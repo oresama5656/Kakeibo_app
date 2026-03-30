@@ -149,23 +149,23 @@ function renderSingleInput(accounts, categories, shortcuts, showFromAccount, sho
       ` : ''}
 
       ${showFromAccount ? renderIconGrid(
-        accounts, state.fromAccount, state.accountsExpanded,
-        'selectFromAccount', 'toggleAccounts',
-        state.type === 'transfer' ? '💴 出金元' : '💴 口座'
-      ) : ''}
+    accounts, state.fromAccount, state.accountsExpanded,
+    'selectFromAccount', 'toggleAccounts',
+    state.type === 'transfer' ? '💴 出金元' : '💴 口座'
+  ) : ''}
 
       ${showToAccount ? renderIconGrid(
-        accounts, state.toAccount,
-        state.type === 'transfer' ? state.accountsExpanded : false,
-        'selectToAccount', 'toggleAccounts',
-        state.type === 'transfer' ? '💴 入金先' : '💴 入金口座'
-      ) : ''}
+    accounts, state.toAccount,
+    state.type === 'transfer' ? state.accountsExpanded : false,
+    'selectToAccount', 'toggleAccounts',
+    state.type === 'transfer' ? '💴 入金先' : '💴 入金口座'
+  ) : ''}
 
       ${showCategories ? renderIconGrid(
-        categories, state.category, state.categoriesExpanded,
-        'selectCategory', 'toggleCategories',
-        '📁 カテゴリー'
-      ) : ''}
+    categories, state.category, state.categoriesExpanded,
+    'selectCategory', 'toggleCategories',
+    '📁 カテゴリー'
+  ) : ''}
 
       <!-- Date with shortcuts & Memo -->
       <div class="selector-section">
@@ -236,9 +236,9 @@ function renderBulkInput(accounts, allCategories) {
                   <td><select data-field="${state.type === 'income' ? 'toAccount' : 'fromAccount'}" data-row="${i}" class="bulk-input">
                     <option value="">--</option>
                     ${accounts.map(a => {
-                      const val = state.type === 'income' ? row.toAccount : row.fromAccount;
-                      return `<option value="${a.name}" ${a.name === val ? 'selected' : ''}>${a.icon} ${a.name}</option>`;
-                    }).join('')}
+    const val = state.type === 'income' ? row.toAccount : row.fromAccount;
+    return `<option value="${a.name}" ${a.name === val ? 'selected' : ''}>${a.icon} ${a.name}</option>`;
+  }).join('')}
                   </select></td>
                   ${state.type === 'transfer' ? `
                     <td><select data-field="toAccount" data-row="${i}" class="bulk-input">
@@ -498,6 +498,11 @@ function refresh() {
   if (container) {
     container.removeEventListener('click', handleClick);
     render(container);
+    // Force reset scroll to left/top
+    container.scrollLeft = 0;
+    container.scrollTop = 0;
+    window.scrollTo(0, 0);
+    
     // Focus amount input after re-render (for PC version only)
     if (!showBulkInput && window.innerWidth >= 768) {
       setTimeout(() => {

@@ -114,6 +114,16 @@ export function deleteAccount(id) {
   save(STORAGE_KEYS.accounts, accounts);
 }
 
+export function reorderAccounts(ids) {
+  const accounts = getAccounts();
+  const reordered = ids.map((id, index) => {
+    const acc = accounts.find(a => a.id === id);
+    if (!acc) return null;
+    return { ...acc, order: index + 1 };
+  }).filter(Boolean);
+  save(STORAGE_KEYS.accounts, reordered);
+}
+
 // --- Categories ---
 export function getCategories() {
   return load(STORAGE_KEYS.categories, []);
@@ -139,6 +149,16 @@ export function updateCategory(id, updates) {
 export function deleteCategory(id) {
   const categories = getCategories().filter(c => c.id !== id);
   save(STORAGE_KEYS.categories, categories);
+}
+
+export function reorderCategories(ids) {
+  const categories = getCategories();
+  const reordered = ids.map((id, index) => {
+    const cat = categories.find(c => c.id === id);
+    if (!cat) return null;
+    return { ...cat, order: index + 1 };
+  }).filter(Boolean);
+  save(STORAGE_KEYS.categories, reordered);
 }
 
 // --- Shortcuts ---

@@ -17,18 +17,18 @@ export function render(container) {
     <div class="settings-screen">
       <h2 style="font-size: var(--font-size-xl); margin-bottom: var(--space-lg);">⚙️ 設定</h2>
 
-      <!-- Accounts -->
       <div class="settings-section">
         <div class="settings-section-title">💴 口座管理 (${accounts.length})</div>
-        <div class="settings-card">
+        <div class="settings-card" id="settings-accounts-list">
           ${accounts.sort((a, b) => a.order - b.order).map(acc => `
-            <div class="settings-item" data-action="editAccount" data-id="${acc.id}">
-              <div class="settings-item-left">
+            <div class="settings-item draggable" data-id="${acc.id}">
+              <div class="settings-drag-handle">⠿</div>
+              <div class="settings-item-left" data-action="editAccount" data-id="${acc.id}">
                 <span class="settings-item-icon">${acc.icon}</span>
                 <span class="settings-item-label">${acc.name}</span>
                 ${acc.pinned ? '<span style="font-size:0.7rem;color:var(--color-accent);">📌</span>' : ''}
               </div>
-              <span class="settings-item-arrow">›</span>
+              <span class="settings-item-arrow" data-action="editAccount" data-id="${acc.id}">›</span>
             </div>
           `).join('')}
           <div class="settings-item" data-action="addAccount" style="justify-content:center; color:var(--color-accent);">
@@ -40,15 +40,16 @@ export function render(container) {
       <!-- Expense Categories -->
       <div class="settings-section">
         <div class="settings-section-title">📁 支出カテゴリー (${expenseCategories.length})</div>
-        <div class="settings-card">
+        <div class="settings-card" id="settings-expense-list">
           ${expenseCategories.sort((a, b) => a.order - b.order).map(cat => `
-            <div class="settings-item" data-action="editCategory" data-id="${cat.id}">
-              <div class="settings-item-left">
+            <div class="settings-item draggable" data-id="${cat.id}">
+              <div class="settings-drag-handle">⠿</div>
+              <div class="settings-item-left" data-action="editCategory" data-id="${cat.id}">
                 <span class="settings-item-icon">${cat.icon}</span>
                 <span class="settings-item-label">${cat.name}</span>
                 ${cat.pinned ? '<span style="font-size:0.7rem;color:var(--color-accent);">📌</span>' : ''}
               </div>
-              <span class="settings-item-arrow">›</span>
+              <span class="settings-item-arrow" data-action="editCategory" data-id="${cat.id}">›</span>
             </div>
           `).join('')}
           <div class="settings-item" data-action="addCategory" data-type="expense" style="justify-content:center; color:var(--color-accent);">
@@ -60,15 +61,16 @@ export function render(container) {
       <!-- Income Categories -->
       <div class="settings-section">
         <div class="settings-section-title">📁 収入カテゴリー (${incomeCategories.length})</div>
-        <div class="settings-card">
+        <div class="settings-card" id="settings-income-list">
           ${incomeCategories.sort((a, b) => a.order - b.order).map(cat => `
-            <div class="settings-item" data-action="editCategory" data-id="${cat.id}">
-              <div class="settings-item-left">
+            <div class="settings-item draggable" data-id="${cat.id}">
+              <div class="settings-drag-handle">⠿</div>
+              <div class="settings-item-left" data-action="editCategory" data-id="${cat.id}">
                 <span class="settings-item-icon">${cat.icon}</span>
                 <span class="settings-item-label">${cat.name}</span>
                 ${cat.pinned ? '<span style="font-size:0.7rem;color:var(--color-accent);">📌</span>' : ''}
               </div>
-              <span class="settings-item-arrow">›</span>
+              <span class="settings-item-arrow" data-action="editCategory" data-id="${cat.id}">›</span>
             </div>
           `).join('')}
           <div class="settings-item" data-action="addCategory" data-type="income" style="justify-content:center; color:var(--color-accent);">
@@ -140,6 +142,34 @@ export function render(container) {
   `;
 
   container.addEventListener('click', handleClick);
+
+  // Initialize Sortable
+  initSortable('settings-accounts-list', 'account');
+  initSortable('settings-expense-list', 'category');
+  initSortable('settings-income-list', 'category');
+}
+
+function initSortable(id, type) {
+  const el = document.getElementById(id);
+  if (!el || !window.Sortable) return;
+
+  window.Sortable.create(el, {
+    handle: '.settings-drag-handle',
+    animation: 200,
+    ghostClass: 'sortable-ghost',
+    dragClass: 'sortable-drag',
+    onEnd: () => {
+      const items = Array.from(el.querySelectorAll('.draggable'));
+      const ids = items.map(item => item.dataset.id);
+      
+      if (type === 'account') {
+        store.reorderAccounts(ids);
+      } else {
+        store.reorderCategories(ids);
+      }
+      window.showToast?.('並べ替えを保存しました');
+    }
+  });
 }
 
 function getDarkModeActive(settings) {
@@ -194,10 +224,6 @@ function showAccountModal(id) {
         <label class="form-label">初期残高</label>
         <input class="form-input" type="number" id="acc-balance" value="${acc?.initialBalance || 0}">
       </div>
-      <div class="form-group">
-        <label class="form-label">表示順</label>
-        <input class="form-input" type="number" id="acc-order" value="${acc?.order || accounts.length + 1}" min="1">
-      </div>
       <div class="form-group" style="display: flex; align-items: center; gap: var(--space-md);">
         <label class="form-label" style="margin: 0;">📌 ピン留め（上部固定）</label>
         <div class="toggle-switch ${acc?.pinned ? 'active' : ''}" id="acc-pinned" data-action="togglePin"></div>
@@ -234,7 +260,7 @@ function showAccountModal(id) {
         name: document.getElementById('acc-name').value.trim(),
         icon: document.getElementById('acc-icon').value.trim() || '💰',
         initialBalance: Number(document.getElementById('acc-balance').value) || 0,
-        order: Number(document.getElementById('acc-order').value) || 1,
+        order: acc?.order || accounts.length + 1,
         pinned: pinnedState,
       };
       if (!data.name) { window.showToast?.('口座名を入力してください', 'error'); return; }
@@ -282,10 +308,6 @@ function showCategoryModal(id, type) {
           <option value="both" ${catType === 'both' ? 'selected' : ''}>両方</option>
         </select>
       </div>
-      <div class="form-group">
-        <label class="form-label">表示順</label>
-        <input class="form-input" type="number" id="cat-order" value="${cat?.order || categories.length + 1}" min="1">
-      </div>
       <div class="form-group" style="display: flex; align-items: center; gap: var(--space-md);">
         <label class="form-label" style="margin: 0;">📌 ピン留め（上部固定）</label>
         <div class="toggle-switch ${cat?.pinned ? 'active' : ''}" id="cat-pinned" data-action="togglePin"></div>
@@ -322,7 +344,7 @@ function showCategoryModal(id, type) {
         name: document.getElementById('cat-name').value.trim(),
         icon: document.getElementById('cat-icon').value.trim() || '📁',
         type: document.getElementById('cat-type').value,
-        order: Number(document.getElementById('cat-order').value) || 1,
+        order: cat?.order || categories.length + 1,
         pinned: pinnedState,
       };
       if (!data.name) { window.showToast?.('カテゴリー名を入力してください', 'error'); return; }
