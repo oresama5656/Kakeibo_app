@@ -18,6 +18,24 @@ let state = {
   categoriesExpanded: false,
 };
 
+// 外部（ダッシュボードなど）から初期値をセットして入力画面を開くための関数
+export function setPreFillState(options = {}) {
+  // 初期化してから上書き
+  state.type = options.type || 'expense';
+  state.amount = '';
+  state.category = '';
+  state.memo = '';
+  state.date = new Date().toISOString().split('T')[0];
+  
+  if (state.type === 'income') {
+    state.toAccount = options.account || '';
+    state.fromAccount = '';
+  } else {
+    state.fromAccount = options.account || '';
+    state.toAccount = '';
+  }
+}
+
 // Bulk input state (PC only)
 let bulkRows = [];
 let showBulkInput = false;

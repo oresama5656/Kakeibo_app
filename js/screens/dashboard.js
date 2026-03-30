@@ -3,6 +3,8 @@
 // ============================================
 
 import * as store from '../store.js';
+import { openModal, closeModal } from '../utils.js';
+import { setPreFillState } from './input.js';
 
 let totalChart = null;
 let accountChart = null;
@@ -15,6 +17,71 @@ export function render(container) {
   const history = store.getAssetHistory(currentPeriod);
 
   const isPositive = totalBalance >= 0;
+
+  // ---------------------------------------------------------
+  // クイックメニュー表示
+  // ---------------------------------------------------------
+  function openAccountMenu(accountId) {
+    const acc = store.getAccounts().find(a => a.id === accountId);
+    if (!acc) return;
+
+    openModal(`
+      <div style="text-align: center; margin-bottom: var(--space-md);">
+        <div style="font-size: 3rem; margin-bottom: var(--space-sm);">${acc.icon}</div>
+        <div style="font-weight: bold; font-size: 1.2rem;">${acc.name}</div>
+        <div style="color: var(--text-muted); font-size: 0.9rem;">残高: ¥${store.getAccountBalance(acc.id).toLocaleString()}</div>
+      </div>
+      <div class="grid grid-2 gap-md">
+        <button class="btn btn-expense" id="quick-expense">🧾 支出</button>
+        <button class="btn btn-income" id="quick-income">💰 収入</button>
+        <button class="btn btn-transfer" id="quick-transfer">🔄 振替</button>
+        <button class="btn btn-secondary" id="quick-adjust">🔢 調整</button>
+      </div>
+    `);
+
+    document.getElementById('quick-expense').onclick = () => {
+      setPreFillState({ type: 'expense', account: acc.name });
+      closeModal();
+      window.navigateTo('input');
+    };
+    document.getElementById('quick-income').onclick = () => {
+      setPreFillState({ type: 'income', account: acc.name });
+      closeModal();
+      window.navigateTo('input');
+    };
+    document.getElementById('quick-transfer').onclick = () => {
+      setPreFillState({ type: 'transfer', account: acc.name });
+      closeModal();
+      window.navigateTo('input');
+    };
+
+    document.getElementById('quick-adjust').onclick = () => {
+      const currentVal = store.getAccountBalance(acc.id);
+      const input = prompt(`「${acc.name}」の現在の「本当の残高」を入力してください：`, currentVal);
+      
+      if (input !== null && !isNaN(input)) {
+        const targetVal = Number(input);
+        const diff = targetVal - currentVal;
+
+        if (diff !== 0) {
+          store.addTransaction({
+            date: new Date().toISOString().split('T')[0],
+            type: diff > 0 ? 'income' : 'expense',
+            amount: Math.abs(diff),
+            category: '残高調整',
+            fromAccount: diff < 0 ? acc.name : '',
+            toAccount: diff > 0 ? acc.name : '',
+            memo: '残高調整 (自動計算)'
+          });
+          window.showToast?.(`残高を ¥${targetVal.toLocaleString()} に修正しました`);
+        }
+        closeModal();
+        refresh();
+      }
+    };
+  }
+
+  const refresh = () => render(container);
 
   container.innerHTML = `
     <div class="dashboard-screen">
@@ -97,6 +164,23 @@ export function render(container) {
   if (selectedAccountId) {
     renderAccountChart(selectedAccountId);
   }
+
+  // Handle local clicks
+  const handleClick = (e) => {
+    // 振替ドラッグ中のクリックは無視する
+    if (e.target.closest('.sortable-ghost')) return;
+
+    const btn = e.target.closest('[data-action]');
+    if (!btn) {
+      const card = e.target.closest('.account-card');
+      if (card) {
+        openAccountMenu(card.dataset.id);
+      }
+      return;
+    }
+    
+    // 他のアクションがあればここに追加
+  };
 
   container.addEventListener('click', handleClick);
   container.querySelector('#period-selector')?.addEventListener('change', e => {
