@@ -157,6 +157,16 @@ export async function loadFromCloud(sheetId) {
   }
 }
 
+// --- Helper for normalized comparison ---
+function normalize(str) {
+  if (!str) return '';
+  // 絵文字、空白、スラッシュを除去して比較
+  return str.toString()
+            .replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF]/g, '')
+            .replace(/\//g, '-')
+            .trim();
+}
+
 // --- Getters ---
 export const getTransactions = () => state.transactions;
 export const getCategories = () => state.categories;
@@ -177,18 +187,18 @@ export function getAccountBalance(id) {
 export function getAssetHistory(days = 90) {
   const history = [];
   const now = new Date();
+  const dateLimit = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days);
   
-  // 開始日から今日までの毎日の残高を計算
   for (let i = 0; i <= days; i++) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
     const dateStr = d.toISOString().split('T')[0];
     
     let dailyBalance = getTotalBalance();
     state.transactions.forEach(tx => {
-      if (tx.date > dateStr) {
+      const txDate = normalize(tx.date);
+      if (txDate > dateStr) {
         if (tx.type === 'income') dailyBalance -= tx.amount;
         if (tx.type === 'expense') dailyBalance += tx.amount;
-        if (tx.type === 'transfer') { /* 振替は総資産に影響しない */ }
       }
     });
 
@@ -201,7 +211,7 @@ export function getAssetHistory(days = 90) {
 export function addTransaction(tx) {
   const id = 'tx_' + Date.now();
   state.transactions.unshift({ ...tx, id });
-  updateAccountBalances();
+  updateAccountBalances(); // 保存前に計算！
   save();
 }
 
@@ -221,24 +231,34 @@ export function deleteTransaction(id) {
 }
 
 function updateAccountBalances() {
-  // 全口座の残高を初期残高でリセット
+  // 1. 全口座のリセット
   state.accounts.forEach(acc => {
-    acc.balance = acc.initialBalance || 0;
+    acc.balance = Number(acc.initialBalance || 0);
   });
 
-  // 取引を古い順に適用
+  const findAccount = (searchValue) => {
+    if (!searchValue) return null;
+    const searchNorm = normalize(searchValue);
+    return state.accounts.find(a => 
+      a.id === searchValue || 
+      normalize(a.name) === searchNorm ||
+      a.name === searchValue
+    );
+  };
+
+  // 2. 取引を古い順に適用（即座に計算）
   [...state.transactions].reverse().forEach(tx => {
     if (tx.type === 'income') {
-      const acc = state.accounts.find(a => a.name === tx.toAccount || a.id === tx.toAccount);
-      if (acc) acc.balance += tx.amount;
+      const acc = findAccount(tx.toAccount);
+      if (acc) acc.balance += Number(tx.amount);
     } else if (tx.type === 'expense') {
-      const acc = state.accounts.find(a => a.name === tx.fromAccount || a.id === tx.fromAccount);
-      if (acc) acc.balance -= tx.amount;
+      const acc = findAccount(tx.fromAccount);
+      if (acc) acc.balance -= Number(tx.amount);
     } else if (tx.type === 'transfer') {
-      const fromAcc = state.accounts.find(a => a.name === tx.fromAccount || a.id === tx.fromAccount);
-      const toAcc = state.accounts.find(a => a.name === tx.toAccount || a.id === tx.toAccount);
-      if (fromAcc) fromAcc.balance -= tx.amount;
-      if (toAcc) toAcc.balance += tx.amount;
+      const fromAcc = findAccount(tx.fromAccount);
+      const toAcc = findAccount(tx.toAccount);
+      if (fromAcc) fromAcc.balance -= Number(tx.amount);
+      if (toAcc) toAcc.balance += Number(tx.amount);
     }
   });
 }
