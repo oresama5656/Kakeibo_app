@@ -254,11 +254,17 @@ async function handleGoogleLogin() {
     window.showToast?.('スプレッドシートを準備中...');
     const sheetId = await auth.getOrCreateSpreadsheet();
     
-    window.showToast?.('初回同期データを送信中...');
-    await store.syncToCloud(sheetId);
-    
-    window.showToast?.('クラウド連携が完了しました！ ✓');
+    // まずはUIを「連携中」に更新して安心させる
     refresh();
+    
+    window.showToast?.('初回同期データを送信中...');
+    try {
+      await store.syncToCloud(sheetId);
+      window.showToast?.('クラウド連携が完了しました！ ✓');
+    } catch (err) {
+      console.warn('Initial sync delayed:', err);
+      window.showToast?.('準備中...後ほど自動同期されます', 'info');
+    }
   } catch (err) {
     console.error(err);
     window.showToast?.('連携に失敗しました', 'error');
