@@ -138,8 +138,23 @@ export async function getOrCreateSpreadsheet() {
     localStorage.setItem('kakeibo_sheet_id', sheetId);
     return sheetId;
   } catch (err) {
-    console.error('Drive API error:', err);
+    console.error('Sheets API update error:', err);
     throw err;
+  }
+}
+
+/**
+ * シートの指定範囲をクリアする（古いデータの残骸を防ぐため）
+ */
+export async function clearRows(spreadsheetId, range) {
+  if (!accessToken) return;
+  try {
+    await gapi.client.sheets.spreadsheets.values.clear({
+      spreadsheetId: spreadsheetId,
+      range: range,
+    });
+  } catch (err) {
+    console.warn('Clear error (non-fatal):', err);
   }
 }
 

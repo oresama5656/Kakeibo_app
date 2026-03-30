@@ -74,6 +74,12 @@ export async function syncToCloud(sheetId) {
   const scRows = state.shortcuts.map(s => [s.id, s.name, s.type, s.amount, s.category, s.fromAccount, s.toAccount, s.order]);
   const setRows = [[JSON.stringify(state.settings)]];
 
+  // 古いデータの残骸が残らないよう、書き込み前にA:Hの範囲をクリアする
+  await auth.clearRows(sheetId, 'transactions!A:H');
+  await auth.clearRows(sheetId, 'categories!A:F');
+  await auth.clearRows(sheetId, 'accounts!A:G');
+  await auth.clearRows(sheetId, 'shortcuts!A:H');
+
   await auth.writeRows(sheetId, 'transactions!A1', txRows.length ? txRows : [['EMPTY']]);
   await auth.writeRows(sheetId, 'categories!A1', catRows.length ? catRows : [['EMPTY']]);
   await auth.writeRows(sheetId, 'accounts!A1', accRows.length ? accRows : [['EMPTY']]);
@@ -107,6 +113,10 @@ export async function loadFromCloud(sheetId) {
     if (setRows.length > 0) {
       state.settings = JSON.parse(setRows[0][0]);
     }
+    
+    // 残高を再計算して整合性を整える
+    updateAccountBalances();
+    
     localStorage.setItem('kakeibo_data', JSON.stringify(state));
     return true;
   } catch (err) {
