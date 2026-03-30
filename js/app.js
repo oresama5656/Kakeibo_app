@@ -7,7 +7,6 @@ import * as auth from './auth.js';
 import { render as renderInput } from './screens/input.js';
 import { render as renderDashboard } from './screens/dashboard.js';
 import { render as renderHistory } from './screens/history.js';
-import { render as renderAnalysis } from './screens/analysis.js'; // 分析画面も追加
 import { render as renderSettings, applyTheme } from './screens/settings.js';
 import { getSettings } from './store.js';
 
@@ -79,7 +78,6 @@ function renderApp() {
     dashboard: renderDashboard,
     input: renderInput,
     history: renderHistory,
-    analysis: renderAnalysis,
     settings: renderSettings
   };
 
