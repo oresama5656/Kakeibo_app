@@ -131,8 +131,11 @@ export function render(container) {
                 ${localStorage.getItem('kakeibo_sheet_id') || '作成中...'}
               </span>
             </div>
-            <div class="settings-item" data-action="syncCloud" style="justify-content:center; color: var(--color-accent);">
-              <span style="font-weight: var(--font-weight-semibold);">📤 クラウドへ今すぐ同期</span>
+            <div class="settings-item" data-action="syncPush" style="justify-content:center; color: var(--color-income);">
+              <span style="font-weight: var(--font-weight-semibold);">📤 クラウドへ保存（送信）</span>
+            </div>
+            <div class="settings-item" data-action="syncPull" style="justify-content:center; color: var(--color-accent);">
+              <span style="font-weight: var(--font-weight-semibold);">📥 クラウドから読込（受信）</span>
             </div>
             <div class="settings-item" data-action="googleLogout" style="justify-content:center; color: var(--color-danger);">
               <span style="font-weight: var(--font-weight-semibold);">連携を解除</span>
@@ -209,7 +212,7 @@ function getDarkModeActive(settings) {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-function handleClick(e) {
+async function handleClick(e) {
   const target = e.target.closest('[data-action]');
   if (!target) return;
 
@@ -227,21 +230,55 @@ function handleClick(e) {
     case 'importData': importData(); break;
     case 'clearData': clearData(); break;
     case 'googleLogin': handleGoogleLogin(); break;
-    case 'googleLogout': auth.signOut(); break;
-    case 'syncCloud': handleSync(); break;
+    case 'googleLogout': handleLogout(); break;
+    case 'syncPush': handleSyncPush(); break;
+    case 'syncPull': handleSyncPull(); break;
   }
 }
 
-async function handleSync() {
+async function handleLogout() {
+  if (confirm('Google連携を解除しますか？')) {
+    auth.signOut();
+  }
+}
+
+async function handleSyncPush() {
   const sheetId = localStorage.getItem('kakeibo_sheet_id');
   if (!sheetId) return;
+
+  if (store.getTransactions().length === 0) {
+    if (!confirm('取引データが0件ですが、クラウド上のデータを空で上書きしてもよろしいですか？')) return;
+  }
+
   try {
-    window.showToast?.('クラウド同期中...', 'info');
+    window.showToast?.('クラウドに保存中...', 'info');
     await store.syncToCloud(sheetId);
-    window.showToast?.('同期が完了しました ✓');
+    window.showToast?.('クラウドに保存しました！ ✓');
   } catch (err) {
     console.error(err);
-    window.showToast?.('同期に失敗しました', 'error');
+    window.showToast?.('保存に失敗しました', 'error');
+  }
+}
+
+async function handleSyncPull() {
+  const sheetId = localStorage.getItem('kakeibo_sheet_id');
+  if (!sheetId) return;
+
+  if (!confirm('クラウドのデータでスマホ内のデータを上書きしますか？\n（現在の入力内容は失われます）')) return;
+
+  try {
+    window.showToast?.('クラウドから読込中...', 'info');
+    const success = await store.loadFromCloud(sheetId);
+    if (success) {
+      window.showToast?.('読込が完了しました！ ✓');
+      // アプリ全体を再起動/再描画してデータを反映させる
+      window.location.reload(); 
+    } else {
+      window.showToast?.('読込に失敗しました。', 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    window.showToast?.('読込中にエラーが発生しました', 'error');
   }
 }
 
