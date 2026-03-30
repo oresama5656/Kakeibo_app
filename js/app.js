@@ -39,18 +39,27 @@ async function initGoogleBackground() {
         console.log('Google SDKs found. Initializing stable auth...');
         await auth.initGoogleAuth();
         
-        const sheetId = await auth.getOrCreateSpreadsheet().catch(e => {
-            console.log('Initial spreadsheet check silent failure (not logged in yet).');
-            return null;
+        const result = await auth.getOrCreateSpreadsheet().catch(e => {
+            console.log('Initial spreadsheet check failed (likely not logged in or network error).');
+            return { id: null, isNew: false };
         });
 
+        const sheetId = typeof result === 'object' ? result.id : result;
+        const isNew = typeof result === 'object' ? result.isNew : false;
+
         if (sheetId) {
-          console.log('Cloud link detected. Pulling latest data...');
-          try {
-            await store.loadFromCloud(sheetId);
-            renderApp();
-          } catch (err) {
-            console.warn('Initial cloud pull failed (likely expired session):', err);
+          if (isNew) {
+            console.log('New cloud link established. Sync ready.');
+            store.setCloudSyncReady(true);
+            await store.save(); // 初期状態を同期
+          } else {
+            console.log('Cloud link detected. Pulling latest data...');
+            try {
+              await store.loadFromCloud(sheetId);
+              renderApp();
+            } catch (err) {
+              console.warn('Initial cloud pull failed (likely offline or network error):', err);
+            }
           }
         }
 

@@ -33,6 +33,8 @@ let state = {
   }
 };
 
+let isCloudSyncReady = false;
+
 // --- Core API ---
 
 export function initStore() {
@@ -43,10 +45,15 @@ export function initStore() {
     if (!state.shortcuts) state.shortcuts = [];
     if (!state.categories || state.categories.length === 0) state.categories = [...DEFAULT_CATEGORIES];
     if (!state.accounts || state.accounts.length === 0) state.accounts = [...DEFAULT_ACCOUNTS];
+    
+    // 既存データがある場合は、クラウド同期の準備を一旦「未完了」にしてロードを待つ
+    isCloudSyncReady = false;
   } else {
     state.categories = [...DEFAULT_CATEGORIES];
     state.accounts = [...DEFAULT_ACCOUNTS];
-    save();
+    // 初回は保存せず、クラウドからのロードを優先する。
+    // ロードに失敗した（＝新規ユーザー）場合にのみ、後のタイミングで保存されるようにする。
+    isCloudSyncReady = false;
   }
 }
 
@@ -55,6 +62,11 @@ export async function save() {
   if (auth.isLoggedIn()) {
     const sheetId = localStorage.getItem('kakeibo_sheet_id');
     if (sheetId) {
+      // クラウドとの整合性が確認できるまで同期をスキップ
+      if (!isCloudSyncReady) {
+        console.log('Sync deferred: Waiting for cloud load to ensure data safety.');
+        return;
+      }
       try {
         await syncToCloud(sheetId);
       } catch (err) {
@@ -150,11 +162,22 @@ export async function loadFromCloud(sheetId) {
     
     updateAccountBalances();
     localStorage.setItem('kakeibo_data', JSON.stringify(state));
+    isCloudSyncReady = true; // 同期準備完了！
     return true;
   } catch (err) {
     console.error('loadFromCloud major error:', err);
-    throw err; // 再スローしてUIに知らせる
+    // ロード失敗時（新規ユーザーなどデータがない場合など）の挙動については
+    // 呼び出し側の判断に任せるが、一応失敗したままだと一生保存できないので、
+    // まったくファイルがない（＝新規）と判断できる場合はReadyにする必要がある。
+    throw err; 
   }
+}
+
+/**
+ * 外から同期を強制的にReadyにできるようにする（新規開始時など用）
+ */
+export function setCloudSyncReady(ready = true) {
+  isCloudSyncReady = ready;
 }
 
 // --- Helper for normalized comparison ---

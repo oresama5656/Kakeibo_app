@@ -102,9 +102,9 @@ export function isLoggedIn() {
 
 export async function getOrCreateSpreadsheet() {
   let sheetId = localStorage.getItem('kakeibo_sheet_id');
-  if (sheetId) return sheetId;
-
-  if (!accessToken) throw new Error('Not logged in');
+  let isNew = false;
+  
+  if (!accessToken) return { id: null, isNew: false };
 
   try {
     // 既存ファイルの検索
@@ -131,12 +131,13 @@ export async function getOrCreateSpreadsheet() {
         resource: { properties: { title: 'Kakeibo_App_Data' } }
       });
       sheetId = createResp.result.spreadsheetId;
+      isNew = true;
       console.log('New spreadsheet created:', sheetId);
       await setupSpreadsheetSkeleton(sheetId);
     }
 
     localStorage.setItem('kakeibo_sheet_id', sheetId);
-    return sheetId;
+    return { id: sheetId, isNew };
   } catch (err) {
     console.error('Sheets API update error:', err);
     throw err;

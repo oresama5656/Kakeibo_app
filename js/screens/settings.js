@@ -293,18 +293,40 @@ async function handleGoogleLogin() {
     window.showToast?.('Google認証中...', 'info');
     await auth.signIn();
     window.showToast?.('スプレッドシートを準備中...');
-    const sheetId = await auth.getOrCreateSpreadsheet();
-    
-    // まずはUIを「連携中」に更新して安心させる
+    const result = await auth.getOrCreateSpreadsheet();
+    const sheetId = result.id;
+    const isNew = result.isNew;
+
+    if (!sheetId) return;
+
+    // UIを「連携中」に更新
     refresh();
-    
-    window.showToast?.('初回同期データを送信中...');
-    try {
+
+    if (isNew) {
+      window.showToast?.('初回同期データを送信中...');
+      store.setCloudSyncReady(true);
       await store.syncToCloud(sheetId);
       window.showToast?.('クラウド連携が完了しました！ ✓');
-    } catch (err) {
-      console.warn('Initial sync delayed:', err);
-      window.showToast?.('準備中...後ほど自動同期されます', 'info');
+    } else {
+      // 既存のシートがある場合、上書きか読込か選ばせる
+      const choice = confirm('クラウド上に既存のデータが見つかりました。\n\n「OK」：クラウドからデータを読み込む（推奨・今の入力は消えます）\n「キャンセル」：今のデータをクラウドへ送る（注意・クラウドのデータが上書きされます）');
+      
+      if (choice) {
+        // クラウドから読込（受信）
+        window.showToast?.('データを読み込み中...');
+        await store.loadFromCloud(sheetId);
+        window.showToast?.('同期完了！再起動します...');
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        // クラウドへ保存（送信）
+        if (confirm('本当に現在のデータでクラウドを上書きしますか？')) {
+          store.setCloudSyncReady(true);
+          await store.syncToCloud(sheetId);
+          window.showToast?.('クラウドへ上書き保存しました！ ✓');
+        } else {
+          window.showToast?.('同期を保留しました。手動で同期してください。', 'info');
+        }
+      }
     }
   } catch (err) {
     console.error('Login/Sync Error:', err);

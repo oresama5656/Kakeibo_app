@@ -69,13 +69,22 @@ function sortItems(items) {
 
 function renderIconGrid(items, selectedName, expanded, onSelect, onToggle, sectionTitle) {
   const { pinned, rest, all } = sortItems(items);
+  const selectedItem = all.find(i => i.name === selectedName);
   const showExpand = rest.length > 0;
-  const displayItems = expanded ? all : pinned;
+  
+  // 選択中のアイテムがピン留めされていない場合、折りたたみ表示でも追加で見せる
+  let displayItems = expanded ? all : [...pinned];
+  if (!expanded && selectedItem && !pinned.find(p => p.name === selectedName)) {
+    displayItems.push(selectedItem);
+  }
 
   return `
     <div class="selector-section">
       <div class="selector-header">
-        <span class="selector-title">${sectionTitle}</span>
+        <span class="selector-title">
+          ${sectionTitle}
+          ${selectedItem ? `<span class="selected-summary-chip">${selectedItem.icon} ${selectedItem.name}</span>` : ''}
+        </span>
         ${showExpand ? `
           <button class="selector-expand" data-action="${onToggle}">
             ${expanded ? '▲ 閉じる' : `▼ もっと見る (${rest.length})`}
