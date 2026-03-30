@@ -112,9 +112,8 @@ export function render(container) {
       dragClass: 'sortable-drag',
       forceFallback: true, 
       fallbackClass: 'sortable-drag',
-      delay: 1000, // 1秒間の長押しでドラッグ開始
-      delayOnTouchOnly: true, // スマホ（タッチ）の時だけ長押しを有効に
-      touchStartThreshold: 5, // 5px 程度の指の動きなら長押し中とみなす
+      delay: 1000, 
+      touchStartThreshold: 15, // 指が多少動いても1秒のカウントを止めない
       onMove: (evt) => {
         // 全てのカードからハイライトを一旦クリア（残らないように）
         el.querySelectorAll('.account-card').forEach(c => c.classList.remove('drag-over'));
