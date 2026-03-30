@@ -1,5 +1,5 @@
 // ============================================
-// メインアプリケーション (v2.2 - 強制描画・安定化)
+// メインアプリケーション (v2.3 - ID 齟齬解消・安定版)
 // ============================================
 
 import { initStore } from './store.js';
@@ -30,7 +30,6 @@ async function initializeApp() {
 
   } catch (err) {
     console.error('CRITICAL: initializeApp failed:', err);
-    // Even if it fails, try to show something
     const main = document.getElementById('main-content');
     if (main) main.innerHTML = `<div style="padding:20px; color:red;">エラーが発生しました。リロードしてください。<br>${err.message}</div>`;
   }
@@ -52,7 +51,7 @@ async function initGoogleBackground() {
         retryCount++;
         setTimeout(checkGoogle, 2000);
       } else {
-        console.warn('Google SDK timeout. Cloud features will be unavailable.');
+        console.warn('Google SDK timeout.');
       }
     };
     checkGoogle();
@@ -67,10 +66,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function renderApp() {
   const main = document.getElementById('main-content');
-  const navContainer = document.getElementById('main-nav');
+  const sidebar = document.getElementById('sidebar');
+  const bottomTab = document.getElementById('bottom-tab');
   
-  if (!main || !navContainer) {
-    console.error('DOM elements missing.');
+  if (!main) {
+    console.error('Main content element missing.');
     return;
   }
 
@@ -81,8 +81,17 @@ function renderApp() {
     settings: renderSettings
   };
 
+  const navButtons = document.querySelectorAll('[data-screen]');
+
   function navigate(screen) {
     console.log('Navigate requested:', screen);
+    
+    // Safety check for Analysis (not implemented yet)
+    if (screen === 'analysis') {
+      window.showToast?.('分析画面は準備中です', 'info');
+      screen = 'dashboard';
+    }
+
     main.innerHTML = '';
     
     try {
@@ -91,37 +100,35 @@ function renderApp() {
       } else {
         console.warn('Route not found:', screen, 'falling back to dashboard');
         routes.dashboard(main);
+        screen = 'dashboard';
       }
     } catch (err) {
       console.error(`Error rendering screen [${screen}]:`, err);
-      main.innerHTML = `<div style="padding:20px;">
-        <h3>⚠️ 読み込みエラー</h3>
-        <p>画面の表示中にエラーが発生しました。</p>
-        <pre style="font-size:12px; color:red;">${err.stack}</pre>
-        <button onclick="localStorage.setItem('kakeibo_current_screen','dashboard'); location.reload();" class="btn btn-primary">ホームに戻る</button>
-      </div>`;
+      main.innerHTML = `<div style="padding:20px;"><h3>⚠️ エラー</h3><pre>${err.message}</pre></div>`;
     }
 
-    // Update nav active state
-    navContainer.querySelectorAll('.nav-item').forEach(item => {
-      item.classList.toggle('active', item.dataset.screen === screen);
+    // Update nav active state (for both sidebar and bottom-tab)
+    navButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.screen === screen);
     });
 
     // Save current screen
     localStorage.setItem('kakeibo_current_screen', screen);
   }
 
-  // Bind nav events
-  navContainer.addEventListener('click', (e) => {
-    const item = e.target.closest('.nav-item');
-    if (item) {
-      const screen = item.dataset.screen;
-      navigate(screen);
+  // Handle navigation clicks
+  const handleNavClick = (e) => {
+    const btn = e.target.closest('[data-screen]');
+    if (btn) {
+      navigate(btn.dataset.screen);
     }
-  });
+  };
+
+  if (sidebar) sidebar.onclick = handleNavClick;
+  if (bottomTab) bottomTab.onclick = handleNavClick;
 
   // Initial render (last screen or dashboard)
-  const lastScreen = localStorage.getItem('kakeibo_current_screen') || 'dashboard';
+  const lastScreen = localStorage.getItem('kakeibo_current_screen') || 'input';
   navigate(lastScreen);
 }
 
@@ -131,9 +138,11 @@ window.showToast = (message, type = 'success') => {
   toast.className = `toast ${type}`;
   toast.textContent = message;
   document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add('show'), 100);
   setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 300);
-  }, 3000);
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }, 10);
 };
