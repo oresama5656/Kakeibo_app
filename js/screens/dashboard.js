@@ -49,20 +49,20 @@ export function render(container) {
       <!-- Account Balance Trend Chart -->
       <div class="chart-card">
         <div class="chart-card-title">🏦 口座別残高推移</div>
-        <div class="chart-period-toggle">
+        <select class="form-input" id="account-selector" style="margin-bottom: var(--space-md); font-size: var(--font-size-sm);">
+          <option value="">口座を選択してください</option>
           ${accounts.map(acc => `
-            <button class="period-btn ${selectedAccountId === acc.id ? 'active' : ''}"
-                    data-action="selectAccount" data-id="${acc.id}">
+            <option value="${acc.id}" ${selectedAccountId === acc.id ? 'selected' : ''}>
               ${acc.icon} ${acc.name}
-            </button>
+            </option>
           `).join('')}
-        </div>
+        </select>
         <div class="chart-container">
           <canvas id="account-chart"></canvas>
         </div>
         ${!selectedAccountId ? `
           <div style="text-align:center; padding: 30px 0; color: var(--text-muted);">
-            上のボタンから口座を選択してください
+            リストから口座を選択してください
           </div>
         ` : ''}
       </div>
@@ -99,26 +99,25 @@ export function render(container) {
   }
 
   container.addEventListener('click', handleClick);
+  container.querySelector('#account-selector')?.addEventListener('change', e => {
+    selectedAccountId = e.target.value;
+    refresh();
+  });
 
-  // Initialize Drag & Drop
+  // Initialize Drag & Drop (PC版のみ有効)
+  const isPC = window.innerWidth >= 768;
   const el = container.querySelector('.account-cards');
-  let currentTarget = null; // ドラッグ先の追跡用
+  let currentTarget = null; 
 
-  if (el && window.Sortable) {
+  if (isPC && el && window.Sortable) {
     Sortable.create(el, {
       sort: false, 
       animation: 150,
       ghostClass: 'sortable-ghost',
       dragClass: 'sortable-drag',
-      forceFallback: true, 
-      fallbackClass: 'sortable-drag',
-      delay: 1000, 
-      touchStartThreshold: 15, // 指が多少動いても1秒のカウントを止めない
+      delay: 0, // PC版は即座にドラッグ開始できるように
       onMove: (evt) => {
-        // 全てのカードからハイライトを一旦クリア（残らないように）
         el.querySelectorAll('.account-card').forEach(c => c.classList.remove('drag-over'));
-        
-        // 重なっている「相手」のカードを取得してハイライト
         if (evt.related && evt.related.classList.contains('account-card')) {
           currentTarget = evt.related;
           currentTarget.classList.add('drag-over');
@@ -127,17 +126,12 @@ export function render(container) {
         }
       },
       onEnd: (evt) => {
-        // ハイライトを全てクリア
         el.querySelectorAll('.account-card').forEach(c => c.classList.remove('drag-over'));
-
-        // ドラッグした場所を特定し、下にある口座を探す
-        const touch = evt.originalEvent.changedTouches ? evt.originalEvent.changedTouches[0] : evt.originalEvent;
         const item = evt.item;
-        
-        // 当たり判定のために自分自身を一時的に無効化
         const originalPointerEvents = item.style.pointerEvents;
         item.style.pointerEvents = 'none';
-        
+
+        const touch = evt.originalEvent.changedTouches ? evt.originalEvent.changedTouches[0] : evt.originalEvent;
         const targetEl = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.account-card');
         
         item.style.pointerEvents = originalPointerEvents;
