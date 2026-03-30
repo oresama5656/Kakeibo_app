@@ -150,8 +150,12 @@ function initSortable(id, type) {
   window.Sortable.create(el, {
     handle: '.settings-drag-handle',
     animation: 200,
+    forceFallback: true,      // ブラウザ標準の残像を消して一体化
+    fallbackOnBody: true,     // ドラッグ中に画面外に隠れないようにする
+    swapThreshold: 0.65,
     ghostClass: 'sortable-ghost',
     dragClass: 'sortable-drag',
+    chosenClass: 'sortable-chosen',
     onEnd: () => {
       const items = Array.from(el.querySelectorAll('.draggable'));
       const ids = items.map(item => item.dataset.id);

@@ -837,6 +837,26 @@ textarea:focus {
   color: var(--color-income);
 }
 
+.sortable-ghost {
+  opacity: 0.15;
+  background: var(--bg-secondary) !important;
+  border: 1px dashed var(--color-accent);
+}
+
+.sortable-drag {
+  background: var(--bg-card) !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.1);
+  opacity: 1 !important;
+  transform: scale(1.02);
+  cursor: grabbing;
+  z-index: 9999;
+}
+
+/* While chosen but not dragging yet */
+.sortable-chosen {
+  background: var(--bg-card-hover) !important;
+}
+
 .total-amount.negative {
   color: var(--color-expense);
 }
