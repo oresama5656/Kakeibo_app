@@ -17,6 +17,7 @@ export function render(container) {
     <div class="settings-screen">
       <h2 style="font-size: var(--font-size-xl); margin-bottom: var(--space-lg);">⚙️ 設定</h2>
 
+      <!-- Accounts -->
       <div class="settings-section">
         <div class="settings-section-title">💴 口座管理 (${accounts.length})</div>
         <div class="settings-card" id="settings-accounts-list">
@@ -28,7 +29,6 @@ export function render(container) {
                 <span class="settings-item-label">${acc.name}</span>
                 ${acc.pinned ? '<span style="font-size:0.7rem;color:var(--color-accent);">📌</span>' : ''}
               </div>
-              <span class="settings-item-arrow" data-action="editAccount" data-id="${acc.id}">›</span>
             </div>
           `).join('')}
           <div class="settings-item" data-action="addAccount" style="justify-content:center; color:var(--color-accent);">
@@ -49,7 +49,6 @@ export function render(container) {
                 <span class="settings-item-label">${cat.name}</span>
                 ${cat.pinned ? '<span style="font-size:0.7rem;color:var(--color-accent);">📌</span>' : ''}
               </div>
-              <span class="settings-item-arrow" data-action="editCategory" data-id="${cat.id}">›</span>
             </div>
           `).join('')}
           <div class="settings-item" data-action="addCategory" data-type="expense" style="justify-content:center; color:var(--color-accent);">
@@ -70,7 +69,6 @@ export function render(container) {
                 <span class="settings-item-label">${cat.name}</span>
                 ${cat.pinned ? '<span style="font-size:0.7rem;color:var(--color-accent);">📌</span>' : ''}
               </div>
-              <span class="settings-item-arrow" data-action="editCategory" data-id="${cat.id}">›</span>
             </div>
           `).join('')}
           <div class="settings-item" data-action="addCategory" data-type="income" style="justify-content:center; color:var(--color-accent);">
@@ -88,7 +86,6 @@ export function render(container) {
               <div class="settings-item-left">
                 <span class="settings-item-label">${sc.name}</span>
               </div>
-              <span class="settings-item-arrow">›</span>
             </div>
           `).join('')}
           <div class="settings-item" data-action="addShortcut" style="justify-content:center; color:var(--color-accent);">
@@ -120,21 +117,18 @@ export function render(container) {
               <span class="settings-item-icon">📤</span>
               <span class="settings-item-label">データをエクスポート</span>
             </div>
-            <span class="settings-item-arrow">›</span>
           </div>
           <div class="settings-item" data-action="importData">
             <div class="settings-item-left">
               <span class="settings-item-icon">📥</span>
               <span class="settings-item-label">データをインポート</span>
             </div>
-            <span class="settings-item-arrow">›</span>
           </div>
           <div class="settings-item" data-action="clearData" style="color: var(--color-danger);">
             <div class="settings-item-left">
               <span class="settings-item-icon">🗑️</span>
               <span class="settings-item-label">全データ削除</span>
             </div>
-            <span class="settings-item-arrow">›</span>
           </div>
         </div>
       </div>
