@@ -1,83 +1,89 @@
 // ============================================
-// メインアプリケーション (ルーター & 初期化)
+// メインアプリケーション (v2 - Google Auth 連携)
 // ============================================
 
 import { initStore } from './store.js';
+import * as auth from './auth.js';
 import { render as renderInput } from './screens/input.js';
 import { render as renderDashboard } from './screens/dashboard.js';
 import { render as renderHistory } from './screens/history.js';
-import { render as renderAnalysis } from './screens/analysis.js';
 import { render as renderSettings, applyTheme } from './screens/settings.js';
 import { getSettings } from './store.js';
 
 // --- Initialize ---
-document.addEventListener('DOMContentLoaded', () => {
+async function initializeApp() {
   initStore();
+  try {
+    // Wait for libraries to be ready
+    if (window.google && window.gapi) {
+      await auth.initGoogleAuth();
+    } else {
+      console.warn('Google libraries not loaded yet. Waiting...');
+      setTimeout(async () => {
+        if (window.google) await auth.initGoogleAuth();
+      }, 2000);
+    }
+  } catch (err) {
+    console.warn('Google Auth initialization skipped/failed:', err);
+  }
+  renderApp();
+}
 
+document.addEventListener('DOMContentLoaded', () => {
+  initializeApp();
+});
+
+function renderApp() {
   // Apply saved theme
   const settings = getSettings();
   applyTheme(settings.darkMode || 'auto');
 
-  // Setup toast
-  window.showToast = showToast;
+  const main = document.getElementById('main-content');
+  const navContainer = document.getElementById('main-nav');
 
-  // Initial render
-  navigateTo('input');
+  const routes = {
+    dashboard: renderDashboard,
+    input: renderInput,
+    history: renderHistory,
+    settings: renderSettings
+  };
 
-  // Setup navigation
-  document.querySelectorAll('[data-screen]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      navigateTo(btn.dataset.screen);
+  function navigate(screen) {
+    // Clear previous screen if needed
+    main.innerHTML = '';
+    
+    // Render the screen
+    routes[screen](main);
+
+    // Update nav active state
+    navContainer.querySelectorAll('.nav-item').forEach(item => {
+      item.classList.toggle('active', item.dataset.screen === screen);
     });
-  });
-});
 
-// --- Navigation ---
-let currentScreen = '';
-
-function navigateTo(screen) {
-  if (screen === currentScreen) return;
-  currentScreen = screen;
-
-  // Update active states
-  document.querySelectorAll('.nav-btn, .tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.screen === screen);
-  });
-
-  // Show/hide screens
-  document.querySelectorAll('.screen').forEach(s => {
-    s.classList.remove('active');
-  });
-
-  const screenEl = document.getElementById(`screen-${screen}`);
-  if (screenEl) {
-    screenEl.classList.add('active');
-
-    // Render screen content
-    switch (screen) {
-      case 'input': renderInput(screenEl); break;
-      case 'dashboard': renderDashboard(screenEl); break;
-      case 'history': renderHistory(screenEl); break;
-      case 'analysis': renderAnalysis(screenEl); break;
-      case 'settings': renderSettings(screenEl); break;
-    }
+    // Save current screen
+    localStorage.setItem('kakeibo_current_screen', screen);
   }
+
+  // Bind nav events
+  navContainer.addEventListener('click', (e) => {
+    const item = e.target.closest('.nav-item');
+    if (item) navigate(item.dataset.screen);
+  });
+
+  // Initial render (last screen or dashboard)
+  const lastScreen = localStorage.getItem('kakeibo_current_screen') || 'dashboard';
+  navigate(lastScreen);
 }
 
-// --- Toast ---
-let toastTimer = null;
-
-function showToast(message, type = 'success') {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-
-  clearTimeout(toastTimer);
-
+// Global Toast logic
+window.showToast = (message, type = 'success') => {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
   toast.textContent = message;
-  toast.style.borderColor = type === 'error' ? 'var(--color-expense)' : 'var(--color-income)';
-  toast.classList.add('show');
-
-  toastTimer = setTimeout(() => {
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 100);
+  setTimeout(() => {
     toast.classList.remove('show');
-  }, 2500);
-}
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+};

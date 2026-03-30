@@ -3,6 +3,7 @@
 // ============================================
 
 import * as store from '../store.js';
+import * as auth from '../auth.js';
 
 export function render(container) {
   const settings = store.getSettings();
@@ -108,6 +109,37 @@ export function render(container) {
         </div>
       </div>
 
+        </div>
+      </div>
+
+      <!-- Cloud Sync -->
+      <div class="settings-section">
+        <div class="settings-section-title">☁️ クラウド連携 (スプレッドシート)</div>
+        <div class="settings-card">
+          ${!auth.isLoggedIn() ? `
+            <div class="settings-item" data-action="googleLogin" style="justify-content:center; background: #4285F4; color: white;">
+              <span style="font-weight: var(--font-weight-semibold);">🔵 Google でログイン</span>
+            </div>
+            <div style="padding: var(--space-sm); font-size: 0.8rem; color: var(--text-secondary); text-align:center;">
+              ログインすると、スプレッドシートと自動同期されます
+            </div>
+          ` : `
+            <div class="settings-item">
+              <div class="settings-item-left">
+                <span class="settings-item-icon">📄</span>
+                <span class="settings-item-label">連携中</span>
+              </div>
+              <span style="font-size: 0.7rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;">
+                ${localStorage.getItem('kakeibo_sheet_id') || '作成中...'}
+              </span>
+            </div>
+            <div class="settings-item" data-action="googleLogout" style="justify-content:center; color: var(--color-danger);">
+              <span style="font-weight: var(--font-weight-semibold);">連携を解除</span>
+            </div>
+          `}
+        </div>
+      </div>
+
       <!-- Data Management -->
       <div class="settings-section">
         <div class="settings-section-title">💾 データ管理</div>
@@ -193,6 +225,22 @@ function handleClick(e) {
     case 'exportData': exportData(); break;
     case 'importData': importData(); break;
     case 'clearData': clearData(); break;
+    case 'googleLogin': handleGoogleLogin(); break;
+    case 'googleLogout': auth.signOut(); break;
+  }
+}
+
+async function handleGoogleLogin() {
+  try {
+    window.showToast?.('Google認証中...', 'info');
+    await auth.signIn();
+    window.showToast?.('スプレッドシートを準備中...');
+    const sheetId = await auth.getOrCreateSpreadsheet();
+    window.showToast?.('クラウド連携が完了しました！ ✓');
+    refresh();
+  } catch (err) {
+    console.error(err);
+    window.showToast?.('連携に失敗しました', 'error');
   }
 }
 
