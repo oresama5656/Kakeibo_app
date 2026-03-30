@@ -35,20 +35,50 @@ async function initGoogleBackground() {
     let retryCount = 0;
     const checkGoogle = async () => {
       if (window.google && window.gapi) {
+        console.log('Google SDKs found. Initializing...');
         await auth.initGoogleAuth();
-        const current = localStorage.getItem('kakeibo_current_screen');
-        if (current === 'settings') {
-          const container = document.getElementById('screen-settings');
-          if (container) renderSettings(container);
+        
+        const sheetId = await auth.getOrCreateSpreadsheet();
+        if (sheetId) {
+          console.log('Cloud link detected. Pulling latest data...');
+          const success = await store.loadFromCloud(sheetId);
+          if (success) {
+            console.log('Cloud data loaded successfully. Refreshing UI.');
+            renderApp(); // Re-render everything with new data
+          }
+        }
+
+        // If we are on settings screen, re-render to show login button
+        if (localStorage.getItem('kakeibo_current_screen') === 'settings') {
+          const main = document.getElementById('screen-settings');
+          if (main) renderSettings(main);
         }
       } else if (retryCount < 10) {
         retryCount++;
         setTimeout(checkGoogle, 2000);
+      } else {
+        console.warn('Google SDK timeout.');
       }
     };
     checkGoogle();
   } catch (err) {
     console.warn('Google Auth silent failure:', err);
+  }
+}
+
+function renderApp() {
+  const currentScreen = localStorage.getItem('kakeibo_current_screen') || 'input';
+  const container = document.getElementById(`screen-${currentScreen}`);
+  if (container) {
+    const renderFunctions = {
+      input: renderInput,
+      dashboard: renderDashboard,
+      history: renderHistory,
+      settings: renderSettings
+    };
+    if (renderFunctions[currentScreen]) {
+      renderFunctions[currentScreen](container);
+    }
   }
 }
 
