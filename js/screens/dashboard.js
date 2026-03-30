@@ -1,15 +1,6 @@
-import * as store from '../store.js';
-import { setQuickInput } from './input.js';
-
-let totalChart = null;
-let accountChart = null;
-let currentPeriod = 90;
-let selectedAccountId = null;
-
 export function render(container) {
   const accounts = store.getAccounts();
   const totalBalance = store.getTotalBalance();
-  const history = store.getAssetHistory(currentPeriod);
 
   const isPositive = totalBalance >= 0;
 
@@ -20,48 +11,6 @@ export function render(container) {
         <div class="total-amount ${isPositive ? 'positive' : 'negative'}">
           ¥${Math.abs(totalBalance).toLocaleString('ja-JP')}
         </div>
-      </div>
-
-      <!-- Total Asset Trend Chart -->
-      <div class="chart-card">
-        <div class="chart-card-title">📈 資産推移</div>
-        <select class="form-input" id="period-selector" style="margin-bottom: var(--space-md); font-size: var(--font-size-sm);">
-          <option value="30" ${currentPeriod === 30 ? 'selected' : ''}>過去1ヶ月</option>
-          <option value="90" ${currentPeriod === 90 ? 'selected' : ''}>過去3ヶ月</option>
-          <option value="180" ${currentPeriod === 180 ? 'selected' : ''}>過去6ヶ月</option>
-          <option value="365" ${currentPeriod === 365 ? 'selected' : ''}>過去1年</option>
-          <option value="9999" ${currentPeriod === 9999 ? 'selected' : ''}>全期間</option>
-        </select>
-        <div class="chart-container">
-          <canvas id="asset-chart"></canvas>
-        </div>
-        ${history.length === 0 ? `
-          <div style="text-align:center; padding: 40px 0; color: var(--text-muted);">
-            <div style="font-size: 2rem; margin-bottom: 8px;">📊</div>
-            取引を入力するとグラフが表示されます
-          </div>
-        ` : ''}
-      </div>
-
-      <!-- Account Balance Trend Chart -->
-      <div class="chart-card">
-        <div class="chart-card-title">🏦 口座別残高推移</div>
-        <select class="form-input" id="account-selector" style="margin-bottom: var(--space-md); font-size: var(--font-size-sm);">
-          <option value="">口座を選択してください</option>
-          ${accounts.map(acc => `
-            <option value="${acc.id}" ${selectedAccountId === acc.id ? 'selected' : ''}>
-              ${acc.icon} ${acc.name}
-            </option>
-          `).join('')}
-        </select>
-        <div class="chart-container">
-          <canvas id="account-chart"></canvas>
-        </div>
-        ${!selectedAccountId ? `
-          <div style="text-align:center; padding: 30px 0; color: var(--text-muted);">
-            リストから口座を選択してください
-          </div>
-        ` : ''}
       </div>
 
       <!-- Account Balance Cards -->
@@ -83,47 +32,30 @@ export function render(container) {
             `;
           }).join('')}
         </div>
+        <div style="margin-top: var(--space-md); font-size: var(--font-size-xs); color: var(--text-muted); text-align: center;">
+          💡 アイコンを長押し/ドラッグで振替、タップで入出金メニューを表示
+        </div>
       </div>
     </div>
   `;
 
-  // Render charts
-  if (history.length > 0) {
-    renderTotalChart(history);
-  }
-  if (selectedAccountId) {
-    renderAccountChart(selectedAccountId);
-  }
-
   container.addEventListener('click', handleClick);
-  container.querySelector('#period-selector')?.addEventListener('change', e => {
-    currentPeriod = Number(e.target.value);
-    refresh();
-  });
-  container.querySelector('#account-selector')?.addEventListener('change', e => {
-    selectedAccountId = e.target.value;
-    refresh();
-  });
 
   // Initialize Drag & Drop (PC版のみ有効)
   const isPC = window.innerWidth >= 768;
   const el = container.querySelector('.account-cards');
-  let currentTarget = null; 
-
+  
   if (isPC && el && window.Sortable) {
     Sortable.create(el, {
       sort: false, 
       animation: 150,
       ghostClass: 'sortable-ghost',
       dragClass: 'sortable-drag',
-      delay: 0, // PC版は即座にドラッグ開始できるように
+      delay: 0,
       onMove: (evt) => {
         el.querySelectorAll('.account-card').forEach(c => c.classList.remove('drag-over'));
         if (evt.related && evt.related.classList.contains('account-card')) {
-          currentTarget = evt.related;
-          currentTarget.classList.add('drag-over');
-        } else {
-          currentTarget = null;
+          evt.related.classList.add('drag-over');
         }
       },
       onEnd: (evt) => {
@@ -142,9 +74,6 @@ export function render(container) {
           const toId = targetEl.dataset.id;
           openQuickTransferModal(fromId, toId);
         }
-        
-        // sort: false でも位置が戻るので、明示的にリフレッシュしなくても大丈夫ですが
-        // 念のため画面全体を最新にする
         refresh(); 
       }
     });
@@ -224,17 +153,8 @@ function handleClick(e) {
   const target = e.target.closest('[data-action]');
   if (!target) return;
 
-  if (target.dataset.action === 'setPeriod') {
-    currentPeriod = Number(target.dataset.days);
-    refresh();
-  } else if (target.dataset.action === 'selectAccount') {
-    const accountId = target.dataset.id;
-    // グラフ更新のためにIDをセット
-    selectedAccountId = accountId;
-    // メニューを表示
-    showQuickMenu(accountId);
-    // グラフも裏で更新するために一応再描画（メニューが出ている間に後ろで動く）
-    renderAccountChart(accountId);
+  if (target.dataset.action === 'selectAccount') {
+    showQuickMenu(target.dataset.id);
   }
 }
 
@@ -278,11 +198,9 @@ function showQuickMenu(accountId) {
       if (type === 'correction') {
         openCorrectionModal(account, currentBalance);
       } else {
-        // 通常の遷移
         const data = { type };
         if (type === 'expense' || type === 'transfer') data.fromAccount = account.name;
         if (type === 'income') data.toAccount = account.name;
-        
         setQuickInput(data);
         window.navigateTo?.('input');
       }
@@ -306,9 +224,6 @@ function openCorrectionModal(account, currentBalance) {
           <label class="form-label">新しい(実際の)金額を入力</label>
           <input type="number" id="correction-target-amount" class="form-input" placeholder="0" inputmode="numeric">
         </div>
-        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: var(--space-sm); line-height: 1.4;">
-          設定した金額になるよう、「差分」を記録します。メモには自動で「残高修正」が入ります。
-        </div>
       </div>
       <div class="form-actions" style="border-top: 1px solid var(--border-light); padding: var(--space-md); margin-top: 0;">
         <button class="btn btn-secondary modal-cancel-btn">戻る</button>
@@ -328,194 +243,18 @@ function openCorrectionModal(account, currentBalance) {
   overlay.querySelector('#go-to-correction').onclick = () => {
     const targetAmount = Number(input.value);
     const diff = targetAmount - currentBalance;
-    
-    if (diff === 0) {
-      window.showToast?.('金額に変更がありません', 'error');
-      return;
-    }
+    if (diff === 0) return;
 
     const type = diff > 0 ? 'income' : 'expense';
     const amount = Math.abs(diff);
 
-    const data = {
-      type: type,
-      amount: String(amount),
-      memo: '残高修正'
-    };
-
-    if (type === 'income') {
-      data.toAccount = account.name;
-    } else {
-      data.fromAccount = account.name;
-    }
+    const data = { type: type, amount: String(amount), memo: '残高修正' };
+    if (type === 'income') data.toAccount = account.name;
+    else data.fromAccount = account.name;
 
     setQuickInput(data);
     close();
     window.navigateTo?.('input');
-  };
-}
-
-function getChartColors() {
-  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches ||
-    document.documentElement.getAttribute('data-theme') === 'dark';
-  return {
-    gridColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-    textColor: isDark ? '#9ca3b8' : '#6b7280',
-    tooltipBg: isDark ? '#1e1e35' : '#ffffff',
-    tooltipBody: isDark ? '#e8e8f0' : '#1a1a2e',
-    tooltipBorder: isDark ? '#2d2d4a' : '#e5e7eb',
-  };
-}
-
-function renderTotalChart(history) {
-  const canvas = document.getElementById('asset-chart');
-  if (!canvas) return;
-  if (totalChart) totalChart.destroy();
-
-  const c = getChartColors();
-
-  totalChart = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: history.map(h => {
-        const d = new Date(h.date);
-        return `${d.getMonth() + 1}/${d.getDate()}`;
-      }),
-      datasets: [{
-        label: '総資産',
-        data: history.map(h => h.total),
-        borderColor: '#6366f1',
-        backgroundColor: 'rgba(99, 102, 241, 0.1)',
-        borderWidth: 2.5,
-        fill: true,
-        tension: 0.3,
-        pointRadius: history.length > 30 ? 0 : 3,
-        pointHoverRadius: 5,
-        pointBackgroundColor: '#6366f1',
-      }],
-    },
-    options: chartOptions(c),
-  });
-}
-
-function renderAccountChart(accountId) {
-  const canvas = document.getElementById('account-chart');
-  if (!canvas) return;
-  if (accountChart) accountChart.destroy();
-
-  const accounts = store.getAccounts();
-  const account = accounts.find(a => a.id === accountId);
-  if (!account) return;
-
-  const history = getAccountHistory(account.name, currentPeriod);
-  if (history.length === 0) return;
-
-  const c = getChartColors();
-
-  accountChart = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: history.map(h => {
-        const d = new Date(h.date);
-        return `${d.getMonth() + 1}/${d.getDate()}`;
-      }),
-      datasets: [{
-        label: account.name,
-        data: history.map(h => h.balance),
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-        borderWidth: 2.5,
-        fill: true,
-        tension: 0.3,
-        pointRadius: history.length > 30 ? 0 : 3,
-        pointHoverRadius: 5,
-        pointBackgroundColor: '#10b981',
-      }],
-    },
-    options: chartOptions(c),
-  });
-}
-
-function getAccountHistory(accountName, days) {
-  const transactions = store.getTransactions()
-    .filter(t => t.date)
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  if (transactions.length === 0) return [];
-
-  const accounts = store.getAccounts();
-  const account = accounts.find(a => a.name === accountName);
-  let balance = account?.initialBalance || 0;
-
-  const dailyBalances = {};
-
-  for (const tx of transactions) {
-    const amount = Number(tx.amount) || 0;
-    if (tx.type === 'income' && tx.toAccount === accountName) {
-      balance += amount;
-    } else if (tx.type === 'expense' && tx.fromAccount === accountName) {
-      balance -= amount;
-    } else if (tx.type === 'transfer') {
-      if (tx.fromAccount === accountName) balance -= amount;
-      if (tx.toAccount === accountName) balance += amount;
-    }
-    dailyBalances[tx.date] = balance;
-  }
-
-  const endDate = new Date();
-  const startDate = new Date(endDate);
-  startDate.setDate(startDate.getDate() - days);
-  const startStr = startDate.toISOString().split('T')[0];
-
-  const result = [];
-  for (const [date, bal] of Object.entries(dailyBalances).sort(([a], [b]) => a.localeCompare(b))) {
-    if (date >= startStr) {
-      result.push({ date, balance: bal });
-    }
-  }
-
-  const todayStr = endDate.toISOString().split('T')[0];
-  if (result.length === 0 || result[result.length - 1].date !== todayStr) {
-    result.push({ date: todayStr, balance });
-  }
-
-  return result;
-}
-
-function chartOptions(c) {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { intersect: false, mode: 'index' },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: c.tooltipBg,
-        titleColor: c.textColor,
-        bodyColor: c.tooltipBody,
-        borderColor: c.tooltipBorder,
-        borderWidth: 1,
-        padding: 12,
-        displayColors: false,
-        callbacks: {
-          label: ctx => `¥${ctx.parsed.y.toLocaleString('ja-JP')}`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        grid: { color: c.gridColor },
-        ticks: { color: c.textColor, maxTicksLimit: 8, font: { size: 11 } },
-      },
-      y: {
-        grid: { color: c.gridColor },
-        ticks: {
-          color: c.textColor,
-          font: { size: 11 },
-          callback: val => `¥${(val / 1000).toFixed(0)}K`,
-        },
-      },
-    },
   };
 }
 

@@ -206,7 +206,7 @@ export function getAccountBalance(id) {
   return acc ? acc.balance : 0;
 }
 
-// ダッシュボード用の資産推移データ
+// ダッシュボード用の累計資産推移データ
 export function getAssetHistory(days = 90) {
   const history = [];
   const now = new Date();
@@ -228,6 +228,48 @@ export function getAssetHistory(days = 90) {
     history.unshift({ date: dateStr, total: dailyBalance });
   }
   return history;
+}
+
+// 特定口座の残高推移データ
+export function getAccountHistory(accountName, days = 90) {
+  const transactions = [...state.transactions].filter(t => t.date).sort((a, b) => a.date.localeCompare(b.date));
+  const accounts = getAccounts();
+  const account = accounts.find(a => a.name === accountName);
+  let balance = account?.initialBalance || 0;
+
+  const dailyBalances = {};
+  for (const tx of transactions) {
+    const amount = Number(tx.amount) || 0;
+    if (tx.type === 'income' && tx.toAccount === accountName) {
+      balance += amount;
+    } else if (tx.type === 'expense' && tx.fromAccount === accountName) {
+      balance -= amount;
+    } else if (tx.type === 'transfer') {
+      if (tx.fromAccount === accountName) balance -= amount;
+      if (tx.toAccount === accountName) balance += amount;
+    }
+    dailyBalances[tx.date] = balance;
+  }
+
+  const endDate = new Date();
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - days);
+  const startStr = startDate.toISOString().split('T')[0];
+
+  const result = [];
+  // 全期間の履歴から範囲内を抽出
+  for (const [date, bal] of Object.entries(dailyBalances).sort(([a], [b]) => a.localeCompare(b))) {
+    if (date >= startStr) {
+      result.push({ date, balance: bal });
+    }
+  }
+
+  const todayStr = endDate.toISOString().split('T')[0];
+  if (result.length === 0 || (result.length > 0 && result[result.length - 1].date !== todayStr)) {
+    result.push({ date: todayStr, balance });
+  }
+
+  return result;
 }
 
 // --- Setters (Transactions) ---
