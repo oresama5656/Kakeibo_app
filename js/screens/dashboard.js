@@ -1,11 +1,13 @@
 // ============================================
-// ダッシュボード画面
+// ダッシュボード画面 (v2 - 口座別残高推移追加)
 // ============================================
 
 import * as store from '../store.js';
 
-let chart = null;
-let currentPeriod = 90; // days
+let totalChart = null;
+let accountChart = null;
+let currentPeriod = 90;
+let selectedAccountId = null;
 
 export function render(container) {
   const accounts = store.getAccounts();
@@ -23,7 +25,7 @@ export function render(container) {
         </div>
       </div>
 
-      <!-- Asset Trend Chart -->
+      <!-- Total Asset Trend Chart -->
       <div class="chart-card">
         <div class="chart-card-title">📈 資産推移</div>
         <div class="chart-period-toggle">
@@ -44,6 +46,27 @@ export function render(container) {
         ` : ''}
       </div>
 
+      <!-- Account Balance Trend Chart -->
+      <div class="chart-card">
+        <div class="chart-card-title">🏦 口座別残高推移</div>
+        <div class="chart-period-toggle">
+          ${accounts.map(acc => `
+            <button class="period-btn ${selectedAccountId === acc.id ? 'active' : ''}"
+                    data-action="selectAccount" data-id="${acc.id}">
+              ${acc.icon} ${acc.name}
+            </button>
+          `).join('')}
+        </div>
+        <div class="chart-container">
+          <canvas id="account-chart"></canvas>
+        </div>
+        ${!selectedAccountId ? `
+          <div style="text-align:center; padding: 30px 0; color: var(--text-muted);">
+            上のボタンから口座を選択してください
+          </div>
+        ` : ''}
+      </div>
+
       <!-- Account Balance Cards -->
       <div class="chart-card">
         <div class="chart-card-title">💰 口座別残高</div>
@@ -51,7 +74,7 @@ export function render(container) {
           ${accounts.map(acc => {
             const balance = store.getAccountBalance(acc.id);
             return `
-              <div class="account-card">
+              <div class="account-card" data-action="selectAccount" data-id="${acc.id}" style="cursor:pointer;">
                 <span class="account-card-icon">${acc.icon}</span>
                 <div class="account-card-info">
                   <div class="account-card-name">${acc.name}</div>
@@ -67,12 +90,14 @@ export function render(container) {
     </div>
   `;
 
-  // Render chart
+  // Render charts
   if (history.length > 0) {
-    renderChart(history);
+    renderTotalChart(history);
+  }
+  if (selectedAccountId) {
+    renderAccountChart(selectedAccountId);
   }
 
-  // Events
   container.addEventListener('click', handleClick);
 }
 
@@ -83,24 +108,32 @@ function handleClick(e) {
   if (target.dataset.action === 'setPeriod') {
     currentPeriod = Number(target.dataset.days);
     refresh();
+  } else if (target.dataset.action === 'selectAccount') {
+    selectedAccountId = target.dataset.id;
+    refresh();
   }
 }
 
-function renderChart(history) {
-  const canvas = document.getElementById('asset-chart');
-  if (!canvas) return;
-
-  if (chart) {
-    chart.destroy();
-  }
-
+function getChartColors() {
   const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches ||
     document.documentElement.getAttribute('data-theme') === 'dark';
+  return {
+    gridColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+    textColor: isDark ? '#9ca3b8' : '#6b7280',
+    tooltipBg: isDark ? '#1e1e35' : '#ffffff',
+    tooltipBody: isDark ? '#e8e8f0' : '#1a1a2e',
+    tooltipBorder: isDark ? '#2d2d4a' : '#e5e7eb',
+  };
+}
 
-  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-  const textColor = isDark ? '#9ca3b8' : '#6b7280';
+function renderTotalChart(history) {
+  const canvas = document.getElementById('asset-chart');
+  if (!canvas) return;
+  if (totalChart) totalChart.destroy();
 
-  chart = new Chart(canvas, {
+  const c = getChartColors();
+
+  totalChart = new Chart(canvas, {
     type: 'line',
     data: {
       labels: history.map(h => {
@@ -120,48 +153,129 @@ function renderChart(history) {
         pointBackgroundColor: '#6366f1',
       }],
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: {
-        intersect: false,
-        mode: 'index',
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: isDark ? '#1e1e35' : '#ffffff',
-          titleColor: textColor,
-          bodyColor: isDark ? '#e8e8f0' : '#1a1a2e',
-          borderColor: isDark ? '#2d2d4a' : '#e5e7eb',
-          borderWidth: 1,
-          padding: 12,
-          displayColors: false,
-          callbacks: {
-            label: ctx => `¥${ctx.parsed.y.toLocaleString('ja-JP')}`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: { color: gridColor },
-          ticks: {
-            color: textColor,
-            maxTicksLimit: 8,
-            font: { size: 11 },
-          },
-        },
-        y: {
-          grid: { color: gridColor },
-          ticks: {
-            color: textColor,
-            font: { size: 11 },
-            callback: val => `¥${(val / 1000).toFixed(0)}K`,
-          },
+    options: chartOptions(c),
+  });
+}
+
+function renderAccountChart(accountId) {
+  const canvas = document.getElementById('account-chart');
+  if (!canvas) return;
+  if (accountChart) accountChart.destroy();
+
+  const accounts = store.getAccounts();
+  const account = accounts.find(a => a.id === accountId);
+  if (!account) return;
+
+  const history = getAccountHistory(account.name, currentPeriod);
+  if (history.length === 0) return;
+
+  const c = getChartColors();
+
+  accountChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: history.map(h => {
+        const d = new Date(h.date);
+        return `${d.getMonth() + 1}/${d.getDate()}`;
+      }),
+      datasets: [{
+        label: account.name,
+        data: history.map(h => h.balance),
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.3,
+        pointRadius: history.length > 30 ? 0 : 3,
+        pointHoverRadius: 5,
+        pointBackgroundColor: '#10b981',
+      }],
+    },
+    options: chartOptions(c),
+  });
+}
+
+function getAccountHistory(accountName, days) {
+  const transactions = store.getTransactions()
+    .filter(t => t.date)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (transactions.length === 0) return [];
+
+  const accounts = store.getAccounts();
+  const account = accounts.find(a => a.name === accountName);
+  let balance = account?.initialBalance || 0;
+
+  const dailyBalances = {};
+
+  for (const tx of transactions) {
+    const amount = Number(tx.amount) || 0;
+    if (tx.type === 'income' && tx.toAccount === accountName) {
+      balance += amount;
+    } else if (tx.type === 'expense' && tx.fromAccount === accountName) {
+      balance -= amount;
+    } else if (tx.type === 'transfer') {
+      if (tx.fromAccount === accountName) balance -= amount;
+      if (tx.toAccount === accountName) balance += amount;
+    }
+    dailyBalances[tx.date] = balance;
+  }
+
+  const endDate = new Date();
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - days);
+  const startStr = startDate.toISOString().split('T')[0];
+
+  const result = [];
+  for (const [date, bal] of Object.entries(dailyBalances).sort(([a], [b]) => a.localeCompare(b))) {
+    if (date >= startStr) {
+      result.push({ date, balance: bal });
+    }
+  }
+
+  const todayStr = endDate.toISOString().split('T')[0];
+  if (result.length === 0 || result[result.length - 1].date !== todayStr) {
+    result.push({ date: todayStr, balance });
+  }
+
+  return result;
+}
+
+function chartOptions(c) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { intersect: false, mode: 'index' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: c.tooltipBg,
+        titleColor: c.textColor,
+        bodyColor: c.tooltipBody,
+        borderColor: c.tooltipBorder,
+        borderWidth: 1,
+        padding: 12,
+        displayColors: false,
+        callbacks: {
+          label: ctx => `¥${ctx.parsed.y.toLocaleString('ja-JP')}`,
         },
       },
     },
-  });
+    scales: {
+      x: {
+        grid: { color: c.gridColor },
+        ticks: { color: c.textColor, maxTicksLimit: 8, font: { size: 11 } },
+      },
+      y: {
+        grid: { color: c.gridColor },
+        ticks: {
+          color: c.textColor,
+          font: { size: 11 },
+          callback: val => `¥${(val / 1000).toFixed(0)}K`,
+        },
+      },
+    },
+  };
 }
 
 function refresh() {

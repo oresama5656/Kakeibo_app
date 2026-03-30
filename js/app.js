@@ -6,6 +6,7 @@ import { initStore } from './store.js';
 import { render as renderInput } from './screens/input.js';
 import { render as renderDashboard } from './screens/dashboard.js';
 import { render as renderHistory } from './screens/history.js';
+import { render as renderAnalysis } from './screens/analysis.js';
 import { render as renderSettings, applyTheme } from './screens/settings.js';
 import { getSettings } from './store.js';
 
@@ -57,6 +58,7 @@ function navigateTo(screen) {
       case 'input': renderInput(screenEl); break;
       case 'dashboard': renderDashboard(screenEl); break;
       case 'history': renderHistory(screenEl); break;
+      case 'analysis': renderAnalysis(screenEl); break;
       case 'settings': renderSettings(screenEl); break;
     }
   }

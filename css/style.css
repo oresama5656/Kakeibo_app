@@ -330,7 +330,7 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-width: 480px;
+  max-width: 600px;
   margin: 0 auto;
 }
 
@@ -532,8 +532,104 @@ input:focus, select:focus, textarea:focus {
 }
 
 .date-input {
-  max-width: 150px;
+  max-width: 160px;
   flex: none !important;
+}
+
+/* Date Row with shortcuts */
+.date-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.date-shortcut-btn {
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  background: transparent;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.date-shortcut-btn:hover:not(:disabled) {
+  background: var(--color-accent);
+  color: white;
+}
+
+.date-shortcut-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Amount Input Field */
+.amount-input-section {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  border: 1px solid var(--border-color);
+}
+
+.amount-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.amount-yen {
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-secondary);
+}
+
+.amount-field {
+  flex: 1;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  border: none;
+  background: transparent;
+  padding: var(--space-sm) 0;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.amount-field::-webkit-outer-spin-button,
+.amount-field::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.amount-field:focus {
+  border: none;
+}
+
+/* Submit Button */
+.submit-btn {
+  width: 100%;
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-top: var(--space-sm);
+}
+
+.submit-btn.expense-mode { background: var(--color-expense); }
+.submit-btn.expense-mode:hover { background: #e11d48; }
+.submit-btn.income-mode { background: var(--color-income); }
+.submit-btn.income-mode:hover { background: #059669; }
+.submit-btn.transfer-mode { background: var(--color-transfer); }
+.submit-btn.transfer-mode:hover { background: #2563eb; }
+
+.submit-btn:active {
+  transform: scale(0.98);
 }
 
 /* Shortcuts */
@@ -581,58 +677,67 @@ input:focus, select:focus, textarea:focus {
   transform: scale(0.95);
 }
 
-/* Numpad */
-.numpad {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--border-color);
-  flex-shrink: 0;
+/* Bulk Input Table (PC only) */
+.bulk-input-section {
+  padding-bottom: var(--space-lg);
 }
 
-.numpad-btn {
+.bulk-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bulk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.bulk-table th {
+  padding: var(--space-sm) var(--space-xs);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xs);
+  border-bottom: 2px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.bulk-table td {
+  padding: var(--space-xs);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.bulk-input {
+  width: 100%;
+  height: 36px;
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs) var(--space-sm);
+  min-width: 80px;
+}
+
+.bulk-input[type="date"] { min-width: 130px; }
+.bulk-input[type="number"] { min-width: 90px; }
+
+.bulk-delete-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 54px;
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-semibold);
-  background: var(--bg-secondary);
-  transition: all var(--transition-fast);
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.numpad-btn:active {
-  background: var(--bg-card-hover);
-  transform: scale(0.97);
-}
-
-.numpad-btn.clear {
   color: var(--color-danger);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-sm);
+  transition: background var(--transition-fast);
 }
 
-.numpad-btn.backspace {
-  font-size: var(--font-size-lg);
+.bulk-delete-btn:hover {
+  background: var(--color-expense-bg);
 }
 
-.numpad-btn.submit {
-  background: var(--color-accent);
-  color: white;
-  font-size: var(--font-size-lg);
+.bulk-toggle {
+  max-width: 120px;
 }
-
-.numpad-btn.submit:active {
-  background: #4f46e5;
-}
-
-.numpad-btn.submit.expense-mode { background: var(--color-expense); }
-.numpad-btn.submit.expense-mode:active { background: #e11d48; }
-.numpad-btn.submit.income-mode { background: var(--color-income); }
-.numpad-btn.submit.income-mode:active { background: #059669; }
-.numpad-btn.submit.transfer-mode { background: var(--color-transfer); }
-.numpad-btn.submit.transfer-mode:active { background: #2563eb; }
 
 
 /* ============================================
@@ -1133,7 +1238,7 @@ input:focus, select:focus, textarea:focus {
   }
 
   .icon-grid {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
   }
 
   .icon-grid.expanded {
@@ -1141,21 +1246,8 @@ input:focus, select:focus, textarea:focus {
   }
 
   .input-screen {
-    max-width: 500px;
+    max-width: 600px;
     padding-top: var(--space-md);
-  }
-
-  .numpad-btn {
-    height: 60px;
-    border-radius: var(--radius-sm);
-  }
-
-  .numpad {
-    gap: var(--space-xs);
-    background: transparent;
-    padding: 0 var(--space-md);
-    max-width: 360px;
-    margin: 0 auto;
   }
 
   .modal-content {
@@ -1174,7 +1266,7 @@ input:focus, select:focus, textarea:focus {
 
 @media (min-width: 1024px) {
   .icon-grid.expanded {
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(6, 1fr);
   }
 
   .account-cards {
