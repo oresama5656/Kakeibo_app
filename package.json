@@ -1,0 +1,9 @@
+{
+  "name": "kakeibo-app",
+  "version": "1.0.0",
+  "description": "家計簿Webアプリ",
+  "scripts": {
+    "dev": "npx -y serve . -l 3000 --cors",
+    "build": "echo 'Static site - no build needed'"
+  }
+}

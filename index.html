@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="description" content="シンプルで直感的な家計簿アプリ。アイコンタップで簡単入力、資産推移をリアルタイムで可視化。">
+  <meta name="theme-color" content="#0f0f1a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>家計簿 - Kakeibo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- PC Sidebar -->
+    <nav id="sidebar" class="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">📒</span>
+        <span class="logo-text">家計簿</span>
+      </div>
+      <ul class="sidebar-nav">
+        <li><button class="nav-btn active" data-screen="input"><span class="nav-icon">📝</span><span class="nav-label">入力</span></button></li>
+        <li><button class="nav-btn" data-screen="dashboard"><span class="nav-icon">📊</span><span class="nav-label">ダッシュ</span></button></li>
+        <li><button class="nav-btn" data-screen="history"><span class="nav-icon">📋</span><span class="nav-label">履歴</span></button></li>
+        <li><button class="nav-btn" data-screen="settings"><span class="nav-icon">⚙️</span><span class="nav-label">設定</span></button></li>
+      </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main-content" class="main-content">
+      <div id="screen-input" class="screen active"></div>
+      <div id="screen-dashboard" class="screen"></div>
+      <div id="screen-history" class="screen"></div>
+      <div id="screen-settings" class="screen"></div>
+    </main>
+
+    <!-- Mobile Bottom Tab -->
+    <nav id="bottom-tab" class="bottom-tab">
+      <button class="tab-btn active" data-screen="input"><span class="tab-icon">📝</span><span class="tab-label">入力</span></button>
+      <button class="tab-btn" data-screen="dashboard"><span class="tab-icon">📊</span><span class="tab-label">ダッシュ</span></button>
+      <button class="tab-btn" data-screen="history"><span class="tab-icon">📋</span><span class="tab-label">履歴</span></button>
+      <button class="tab-btn" data-screen="settings"><span class="tab-icon">⚙️</span><span class="tab-label">設定</span></button>
+    </nav>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
