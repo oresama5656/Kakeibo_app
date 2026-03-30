@@ -1,317 +1,149 @@
 // ============================================
-// データストア (localStorage版)
-// 将来的にGoogle Sheets APIに差し替え可能な設計
+// データ管理モジュール (v2.5 - クラウド対応)
 // ============================================
 
-import { DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES, DEFAULT_SHORTCUTS } from './data.js';
+import * as auth from './auth.js';
 
-const STORAGE_KEYS = {
-  transactions: 'kakeibo_transactions',
-  accounts: 'kakeibo_accounts',
-  categories: 'kakeibo_categories',
-  shortcuts: 'kakeibo_shortcuts',
-  settings: 'kakeibo_settings',
+// --- 初期データ ---
+const DEFAULT_CATEGORIES = [
+  { id: 'cat_01', name: '食費', icon: '🍎', type: 'expense' },
+  { id: 'cat_02', name: '日用品', icon: '🧻', type: 'expense' },
+  { id: 'cat_03', name: '交通費', icon: '🚃', type: 'expense' },
+  { id: 'cat_04', name: '交際費', icon: '🍻', type: 'expense' },
+  { id: 'cat_05', name: '居住費', icon: '🏠', type: 'expense' },
+  { id: 'cat_06', name: '娯楽', icon: '🎮', type: 'expense' },
+  { id: 'cat_07', name: '給与', icon: '💰', type: 'income' },
+  { id: 'cat_08', name: '他収入', icon: '🧧', type: 'income' }
+];
+
+const DEFAULT_ACCOUNTS = [
+  { id: 'acc_01', name: '現金', icon: '💵', balance: 0 },
+  { id: 'acc_02', name: '銀行A', icon: '🏦', balance: 0 },
+  { id: 'acc_03', name: 'クレカ', icon: '💳', balance: 0 }
+];
+
+let state = {
+  transactions: [],
+  categories: [],
+  accounts: [],
+  shortcuts: [],
+  settings: {
+    darkMode: 'auto',
+    currency: 'JPY',
+    sheetId: null
+  }
 };
 
-// --- Utility ---
-function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
-}
+// --- Core API ---
 
-function load(key, fallback = []) {
-  try {
-    const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function save(key, data) {
-  localStorage.setItem(key, JSON.stringify(data));
-}
-
-// --- Initialize ---
 export function initStore() {
-  if (!localStorage.getItem(STORAGE_KEYS.accounts)) {
-    const accounts = DEFAULT_ACCOUNTS.map((a, i) => ({
-      ...a,
-      id: generateId() + i,
-      initialBalance: 0,
-    }));
-    save(STORAGE_KEYS.accounts, accounts);
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.categories)) {
-    const categories = DEFAULT_CATEGORIES.map((c, i) => ({
-      ...c,
-      id: generateId() + i,
-    }));
-    save(STORAGE_KEYS.categories, categories);
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.shortcuts)) {
-    save(STORAGE_KEYS.shortcuts, DEFAULT_SHORTCUTS);
-  }
-  if (!localStorage.getItem(STORAGE_KEYS.transactions)) {
-    save(STORAGE_KEYS.transactions, []);
+  const localData = localStorage.getItem('kakeibo_data');
+  if (localData) {
+    state = JSON.parse(localData);
+  } else {
+    state.categories = [...DEFAULT_CATEGORIES];
+    state.accounts = [...DEFAULT_ACCOUNTS];
+    save();
   }
 }
 
-// --- Transactions ---
-export function getTransactions() {
-  return load(STORAGE_KEYS.transactions, []);
+// データを保存 (Local + Cloud)
+export async function save() {
+  localStorage.setItem('kakeibo_data', JSON.stringify(state));
+  
+  // クラウド同期 (ログイン中の場合)
+  if (auth.isLoggedIn()) {
+    const sheetId = localStorage.getItem('kakeibo_sheet_id');
+    if (sheetId) {
+      try {
+        console.log('Auto-syncing to cloud...');
+        await syncToCloud(sheetId);
+      } catch (err) {
+        console.warn('Auto-sync failed:', err);
+      }
+    }
+  }
 }
 
+// --- Sync Functions ---
+
+export async function syncToCloud(sheetId) {
+  if (!auth.isLoggedIn()) return;
+
+  // 各データを配列形式に変換 (スプレッドシートの1行分が1配列)
+  const txRows = state.transactions.map(t => [t.id, t.date, t.amount, t.type, t.categoryId, t.accountId, t.memo]);
+  const catRows = state.categories.map(c => [c.id, c.name, c.icon, c.type]);
+  const accRows = state.accounts.map(a => [a.id, a.name, a.icon, a.balance]);
+  const setRows = [[JSON.stringify(state.settings)]];
+
+  // シートごとに一括更新
+  await auth.writeRows(sheetId, 'transactions!A1', txRows.length ? txRows : [['EMPTY']]);
+  await auth.writeRows(sheetId, 'categories!A1', catRows.length ? catRows : [['EMPTY']]);
+  await auth.writeRows(sheetId, 'accounts!A1', accRows.length ? accRows : [['EMPTY']]);
+  await auth.writeRows(sheetId, 'settings!A1', setRows);
+}
+
+export async function loadFromCloud(sheetId) {
+  if (!auth.isLoggedIn()) return;
+
+  try {
+    const [txRows, catRows, accRows, setRows] = await Promise.all([
+      auth.readRows(sheetId, 'transactions!A:G'),
+      auth.readRows(sheetId, 'categories!A:D'),
+      auth.readRows(sheetId, 'accounts!A:D'),
+      auth.readRows(sheetId, 'settings!A1')
+    ]);
+
+    if (txRows.length > 0 && txRows[0][0] !== 'EMPTY') {
+      state.transactions = txRows.map(r => ({ id: r[0], date: r[1], amount: Number(r[2]), type: r[3], categoryId: r[4], accountId: r[5], memo: r[6] || '' }));
+    }
+    if (catRows.length > 0 && catRows[0][0] !== 'EMPTY') {
+      state.categories = catRows.map(r => ({ id: r[0], name: r[1], icon: r[2], type: r[3] }));
+    }
+    if (accRows.length > 0 && accRows[0][0] !== 'EMPTY') {
+      state.accounts = accRows.map(r => ({ id: r[0], name: r[1], icon: r[2], balance: Number(r[3]) }));
+    }
+    if (setRows.length > 0) {
+      state.settings = JSON.parse(setRows[0][0]);
+    }
+
+    localStorage.setItem('kakeibo_data', JSON.stringify(state));
+    return true;
+  } catch (err) {
+    console.error('Cloud load failed:', err);
+    return false;
+  }
+}
+
+// --- Getters ---
+export const getTransactions = () => state.transactions;
+export const getCategories = () => state.categories;
+export const getAccounts = () => state.accounts;
+export const getSettings = () => state.settings;
+
+// --- Setters ---
 export function addTransaction(tx) {
-  const transactions = getTransactions();
-  const newTx = {
-    ...tx,
-    id: generateId(),
-    createdAt: new Date().toISOString(),
-  };
-  transactions.push(newTx);
-  save(STORAGE_KEYS.transactions, transactions);
-  return newTx;
-}
-
-export function updateTransaction(id, updates) {
-  const transactions = getTransactions();
-  const idx = transactions.findIndex(t => t.id === id);
-  if (idx === -1) return null;
-  transactions[idx] = { ...transactions[idx], ...updates };
-  save(STORAGE_KEYS.transactions, transactions);
-  return transactions[idx];
+  const id = 'tx_' + Date.now();
+  state.transactions.unshift({ ...tx, id });
+  save();
 }
 
 export function deleteTransaction(id) {
-  const transactions = getTransactions().filter(t => t.id !== id);
-  save(STORAGE_KEYS.transactions, transactions);
+  state.transactions = state.transactions.filter(t => t.id !== id);
+  save();
 }
 
-// --- Accounts ---
-export function getAccounts() {
-  return load(STORAGE_KEYS.accounts, []);
+export function updateCategories(newCategories) {
+  state.categories = newCategories;
+  save();
 }
 
-export function addAccount(account) {
-  const accounts = getAccounts();
-  const newAccount = { ...account, id: generateId() };
-  accounts.push(newAccount);
-  save(STORAGE_KEYS.accounts, accounts);
-  return newAccount;
+export function updateAccounts(newAccounts) {
+  state.accounts = newAccounts;
+  save();
 }
 
-export function updateAccount(id, updates) {
-  const accounts = getAccounts();
-  const idx = accounts.findIndex(a => a.id === id);
-  if (idx === -1) return null;
-  accounts[idx] = { ...accounts[idx], ...updates };
-  save(STORAGE_KEYS.accounts, accounts);
-  return accounts[idx];
-}
-
-export function deleteAccount(id) {
-  const accounts = getAccounts().filter(a => a.id !== id);
-  save(STORAGE_KEYS.accounts, accounts);
-}
-
-export function reorderAccounts(ids) {
-  const accounts = getAccounts();
-  const reordered = ids.map((id, index) => {
-    const acc = accounts.find(a => a.id === id);
-    if (!acc) return null;
-    return { ...acc, order: index + 1 };
-  }).filter(Boolean);
-  save(STORAGE_KEYS.accounts, reordered);
-}
-
-// --- Categories ---
-export function getCategories() {
-  return load(STORAGE_KEYS.categories, []);
-}
-
-export function addCategory(category) {
-  const categories = getCategories();
-  const newCat = { ...category, id: generateId() };
-  categories.push(newCat);
-  save(STORAGE_KEYS.categories, categories);
-  return newCat;
-}
-
-export function updateCategory(id, updates) {
-  const categories = getCategories();
-  const idx = categories.findIndex(c => c.id === id);
-  if (idx === -1) return null;
-  categories[idx] = { ...categories[idx], ...updates };
-  save(STORAGE_KEYS.categories, categories);
-  return categories[idx];
-}
-
-export function deleteCategory(id) {
-  const categories = getCategories().filter(c => c.id !== id);
-  save(STORAGE_KEYS.categories, categories);
-}
-
-export function reorderCategories(ids) {
-  const categories = getCategories();
-  const reordered = ids.map((id, index) => {
-    const cat = categories.find(c => c.id === id);
-    if (!cat) return null;
-    return { ...cat, order: index + 1 };
-  }).filter(Boolean);
-  save(STORAGE_KEYS.categories, reordered);
-}
-
-// --- Shortcuts ---
-export function getShortcuts() {
-  return load(STORAGE_KEYS.shortcuts, []);
-}
-
-export function addShortcut(shortcut) {
-  const shortcuts = getShortcuts();
-  const newSc = { ...shortcut, id: generateId() };
-  shortcuts.push(newSc);
-  save(STORAGE_KEYS.shortcuts, shortcuts);
-  return newSc;
-}
-
-export function updateShortcut(id, updates) {
-  const shortcuts = getShortcuts();
-  const idx = shortcuts.findIndex(s => s.id === id);
-  if (idx === -1) return null;
-  shortcuts[idx] = { ...shortcuts[idx], ...updates };
-  save(STORAGE_KEYS.shortcuts, shortcuts);
-  return shortcuts[idx];
-}
-
-export function deleteShortcut(id) {
-  const shortcuts = getShortcuts().filter(s => s.id !== id);
-  save(STORAGE_KEYS.shortcuts, shortcuts);
-}
-
-// --- Balance Calculation ---
-export function getAccountBalance(accountId) {
-  const accounts = getAccounts();
-  const account = accounts.find(a => a.id === accountId);
-  if (!account) return 0;
-
-  const transactions = getTransactions();
-  let balance = account.initialBalance || 0;
-
-  for (const tx of transactions) {
-    const amount = Number(tx.amount) || 0;
-    if (tx.type === 'income' && tx.toAccount === account.name) {
-      balance += amount;
-    } else if (tx.type === 'expense' && tx.fromAccount === account.name) {
-      balance -= amount;
-    } else if (tx.type === 'transfer') {
-      if (tx.fromAccount === account.name) balance -= amount;
-      if (tx.toAccount === account.name) balance += amount;
-    }
-  }
-  return balance;
-}
-
-export function getAccountBalanceByName(accountName) {
-  const accounts = getAccounts();
-  const account = accounts.find(a => a.name === accountName);
-  if (!account) return 0;
-  return getAccountBalance(account.id);
-}
-
-export function getTotalBalance() {
-  const accounts = getAccounts();
-  return accounts.reduce((sum, acc) => sum + getAccountBalance(acc.id), 0);
-}
-
-// --- Asset History (calculated from transactions) ---
-export function getAssetHistory(days = 90) {
-  const transactions = getTransactions()
-    .filter(t => t.date)
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  if (transactions.length === 0) return [];
-
-  const accounts = getAccounts();
-  const balances = {};
-  accounts.forEach(a => { balances[a.name] = a.initialBalance || 0; });
-
-  const dailyTotals = {};
-
-  for (const tx of transactions) {
-    const amount = Number(tx.amount) || 0;
-    if (tx.type === 'income' && tx.toAccount) {
-      balances[tx.toAccount] = (balances[tx.toAccount] || 0) + amount;
-    } else if (tx.type === 'expense' && tx.fromAccount) {
-      balances[tx.fromAccount] = (balances[tx.fromAccount] || 0) - amount;
-    } else if (tx.type === 'transfer') {
-      if (tx.fromAccount) balances[tx.fromAccount] = (balances[tx.fromAccount] || 0) - amount;
-      if (tx.toAccount) balances[tx.toAccount] = (balances[tx.toAccount] || 0) + amount;
-    }
-
-    const total = Object.values(balances).reduce((s, v) => s + v, 0);
-    dailyTotals[tx.date] = total;
-  }
-
-  // Fill in gaps and limit to requested days
-  const dates = Object.keys(dailyTotals).sort();
-  const endDate = new Date();
-  const startDate = new Date(endDate);
-  startDate.setDate(startDate.getDate() - days);
-  const startStr = startDate.toISOString().split('T')[0];
-
-  const result = [];
-  let lastTotal = 0;
-  for (const [date, total] of Object.entries(dailyTotals).sort(([a], [b]) => a.localeCompare(b))) {
-    if (date >= startStr) {
-      result.push({ date, total });
-    }
-    lastTotal = total;
-  }
-
-  // Add today if not present
-  const todayStr = endDate.toISOString().split('T')[0];
-  if (result.length === 0 || result[result.length - 1].date !== todayStr) {
-    result.push({ date: todayStr, total: lastTotal });
-  }
-
-  return result;
-}
-
-// --- Settings ---
-export function getSettings() {
-  return load(STORAGE_KEYS.settings, {
-    darkMode: 'auto', // 'auto', 'dark', 'light'
-    sheetId: '',
-  });
-}
-
-export function updateSettings(updates) {
-  const settings = getSettings();
-  const newSettings = { ...settings, ...updates };
-  save(STORAGE_KEYS.settings, newSettings);
-  return newSettings;
-}
-
-// --- Export / Import ---
-export function exportAllData() {
-  return {
-    transactions: getTransactions(),
-    accounts: getAccounts(),
-    categories: getCategories(),
-    shortcuts: getShortcuts(),
-    settings: getSettings(),
-    exportedAt: new Date().toISOString(),
-  };
-}
-
-export function importAllData(data) {
-  if (data.transactions) save(STORAGE_KEYS.transactions, data.transactions);
-  if (data.accounts) save(STORAGE_KEYS.accounts, data.accounts);
-  if (data.categories) save(STORAGE_KEYS.categories, data.categories);
-  if (data.shortcuts) save(STORAGE_KEYS.shortcuts, data.shortcuts);
-  if (data.settings) save(STORAGE_KEYS.settings, data.settings);
-}
-
-export function clearAllData() {
-  Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+export function updateSettings(newSettings) {
+  state.settings = { ...state.settings, ...newSettings };
+  save();
 }

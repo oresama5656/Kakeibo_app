@@ -133,6 +133,9 @@ export function render(container) {
                 ${localStorage.getItem('kakeibo_sheet_id') || '作成中...'}
               </span>
             </div>
+            <div class="settings-item" data-action="syncCloud" style="justify-content:center; color: var(--color-accent);">
+              <span style="font-weight: var(--font-weight-semibold);">📤 クラウドへ今すぐ同期</span>
+            </div>
             <div class="settings-item" data-action="googleLogout" style="justify-content:center; color: var(--color-danger);">
               <span style="font-weight: var(--font-weight-semibold);">連携を解除</span>
             </div>
@@ -227,6 +230,20 @@ function handleClick(e) {
     case 'clearData': clearData(); break;
     case 'googleLogin': handleGoogleLogin(); break;
     case 'googleLogout': auth.signOut(); break;
+    case 'syncCloud': handleSync(); break;
+  }
+}
+
+async function handleSync() {
+  const sheetId = localStorage.getItem('kakeibo_sheet_id');
+  if (!sheetId) return;
+  try {
+    window.showToast?.('クラウド同期中...', 'info');
+    await store.syncToCloud(sheetId);
+    window.showToast?.('同期が完了しました ✓');
+  } catch (err) {
+    console.error(err);
+    window.showToast?.('同期に失敗しました', 'error');
   }
 }
 
@@ -236,6 +253,10 @@ async function handleGoogleLogin() {
     await auth.signIn();
     window.showToast?.('スプレッドシートを準備中...');
     const sheetId = await auth.getOrCreateSpreadsheet();
+    
+    window.showToast?.('初回同期データを送信中...');
+    await store.syncToCloud(sheetId);
+    
     window.showToast?.('クラウド連携が完了しました！ ✓');
     refresh();
   } catch (err) {
