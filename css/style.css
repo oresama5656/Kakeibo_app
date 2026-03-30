@@ -954,6 +954,37 @@ textarea:focus {
   font-variant-numeric: tabular-nums;
 }
 
+/* Drag and Drop Transfer Styles */
+.account-card.sortable-ghost {
+  opacity: 0.3;
+  background: var(--color-selected-bg) !important;
+  border: 2px dashed var(--color-selected);
+}
+
+.account-card.drag-over {
+  transform: scale(1.05);
+  border-color: var(--color-income) !important;
+  background: var(--color-income-light) !important;
+  box-shadow: 0 0 15px var(--color-income-bg);
+  z-index: 10;
+}
+
+/* Quick Transfer Modal Specifics */
+.quick-transfer-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.transfer-arrow {
+  color: var(--color-transfer);
+  font-size: 1.5rem;
+}
+
 
 /* ============================================
    History Screen

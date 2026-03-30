@@ -99,6 +99,101 @@ export function render(container) {
   }
 
   container.addEventListener('click', handleClick);
+
+  // Initialize Drag & Drop
+  const el = container.querySelector('.account-cards');
+  if (el && window.Sortable) {
+    Sortable.create(el, {
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      dragClass: 'sortable-drag',
+      forceFallback: true, 
+      fallbackClass: 'sortable-drag',
+      onEnd: (evt) => {
+        const touch = evt.originalEvent.changedTouches ? evt.originalEvent.changedTouches[0] : evt.originalEvent;
+        const targetEl = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.account-card');
+        
+        if (targetEl && targetEl !== evt.item) {
+          const fromId = evt.item.dataset.id;
+          const toId = targetEl.dataset.id;
+          openQuickTransferModal(fromId, toId);
+          refresh(); 
+        } else {
+          const ids = Array.from(el.querySelectorAll('.account-card')).map(card => card.dataset.id);
+          store.reorderAccounts(ids);
+        }
+      }
+    });
+  }
+}
+
+function openQuickTransferModal(fromId, toId) {
+  const accounts = store.getAccounts();
+  const fromAcc = accounts.find(a => a.id === fromId);
+  const toAcc = accounts.find(a => a.id === toId);
+  if (!fromAcc || !toAcc) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '3000';
+  overlay.innerHTML = `
+    <div class="modal-content" style="margin: auto; border-radius: var(--radius-xl);">
+      <div class="modal-header">
+        <div class="modal-title">クイック振替 🔄</div>
+        <button class="modal-close-btn">✕</button>
+      </div>
+      <div class="quick-transfer-header">
+        <div style="text-align:center">
+          <div style="font-size:2rem">${fromAcc.icon}</div>
+          <div style="font-size:0.8rem">${fromAcc.name}</div>
+        </div>
+        <div class="transfer-arrow">➡</div>
+        <div style="text-align:center">
+          <div style="font-size:2rem">${toAcc.icon}</div>
+          <div style="font-size:0.8rem">${toAcc.name}</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">移動する金額</label>
+        <input type="number" id="quick-transfer-amount" class="form-input" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary modal-cancel-btn">キャンセル</button>
+        <button class="btn btn-primary" id="execute-quick-transfer">移動する</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  const input = overlay.querySelector('#quick-transfer-amount');
+  setTimeout(() => input.focus(), 100);
+
+  const close = () => { overlay.remove(); };
+  overlay.querySelector('.modal-close-btn').onclick = close;
+  overlay.querySelector('.modal-cancel-btn').onclick = close;
+  
+  overlay.querySelector('#execute-quick-transfer').onclick = () => {
+    const amount = Number(input.value);
+    if (!amount || amount <= 0) {
+      window.showToast?.('金額を入力してください', 'error');
+      return;
+    }
+
+    const tx = {
+      date: new Date().toISOString().split('T')[0],
+      type: 'transfer',
+      amount: amount,
+      category: '',
+      fromAccount: fromAcc.name,
+      toAccount: toAcc.name,
+      memo: 'クイック振替'
+    };
+
+    store.addTransaction(tx);
+    window.showToast?.('振替を完了しました ✓');
+    close();
+    refresh();
+  };
 }
 
 function handleClick(e) {

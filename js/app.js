@@ -2,12 +2,12 @@
 // メインアプリケーション (v3.3 - キャッシュ強制破棄・最終安定版)
 // ============================================
 
-// バージョンを v3.3 に一気に引き上げて、古いキャッシュを完全に無視させる
 import { initStore } from './store.js';
 import * as auth from './auth.js';
 import { render as renderInput } from './screens/input.js';
 import { render as renderDashboard } from './screens/dashboard.js';
 import { render as renderHistory } from './screens/history.js';
+import { render as renderAnalysis } from './screens/analysis.js';
 import { render as renderSettings, applyTheme } from './screens/settings.js';
 import * as store from './store.js';
 
@@ -35,7 +35,6 @@ async function initGoogleBackground() {
   try {
     let retryCount = 0;
     const checkGoogle = async () => {
-      // 外部SDKが完全に揃うまで粘り強く待つ
       if (window.google && window.gapi) {
         console.log('Google SDKs found. Initializing stable auth...');
         await auth.initGoogleAuth();
@@ -49,14 +48,12 @@ async function initGoogleBackground() {
           console.log('Cloud link detected. Pulling latest data...');
           try {
             await store.loadFromCloud(sheetId);
-            renderApp(); // Re-render with new data
+            renderApp();
           } catch (err) {
             console.warn('Initial cloud pull failed (likely expired session):', err);
-            // 期限切れの場合は auth 内でトークンが消去されているため、次回アクセス時にログインボタンが出る
           }
         }
 
-        // Settings screen login status refresh
         if (localStorage.getItem('kakeibo_current_screen') === 'settings') {
           const container = document.getElementById('screen-settings');
           if (container) renderSettings(container);
