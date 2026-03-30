@@ -450,6 +450,16 @@ textarea:focus {
   border: 1px solid var(--border-color);
 }
 
+@media (max-width: 767px) {
+  .selector-section {
+    padding: var(--space-sm) var(--space-md);
+    margin-bottom: 2px;
+  }
+  .selector-header {
+    margin-bottom: 0;
+  }
+}
+
 .selector-header {
   display: flex;
   justify-content: space-between;
@@ -555,8 +565,14 @@ textarea:focus {
 }
 
 .icon-emoji {
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   line-height: 1;
+}
+
+@media (min-width: 768px) {
+  .icon-emoji {
+    font-size: 2rem;
+  }
 }
 
 .icon-label {

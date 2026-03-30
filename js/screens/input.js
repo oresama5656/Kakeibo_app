@@ -72,9 +72,16 @@ function renderIconGrid(items, selectedName, expanded, onSelect, onToggle, secti
   const selectedItem = all.find(i => i.name === selectedName);
   const showExpand = rest.length > 0;
   
-  // 選択中のアイテムがピン留めされていない場合、折りたたみ表示でも追加で見せる
+  const isPC = window.innerWidth >= 768;
+
+  // 1画面に収まるように、スマホ版かつ折りたたみ時はアイコンを一切表示しない（バッジのみ）
+  // PC版の場合は、利便性のためにピン留めアイテムを常時表示する
   let displayItems = expanded ? all : [...pinned];
-  if (!expanded && selectedItem && !pinned.find(p => p.name === selectedName)) {
+  
+  if (!isPC && !expanded) {
+    displayItems = []; // スマホ版の閉じている時は何も表示しない
+  } else if (!expanded && selectedItem && !pinned.find(p => p.name === selectedName)) {
+    // 選択中のアイテムがピン留めされておらず、表示対象にも入っていない場合は追加で見せる
     displayItems.push(selectedItem);
   }
 
