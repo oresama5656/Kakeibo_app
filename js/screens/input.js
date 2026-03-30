@@ -337,39 +337,41 @@ function handleCsvFile(e) {
       let transactionsToAdd = [];
       let errors = [];
 
-      data.forEach((row, index) => {
+      data.slice(1).forEach((row, index) => {
         const [date, type, cat, amount, from, to, memo] = row.map(s => s?.trim());
         const isEmpty = !date && !type && !amount;
         if (isEmpty) return;
 
+        const rowNum = index + 2; // For error messages, start from CSV row 2
+
         if (!date || !type || !amount) {
-          errors.push(`行${index + 1}: 項目不足`);
+          errors.push(`行${rowNum}: 項目不足`);
           return;
         }
 
         const typeMap = { '支出': 'expense', '収入': 'income', '振替': 'transfer' };
         const internalType = typeMap[type];
         if (!internalType) {
-          errors.push(`行${index + 1}: 種類不正 (${type})`);
+          errors.push(`行${rowNum}: 種類不正 (${type})`);
           return;
         }
 
         const numAmount = Number(String(amount).replace(/[,¥]/g, ''));
         if (isNaN(numAmount)) {
-          errors.push(`行${index + 1}: 金額不正`);
+          errors.push(`行${rowNum}: 金額不正`);
           return;
         }
 
         if ((internalType === 'expense' || internalType === 'transfer') && !accountNames.includes(from)) {
-          errors.push(`行${index + 1}: 口座名不一致 [${from}]`);
+          errors.push(`行${rowNum}: 口座名不一致 [${from}]`);
           return;
         }
         if ((internalType === 'income' || internalType === 'transfer') && !accountNames.includes(to)) {
-          errors.push(`行${index + 1}: 入金先不一致 [${to}]`);
+          errors.push(`行${rowNum}: 入金先不一致 [${to}]`);
           return;
         }
         if (internalType !== 'transfer' && cat && !categoryNames.includes(cat)) {
-          errors.push(`行${index + 1}: カテゴリ不一致 [${cat}]`);
+          errors.push(`行${rowNum}: カテゴリ不一致 [${cat}]`);
           return;
         }
 
