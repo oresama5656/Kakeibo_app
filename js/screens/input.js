@@ -412,9 +412,9 @@ function handleClick(e) {
       bulkRows = [];
       refresh();
       break;
-    case 'selectFromAccount': state.fromAccount = target.dataset.name; refresh(); break;
-    case 'selectToAccount': state.toAccount = target.dataset.name; refresh(); break;
-    case 'selectCategory': state.category = target.dataset.name; refresh(); break;
+    case 'selectFromAccount': state.fromAccount = target.dataset.name; state.accountsExpanded = false; refresh(); break;
+    case 'selectToAccount': state.toAccount = target.dataset.name; state.accountsExpanded = false; refresh(); break;
+    case 'selectCategory': state.category = target.dataset.name; state.categoriesExpanded = false; refresh(); break;
     case 'toggleAccounts': state.accountsExpanded = !state.accountsExpanded; refresh(); break;
     case 'toggleCategories': state.categoriesExpanded = !state.categoriesExpanded; refresh(); break;
     case 'dateToday': state.date = getTodayStr(); refresh(); break;
@@ -438,6 +438,8 @@ function handleClick(e) {
         state.category = sc.category || null;
         state.fromAccount = sc.fromAccount || null;
         state.toAccount = sc.toAccount || null;
+        state.accountsExpanded = false;
+        state.categoriesExpanded = false;
         refresh();
       }
       break;
