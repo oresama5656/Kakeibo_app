@@ -106,16 +106,17 @@ export function render(container) {
 
   if (el && window.Sortable) {
     Sortable.create(el, {
+      sort: false, // 並び替え機能を一旦完全停止
       animation: 150,
       ghostClass: 'sortable-ghost',
       dragClass: 'sortable-drag',
       forceFallback: true, 
       fallbackClass: 'sortable-drag',
       onMove: (evt) => {
-        // 前のターゲットのハイライトを消す
-        if (currentTarget) currentTarget.classList.remove('drag-over');
+        // 全てのカードからハイライトを一旦クリア（残らないように）
+        el.querySelectorAll('.account-card').forEach(c => c.classList.remove('drag-over'));
         
-        // 重なっているカードがあるか確認
+        // 重なっている「相手」のカードを取得してハイライト
         if (evt.related && evt.related.classList.contains('account-card')) {
           currentTarget = evt.related;
           currentTarget.classList.add('drag-over');
@@ -127,29 +128,27 @@ export function render(container) {
         // ハイライトを全てクリア
         el.querySelectorAll('.account-card').forEach(c => c.classList.remove('drag-over'));
 
-        // 指を離した場所の要素を取得（自分の当たり判定を一時的に無効化して「下」を見る）
+        // ドラッグした場所を特定し、下にある口座を探す
+        const touch = evt.originalEvent.changedTouches ? evt.originalEvent.changedTouches[0] : evt.originalEvent;
         const item = evt.item;
+        
+        // 当たり判定のために自分自身を一時的に無効化
         const originalPointerEvents = item.style.pointerEvents;
         item.style.pointerEvents = 'none';
-
-        const touch = evt.originalEvent.changedTouches ? evt.originalEvent.changedTouches[0] : evt.originalEvent;
+        
         const targetEl = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.account-card');
         
         item.style.pointerEvents = originalPointerEvents;
 
         if (targetEl && targetEl !== item) {
-          // 別のカードの上に落としたら振替！
           const fromId = item.dataset.id;
           const toId = targetEl.dataset.id;
           openQuickTransferModal(fromId, toId);
-          // 振替メニューを開くので、元の位置は変えないように再描画でリセット
-          refresh(); 
-        } else {
-          // 隙間に落としたら並び替え
-          const ids = Array.from(el.querySelectorAll('.account-card')).map(card => card.dataset.id);
-          store.reorderAccounts(ids);
-          currentTarget = null;
         }
+        
+        // sort: false でも位置が戻るので、明示的にリフレッシュしなくても大丈夫ですが
+        // 念のため画面全体を最新にする
+        refresh(); 
       }
     });
   }
