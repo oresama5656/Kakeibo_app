@@ -1,0 +1,17 @@
+{
+  "name": "かけいぼ - スプレッドシート家計簿",
+  "short_name": "かけいぼ",
+  "description": "Googleスプレッドシートとリアルタイム同期する家計簿アプリ",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
