@@ -67,28 +67,35 @@ export async function save() {
 // --- Sync Functions ---
 
 export async function syncToCloud(sheetId) {
-  if (!auth.isLoggedIn()) return;
-  const txRows = state.transactions.map(t => [t.id, t.date, t.amount, t.type, t.categoryId, t.accountId, t.memo, t.toAccountId || '']);
+  if (!auth.isLoggedIn()) throw new Error('Not logged in');
+  
+  const txRows = state.transactions.map(t => [t.id, t.date, t.amount, t.type, t.category, t.fromAccount, t.memo, t.toAccount || '']);
   const catRows = state.categories.map(c => [c.id, c.name, c.icon, c.type, c.order, c.pinned ? 1 : 0]);
   const accRows = state.accounts.map(a => [a.id, a.name, a.icon, a.balance, a.initialBalance, a.order, a.pinned ? 1 : 0]);
   const scRows = state.shortcuts.map(s => [s.id, s.name, s.type, s.amount, s.category, s.fromAccount, s.toAccount, s.order]);
   const setRows = [[JSON.stringify(state.settings)]];
 
-  // 古いデータの残骸が残らないよう、書き込み前にA:Hの範囲をクリアする
-  await auth.clearRows(sheetId, 'transactions!A:H');
-  await auth.clearRows(sheetId, 'categories!A:F');
-  await auth.clearRows(sheetId, 'accounts!A:G');
-  await auth.clearRows(sheetId, 'shortcuts!A:H');
+  // まず書き込みテストをして認証が有効かチェック
+  try {
+    await auth.clearRows(sheetId, 'transactions!A:H');
+    await auth.clearRows(sheetId, 'categories!A:F');
+    await auth.clearRows(sheetId, 'accounts!A:G');
+    await auth.clearRows(sheetId, 'shortcuts!A:H');
 
-  await auth.writeRows(sheetId, 'transactions!A1', txRows.length ? txRows : [['EMPTY']]);
-  await auth.writeRows(sheetId, 'categories!A1', catRows.length ? catRows : [['EMPTY']]);
-  await auth.writeRows(sheetId, 'accounts!A1', accRows.length ? accRows : [['EMPTY']]);
-  await auth.writeRows(sheetId, 'shortcuts!A1', scRows.length ? scRows : [['EMPTY']]);
-  await auth.writeRows(sheetId, 'settings!A1', setRows);
+    await auth.writeRows(sheetId, 'transactions!A1', txRows.length ? txRows : [['EMPTY']]);
+    await auth.writeRows(sheetId, 'categories!A1', catRows.length ? catRows : [['EMPTY']]);
+    await auth.writeRows(sheetId, 'accounts!A1', accRows.length ? accRows : [['EMPTY']]);
+    await auth.writeRows(sheetId, 'shortcuts!A1', scRows.length ? scRows : [['EMPTY']]);
+    await auth.writeRows(sheetId, 'settings!A1', setRows);
+  } catch (err) {
+    console.error('syncToCloud failed:', err);
+    throw err;
+  }
 }
 
 export async function loadFromCloud(sheetId) {
-  if (!auth.isLoggedIn()) return;
+  if (!auth.isLoggedIn()) throw new Error('Not logged in');
+  
   try {
     const [txRows, catRows, accRows, scRows, setRows] = await Promise.all([
       auth.readRows(sheetId, 'transactions!A:H'),
@@ -98,30 +105,55 @@ export async function loadFromCloud(sheetId) {
       auth.readRows(sheetId, 'settings!A1')
     ]);
 
-    if (txRows.length > 0 && txRows[0][0] !== 'EMPTY') {
-      state.transactions = txRows.map(r => ({ id: r[0], date: r[1], amount: Number(r[2]), type: r[3], categoryId: r[4], accountId: r[5], memo: r[6] || '', toAccountId: r[7] || '' }));
-    }
-    if (catRows.length > 0 && catRows[0][0] !== 'EMPTY') {
-      state.categories = catRows.map(r => ({ id: r[0], name: r[1], icon: r[2], type: r[3], order: Number(r[4]), pinned: r[5] === '1' }));
-    }
-    if (accRows.length > 0 && accRows[0][0] !== 'EMPTY') {
-      state.accounts = accRows.map(r => ({ id: r[0], name: r[1], icon: r[2], balance: Number(r[3]), initialBalance: Number(r[4] || 0), order: Number(r[5] || 0), pinned: r[6] === '1' }));
-    }
-    if (scRows.length > 0 && scRows[0][0] !== 'EMPTY') {
-      state.shortcuts = scRows.map(r => ({ id: r[0], name: r[1], type: r[2], amount: Number(r[3]), category: r[4], fromAccount: r[5], toAccount: r[6], order: Number(r[7]) }));
-    }
-    if (setRows.length > 0) {
-      state.settings = JSON.parse(setRows[0][0]);
+    // トランザクション
+    if (txRows.length > 0) {
+      if (txRows[0][0] === 'EMPTY') {
+        state.transactions = [];
+      } else {
+        state.transactions = txRows.map(r => ({ id: r[0], date: r[1], amount: Number(r[2]), type: r[3], category: r[4], fromAccount: r[5], memo: r[6] || '', toAccount: r[7] || '' }));
+      }
     }
     
-    // 残高を再計算して整合性を整える
+    // カテゴリー
+    if (catRows.length > 0) {
+       if (catRows[0][0] === 'EMPTY') {
+         state.categories = [...DEFAULT_CATEGORIES];
+       } else {
+         state.categories = catRows.map(r => ({ id: r[0], name: r[1], icon: r[2], type: r[3], order: Number(r[4]), pinned: r[5] === '1' }));
+       }
+    }
+    
+    // 口座
+    if (accRows.length > 0) {
+      if (accRows[0][0] === 'EMPTY') {
+        state.accounts = [...DEFAULT_ACCOUNTS];
+      } else {
+        state.accounts = accRows.map(r => ({ id: r[0], name: r[1], icon: r[2], balance: Number(r[3]), initialBalance: Number(r[4] || 0), order: Number(r[5] || 0), pinned: r[6] === '1' }));
+      }
+    }
+
+    // ショートカット
+    if (scRows.length > 0) {
+      if (scRows[0][0] === 'EMPTY') {
+        state.shortcuts = [];
+      } else {
+        state.shortcuts = scRows.map(r => ({ id: r[0], name: r[1], type: r[2], amount: Number(r[3]), category: r[4], fromAccount: r[5], toAccount: r[6], order: Number(r[7]) }));
+      }
+    }
+
+    // 設定
+    if (setRows.length > 0 && setRows[0][0]) {
+      try {
+        state.settings = JSON.parse(setRows[0][0]);
+      } catch (e) { console.warn('Settings parse failed'); }
+    }
+    
     updateAccountBalances();
-    
     localStorage.setItem('kakeibo_data', JSON.stringify(state));
     return true;
   } catch (err) {
-    console.error('Cloud load failed:', err);
-    return false;
+    console.error('loadFromCloud major error:', err);
+    throw err; // 再スローしてUIに知らせる
   }
 }
 
@@ -197,14 +229,14 @@ function updateAccountBalances() {
   // 取引を古い順に適用
   [...state.transactions].reverse().forEach(tx => {
     if (tx.type === 'income') {
-      const acc = state.accounts.find(a => a.name === tx.accountId || a.id === tx.accountId);
+      const acc = state.accounts.find(a => a.name === tx.toAccount || a.id === tx.toAccount);
       if (acc) acc.balance += tx.amount;
     } else if (tx.type === 'expense') {
-      const acc = state.accounts.find(a => a.name === tx.accountId || a.id === tx.accountId);
+      const acc = state.accounts.find(a => a.name === tx.fromAccount || a.id === tx.fromAccount);
       if (acc) acc.balance -= tx.amount;
     } else if (tx.type === 'transfer') {
-      const fromAcc = state.accounts.find(a => a.name === tx.accountId || a.id === tx.accountId);
-      const toAcc = state.accounts.find(a => a.name === tx.toAccountId || a.id === tx.toAccountId);
+      const fromAcc = state.accounts.find(a => a.name === tx.fromAccount || a.id === tx.fromAccount);
+      const toAcc = state.accounts.find(a => a.name === tx.toAccount || a.id === tx.toAccount);
       if (fromAcc) fromAcc.balance -= tx.amount;
       if (toAcc) toAcc.balance += tx.amount;
     }

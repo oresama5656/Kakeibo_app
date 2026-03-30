@@ -47,9 +47,12 @@ async function initGoogleBackground() {
 
         if (sheetId) {
           console.log('Cloud link detected. Pulling latest data...');
-          const success = await store.loadFromCloud(sheetId);
-          if (success) {
+          try {
+            await store.loadFromCloud(sheetId);
             renderApp(); // Re-render with new data
+          } catch (err) {
+            console.warn('Initial cloud pull failed (likely expired session):', err);
+            // 期限切れの場合は auth 内でトークンが消去されているため、次回アクセス時にログインボタンが出る
           }
         }
 

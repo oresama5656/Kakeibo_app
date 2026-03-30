@@ -176,21 +176,26 @@ async function setupSpreadsheetSkeleton(spreadsheetId) {
 }
 
 export async function writeRows(spreadsheetId, range, rows) {
-  if (!accessToken) return;
+  if (!accessToken) throw new Error('アクセストークンがありません。再ログインしてください。');
   try {
-    await gapi.client.sheets.spreadsheets.values.update({
+    const resp = await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId,
       range,
       valueInputOption: 'USER_ENTERED',
       resource: { values: rows }
     });
+    return resp;
   } catch (e) {
-    console.warn('Write failed:', e);
+    if (e.status === 401 || e.status === 403) {
+      accessToken = null;
+      localStorage.removeItem('g_access_token');
+    }
+    throw e;
   }
 }
 
 export async function readRows(spreadsheetId, range) {
-  if (!accessToken) return [];
+  if (!accessToken) throw new Error('アクセストークンがありません。再ログインしてください。');
   try {
     const resp = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId,
@@ -198,7 +203,10 @@ export async function readRows(spreadsheetId, range) {
     });
     return resp.result.values || [];
   } catch (e) {
-    console.warn('Read failed:', e);
-    return [];
+    if (e.status === 401 || e.status === 403) {
+      accessToken = null;
+      localStorage.removeItem('g_access_token');
+    }
+    throw e;
   }
 }

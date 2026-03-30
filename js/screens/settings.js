@@ -255,8 +255,13 @@ async function handleSyncPush() {
     await store.syncToCloud(sheetId);
     window.showToast?.('クラウドに保存しました！ ✓');
   } catch (err) {
-    console.error(err);
-    window.showToast?.('保存に失敗しました', 'error');
+    console.error('Push failed:', err);
+    if (!auth.isLoggedIn()) {
+      window.showToast?.('ログインの有効期限が切れました。再ログインしてください。', 'error');
+      refresh();
+    } else {
+      window.showToast?.('保存に失敗しました。ネットワークを確認してください。', 'error');
+    }
   }
 }
 
@@ -268,17 +273,18 @@ async function handleSyncPull() {
 
   try {
     window.showToast?.('クラウドから読込中...', 'info');
-    const success = await store.loadFromCloud(sheetId);
-    if (success) {
-      window.showToast?.('読込が完了しました！ ✓');
-      // アプリ全体を再起動/再描画してデータを反映させる
-      window.location.reload(); 
+    await store.loadFromCloud(sheetId);
+    window.showToast?.('読込が完了しました！ ✓');
+    // アプリ全体を再起動してデータを反映させる
+    setTimeout(() => window.location.reload(), 1000); 
+  } catch (err) {
+    console.error('Pull failed:', err);
+    if (!auth.isLoggedIn()) {
+      window.showToast?.('ログインの有効期限が切れました。再ログインしてください。', 'error');
+      refresh();
     } else {
       window.showToast?.('読込に失敗しました。', 'error');
     }
-  } catch (err) {
-    console.error(err);
-    window.showToast?.('読込中にエラーが発生しました', 'error');
   }
 }
 
