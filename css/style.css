@@ -259,24 +259,26 @@ textarea:focus {
 .main-content {
   flex: 1;
   position: relative;
-  height: 100dvh;
+  overflow: hidden; /* Container itself shouldn't scroll */
 }
 
 .screen {
   display: none;
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  height: 100%;
+  padding: var(--space-md);
   padding-bottom: calc(var(--bottom-tab-height) + 40px);
   -webkit-overflow-scrolling: touch;
-  width: 100%;
+  background: var(--bg-primary);
 }
 
 .screen.active {
   display: block;
-  animation: fadeIn 0.2s ease-out;
 }
 
 @keyframes fadeIn {
