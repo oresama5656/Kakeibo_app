@@ -28,13 +28,13 @@ export function render(container) {
       <!-- Total Asset Trend Chart -->
       <div class="chart-card">
         <div class="chart-card-title">📈 資産推移</div>
-        <div class="chart-period-toggle">
-          <button class="period-btn ${currentPeriod === 30 ? 'active' : ''}" data-action="setPeriod" data-days="30">1ヶ月</button>
-          <button class="period-btn ${currentPeriod === 90 ? 'active' : ''}" data-action="setPeriod" data-days="90">3ヶ月</button>
-          <button class="period-btn ${currentPeriod === 180 ? 'active' : ''}" data-action="setPeriod" data-days="180">6ヶ月</button>
-          <button class="period-btn ${currentPeriod === 365 ? 'active' : ''}" data-action="setPeriod" data-days="365">1年</button>
-          <button class="period-btn ${currentPeriod === 9999 ? 'active' : ''}" data-action="setPeriod" data-days="9999">全期間</button>
-        </div>
+        <select class="form-input" id="period-selector" style="margin-bottom: var(--space-md); font-size: var(--font-size-sm);">
+          <option value="30" ${currentPeriod === 30 ? 'selected' : ''}>過去1ヶ月</option>
+          <option value="90" ${currentPeriod === 90 ? 'selected' : ''}>過去3ヶ月</option>
+          <option value="180" ${currentPeriod === 180 ? 'selected' : ''}>過去6ヶ月</option>
+          <option value="365" ${currentPeriod === 365 ? 'selected' : ''}>過去1年</option>
+          <option value="9999" ${currentPeriod === 9999 ? 'selected' : ''}>全期間</option>
+        </select>
         <div class="chart-container">
           <canvas id="asset-chart"></canvas>
         </div>
@@ -99,6 +99,10 @@ export function render(container) {
   }
 
   container.addEventListener('click', handleClick);
+  container.querySelector('#period-selector')?.addEventListener('change', e => {
+    currentPeriod = Number(e.target.value);
+    refresh();
+  });
   container.querySelector('#account-selector')?.addEventListener('change', e => {
     selectedAccountId = e.target.value;
     refresh();

@@ -103,12 +103,13 @@ export function render(container) {
 
       <!-- Period Toggle -->
       <div class="chart-card">
-        <div class="chart-period-toggle">
-          <button class="period-btn ${analysisState.periodType === 'day' ? 'active' : ''}" data-action="setPeriodType" data-period="day">日</button>
-          <button class="period-btn ${analysisState.periodType === 'week' ? 'active' : ''}" data-action="setPeriodType" data-period="week">週</button>
-          <button class="period-btn ${analysisState.periodType === 'month' ? 'active' : ''}" data-action="setPeriodType" data-period="month">月</button>
-          <button class="period-btn ${analysisState.periodType === 'custom' ? 'active' : ''}" data-action="setPeriodType" data-period="custom">期間指定</button>
-        </div>
+        <div class="chart-card-title">📅 表示期間</div>
+        <select class="form-input" id="analysis-period-selector" style="margin-bottom: var(--space-md); font-size: var(--font-size-sm);">
+          <option value="day" ${analysisState.periodType === 'day' ? 'selected' : ''}>今日</option>
+          <option value="week" ${analysisState.periodType === 'week' ? 'selected' : ''}>今週</option>
+          <option value="month" ${analysisState.periodType === 'month' ? 'selected' : ''}>今月</option>
+          <option value="custom" ${analysisState.periodType === 'custom' ? 'selected' : ''}>期間を自由に指定</option>
+        </select>
 
         ${analysisState.periodType === 'custom' ? `
           <div class="meta-row" style="margin-bottom: var(--space-md);">
@@ -128,10 +129,12 @@ export function render(container) {
 
       <!-- Chart Mode Toggle -->
       <div class="chart-card">
-        <div class="chart-period-toggle" style="margin-bottom: var(--space-md);">
-          <button class="period-btn ${analysisState.chartMode === 'pie' ? 'active' : ''}" data-action="setChartMode" data-mode="pie">🍩 内訳</button>
-          <button class="period-btn ${analysisState.chartMode === 'trend' ? 'active' : ''}" data-action="setChartMode" data-mode="trend">📈 推移</button>
-        </div>
+        <div class="chart-card-title">📊 表示形式</div>
+        <select class="form-input" id="chart-mode-selector" style="margin-bottom: var(--space-md); font-size: var(--font-size-sm);">
+          <option value="pie" ${analysisState.chartMode === 'pie' ? 'selected' : ''}>🍩 内訳 (円グラフ)</option>
+          <option value="trend" ${analysisState.chartMode === 'trend' ? 'selected' : ''}>📈 推移 (折れ線グラフ)</option>
+        </select>
+        
         <div class="chart-container" style="height: 280px;">
           <canvas id="analysis-chart"></canvas>
         </div>
@@ -180,6 +183,17 @@ export function render(container) {
 
   // Events
   container.addEventListener('click', handleClick);
+  
+  container.querySelector('#analysis-period-selector')?.addEventListener('change', e => {
+    analysisState.periodType = e.target.value;
+    refresh();
+  });
+
+  container.querySelector('#chart-mode-selector')?.addEventListener('change', e => {
+    analysisState.chartMode = e.target.value;
+    refresh();
+  });
+
   container.querySelector('[data-action="setCustomStart"]')?.addEventListener('change', e => {
     analysisState.customStart = e.target.value;
     refresh();
