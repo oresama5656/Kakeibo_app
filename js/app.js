@@ -80,6 +80,7 @@ function renderApp() {
       input: renderInput,
       dashboard: renderDashboard,
       history: renderHistory,
+      analysis: renderAnalysis,
       settings: renderSettings
     };
     if (renderFunctions[currentScreen]) {
@@ -96,6 +97,7 @@ function setupNavigation() {
     input: document.getElementById('screen-input'),
     dashboard: document.getElementById('screen-dashboard'),
     history: document.getElementById('screen-history'),
+    analysis: document.getElementById('screen-analysis'),
     settings: document.getElementById('screen-settings')
   };
 
@@ -103,18 +105,13 @@ function setupNavigation() {
     input: renderInput,
     dashboard: renderDashboard,
     history: renderHistory,
+    analysis: renderAnalysis,
     settings: renderSettings
   };
 
   const navButtons = document.querySelectorAll('[data-screen]');
 
   function navigate(screenName) {
-    // Analysis is not ready
-    if (screenName === 'analysis') {
-      window.showToast?.('分析画面は準備中です', 'info');
-      screenName = 'dashboard';
-    }
-
     Object.keys(screens).forEach(key => {
       if (screens[key]) {
         if (key === screenName) {
