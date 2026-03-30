@@ -19,13 +19,16 @@ export async function initGoogleAuth() {
   return new Promise((resolve) => {
     const checkAndInit = () => {
       if (window.gapi && window.google) {
+        console.log('SDK detection successful. Loading GAPI components...');
         // 1. GAPIのロード
         gapi.load('client', async () => {
           try {
             await gapi.client.init({});
+            console.log('GAPI client init base successful.');
             // 標準的な読み込み方式に変更 (502エラー対策)
             await gapi.client.load('sheets', 'v4');
             await gapi.client.load('drive', 'v3');
+            console.log('GAPI sheets/drive loaded.');
             
             const storedToken = localStorage.getItem('g_access_token');
             if (storedToken) {
@@ -44,8 +47,9 @@ export async function initGoogleAuth() {
             console.log('Google API fully initialized.');
             resolve();
           } catch (e) {
-            console.error('GAPI load error:', e);
-            resolve(); 
+            console.error('GAPI initialization major failure:', e);
+            window.showToast?.(`API初期化エラー: ${e.message || JSON.stringify(e)}`, 'error');
+            resolve(); // 続行は試みるが失敗の可能性大
           }
         });
       } else {
@@ -104,6 +108,10 @@ export async function getOrCreateSpreadsheet() {
 
   try {
     // 既存ファイルの検索
+    if (!gapi.client.drive) {
+        console.log('Drive API client missing, retrying load...');
+        await gapi.client.load('drive', 'v3');
+    }
     const resp = await gapi.client.drive.files.list({
       q: "name = 'Kakeibo_App_Data' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
       fields: 'files(id, name)',
@@ -112,12 +120,18 @@ export async function getOrCreateSpreadsheet() {
     const files = resp.result.files;
     if (files && files.length > 0) {
       sheetId = files[0].id;
+      console.log('Existing spreadsheet found:', sheetId);
     } else {
+      console.log('No existing spreadsheet. Creating new one...');
+      if (!gapi.client.sheets) {
+          await gapi.client.load('sheets', 'v4');
+      }
       // 新規作成
       const createResp = await gapi.client.sheets.spreadsheets.create({
         resource: { properties: { title: 'Kakeibo_App_Data' } }
       });
       sheetId = createResp.result.spreadsheetId;
+      console.log('New spreadsheet created:', sheetId);
       await setupSpreadsheetSkeleton(sheetId);
     }
 
