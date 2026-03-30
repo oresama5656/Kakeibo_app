@@ -1392,11 +1392,11 @@ textarea:focus {
   }
 
   .icon-grid {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .icon-grid.expanded {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .input-screen {
@@ -1433,7 +1433,7 @@ textarea:focus {
 
 @media (min-width: 1024px) {
   .icon-grid.expanded {
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .account-cards {
