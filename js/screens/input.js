@@ -110,8 +110,6 @@ export function render(container) {
         <button class="type-btn ${state.type === 'transfer' ? 'active' : ''}" data-type="transfer" data-action="setType">振替</button>
         ${isPC ? `
           <button class="type-btn bulk-toggle ${showBulkInput ? 'active' : ''}" data-action="toggleBulk" style="border-color: var(--color-accent); color: var(--color-accent); ${showBulkInput ? 'background: var(--color-accent); color: white;' : ''}">📋 一括入力</button>
-          <button class="type-btn" data-action="triggerCsvImport" style="border-color: var(--color-income); color: var(--color-income);">📥 CSVインポート</button>
-          <input type="file" id="csv-import-input" accept=".csv" style="display: none;">
         ` : ''}
       </div>
 
@@ -172,7 +170,11 @@ function renderBulkInput(accounts, allCategories) {
       <div class="selector-section">
         <div class="selector-header">
           <span class="selector-title">📋 一括入力 (${getTypeLabel(state.type)})</span>
-          <button class="selector-expand" data-action="addBulkRow">＋ 行を追加</button>
+          <div style="display: flex; gap: var(--space-sm);">
+            <button class="selector-expand" data-action="addBulkRow">＋ 行を追加</button>
+            <button class="selector-expand" data-action="triggerCsvImport" style="background: var(--color-income-light); color: var(--color-income-dark); border: 1px solid var(--color-income);">📥 CSVから読込</button>
+            <input type="file" id="csv-import-input" accept=".csv" style="display: none;">
+          </div>
         </div>
         <div class="bulk-table-wrapper">
           <table class="bulk-table">
@@ -274,15 +276,18 @@ function handleCsvFile(e) {
 
       data.forEach((row, index) => {
         const [date, type, cat, amount, from, to, memo] = row.map(s => s?.trim());
+        const isEmpty = !date && !type && !amount;
+        if (isEmpty) return;
+
         if (!date || !type || !amount) {
-          if (index > 0 || (date && type && amount)) errors.push(`行${index + 1}: 必須項目不足`);
+          errors.push(`行${index + 1}: 項目不足`);
           return;
         }
 
         const typeMap = { '支出': 'expense', '収入': 'income', '振替': 'transfer' };
         const internalType = typeMap[type];
         if (!internalType) {
-          errors.push(`行${index + 1}: 種類不正`);
+          errors.push(`行${index + 1}: 種類不正 (${type})`);
           return;
         }
 
