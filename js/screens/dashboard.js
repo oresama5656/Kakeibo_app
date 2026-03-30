@@ -102,6 +102,8 @@ export function render(container) {
 
   // Initialize Drag & Drop
   const el = container.querySelector('.account-cards');
+  let currentTarget = null; // ドラッグ先の追跡用
+
   if (el && window.Sortable) {
     Sortable.create(el, {
       animation: 150,
@@ -109,18 +111,44 @@ export function render(container) {
       dragClass: 'sortable-drag',
       forceFallback: true, 
       fallbackClass: 'sortable-drag',
+      onMove: (evt) => {
+        // 前のターゲットのハイライトを消す
+        if (currentTarget) currentTarget.classList.remove('drag-over');
+        
+        // 重なっているカードがあるか確認
+        if (evt.related && evt.related.classList.contains('account-card')) {
+          currentTarget = evt.related;
+          currentTarget.classList.add('drag-over');
+        } else {
+          currentTarget = null;
+        }
+      },
       onEnd: (evt) => {
+        // ハイライトを全てクリア
+        el.querySelectorAll('.account-card').forEach(c => c.classList.remove('drag-over'));
+
+        // 指を離した場所の要素を取得（自分の当たり判定を一時的に無効化して「下」を見る）
+        const item = evt.item;
+        const originalPointerEvents = item.style.pointerEvents;
+        item.style.pointerEvents = 'none';
+
         const touch = evt.originalEvent.changedTouches ? evt.originalEvent.changedTouches[0] : evt.originalEvent;
         const targetEl = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.account-card');
         
-        if (targetEl && targetEl !== evt.item) {
-          const fromId = evt.item.dataset.id;
+        item.style.pointerEvents = originalPointerEvents;
+
+        if (targetEl && targetEl !== item) {
+          // 別のカードの上に落としたら振替！
+          const fromId = item.dataset.id;
           const toId = targetEl.dataset.id;
           openQuickTransferModal(fromId, toId);
+          // 振替メニューを開くので、元の位置は変えないように再描画でリセット
           refresh(); 
         } else {
+          // 隙間に落としたら並び替え
           const ids = Array.from(el.querySelectorAll('.account-card')).map(card => card.dataset.id);
           store.reorderAccounts(ids);
+          currentTarget = null;
         }
       }
     });
