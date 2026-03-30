@@ -1,25 +1,28 @@
 // ============================================
-// メインアプリケーション (v3.0 - 安定ルーティング & スクロール復活)
+// メインアプリケーション (v3.2 - キャッシュ回避版)
 // ============================================
 
-import { initStore } from './store.js';
-import * as auth from './auth.js';
-import { render as renderInput } from './screens/input.js';
-import { render as renderDashboard } from './screens/dashboard.js';
-import { render as renderHistory } from './screens/history.js';
-import { render as renderSettings, applyTheme } from './screens/settings.js';
-import { getSettings } from './store.js';
+const V = '?v=' + Date.now(); // 毎回最新を読み込ませる
+
+import { initStore } from './store.js?v=2.1';
+import * as auth from './auth.js?v=2.1';
+import { render as renderInput } from './screens/input.js?v=2.1';
+import { render as renderDashboard } from './screens/dashboard.js?v=2.1';
+import { render as renderHistory } from './screens/history.js?v=2.1';
+import { render as renderSettings, applyTheme } from './screens/settings.js?v=2.1';
+import { getSettings } from './store.js?v=2.1';
+import * as store from './store.js?v=2.1';
 
 // --- Initialize ---
 async function initializeApp() {
-  console.log('--- Kakeibo App [v3.0] Starting ---');
+  console.log('--- Kakeibo App [v3.2] Starting ---');
   try {
-    initStore();
+    store.initStore();
     
-    const settings = getSettings();
+    const settings = store.getSettings();
     applyTheme(settings.darkMode || 'auto');
 
-    // Setup UI
+    // UI rendering priority
     setupNavigation();
 
     // Background auth initialization
@@ -48,10 +51,10 @@ async function initGoogleBackground() {
           }
         }
 
-        // If we are on settings screen, re-render to show login button
+        // Re-render settings if current
         if (localStorage.getItem('kakeibo_current_screen') === 'settings') {
-          const main = document.getElementById('screen-settings');
-          if (main) renderSettings(main);
+          const container = document.getElementById('screen-settings');
+          if (container) renderSettings(container);
         }
       } else if (retryCount < 10) {
         retryCount++;
@@ -85,6 +88,7 @@ function renderApp() {
 function setupNavigation() {
   const sidebar = document.getElementById('sidebar');
   const bottomTab = document.getElementById('bottom-tab');
+  
   const screens = {
     input: document.getElementById('screen-input'),
     dashboard: document.getElementById('screen-dashboard'),
@@ -104,7 +108,7 @@ function setupNavigation() {
   function navigate(screenName) {
     console.log('Navigating to:', screenName);
 
-    // Fallback for missing or unimplemented screens
+    // Fallback
     if (screenName === 'analysis') {
       window.showToast?.('分析画面は準備中です', 'info');
       screenName = 'dashboard';
@@ -116,7 +120,6 @@ function setupNavigation() {
         if (key === screenName) {
           screens[key].style.display = 'block';
           screens[key].classList.add('active');
-          // Perform full render into the specific container
           if (renderFunctions[key]) {
             renderFunctions[key](screens[key]);
           }
@@ -127,7 +130,7 @@ function setupNavigation() {
       }
     });
 
-    // Update button states
+    // Update buttons
     navButtons.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.screen === screenName);
     });
@@ -143,7 +146,6 @@ function setupNavigation() {
   if (sidebar) sidebar.onclick = handleNavClick;
   if (bottomTab) bottomTab.onclick = handleNavClick;
 
-  // Initial screen
   const lastScreen = localStorage.getItem('kakeibo_current_screen') || 'input';
   navigate(lastScreen);
 }
