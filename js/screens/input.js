@@ -22,6 +22,27 @@ let state = {
 let bulkRows = [];
 let showBulkInput = false;
 
+/**
+ * 外部から入力を制御するための関数
+ * @param {Object} data { type, amount, fromAccount, toAccount, category, memo }
+ */
+export function setQuickInput(data) {
+  state = {
+    ...state,
+    ...data,
+    accountsExpanded: false,
+    categoriesExpanded: false,
+  };
+  // 必要に応じて他のフィールドをリセット
+  if (data.type) {
+    if (data.type === 'expense') {
+      state.toAccount = null;
+    } else if (data.type === 'income') {
+      state.fromAccount = null;
+    }
+  }
+}
+
 function resetState() {
   state = {
     ...state,

@@ -141,6 +141,9 @@ function setupNavigation() {
 
   const lastScreen = localStorage.getItem('kakeibo_current_screen') || 'input';
   navigate(lastScreen);
+
+  // --- Expose navigate for external use ---
+  window.navigateTo = navigate;
 }
 
 document.addEventListener('DOMContentLoaded', initializeApp);

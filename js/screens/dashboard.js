@@ -1,8 +1,5 @@
-// ============================================
-// ダッシュボード画面 (v2 - 口座別残高推移追加)
-// ============================================
-
 import * as store from '../store.js';
+import { setQuickInput } from './input.js';
 
 let totalChart = null;
 let accountChart = null;
@@ -231,9 +228,131 @@ function handleClick(e) {
     currentPeriod = Number(target.dataset.days);
     refresh();
   } else if (target.dataset.action === 'selectAccount') {
-    selectedAccountId = target.dataset.id;
-    refresh();
+    const accountId = target.dataset.id;
+    // グラフ更新のためにIDをセット
+    selectedAccountId = accountId;
+    // メニューを表示
+    showQuickMenu(accountId);
+    // グラフも裏で更新するために一応再描画（メニューが出ている間に後ろで動く）
+    renderAccountChart(accountId);
   }
+}
+
+function showQuickMenu(accountId) {
+  const account = store.getAccounts().find(a => a.id === accountId);
+  if (!account) return;
+
+  const currentBalance = store.getAccountBalance(accountId);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '3000';
+  overlay.innerHTML = `
+    <div class="modal-content" style="max-width: 320px; border-radius: var(--radius-xl); padding-bottom: var(--space-lg);">
+      <div class="modal-header" style="border-bottom: none; padding-bottom: 0;">
+        <div class="modal-title" style="font-size: 1.1rem;">${account.icon} ${account.name}</div>
+        <button class="modal-close modal-close-btn">✕</button>
+      </div>
+      <div style="text-align: center; margin-bottom: var(--space-md); font-weight: bold; font-size: 1.2rem; color: var(--text-secondary);">
+        ¥${currentBalance.toLocaleString()}
+      </div>
+      <div class="quick-menu-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); padding: 0 var(--space-md);">
+        <button class="btn btn-primary quick-menu-btn" data-type="expense" style="background: var(--color-expense); height: 60px; font-size: 1rem;">支出</button>
+        <button class="btn btn-primary quick-menu-btn" data-type="income" style="background: var(--color-income); height: 60px; font-size: 1rem;">収入</button>
+        <button class="btn btn-primary quick-menu-btn" data-type="transfer" style="background: var(--color-accent); height: 60px; font-size: 1rem; color: white;">振替</button>
+        <button class="btn btn-secondary quick-menu-btn" data-type="correction" style="height: 60px; font-size: 1rem; border: 1px solid var(--border-medium);">修正 (調整)</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  overlay.querySelector('.modal-close-btn').onclick = close;
+
+  overlay.querySelectorAll('.quick-menu-btn').forEach(btn => {
+    btn.onclick = () => {
+      const type = btn.dataset.type;
+      close();
+
+      if (type === 'correction') {
+        openCorrectionModal(account, currentBalance);
+      } else {
+        // 通常の遷移
+        const data = { type };
+        if (type === 'expense' || type === 'transfer') data.fromAccount = account.name;
+        if (type === 'income') data.toAccount = account.name;
+        
+        setQuickInput(data);
+        window.navigateTo?.('input');
+      }
+    };
+  });
+}
+
+function openCorrectionModal(account, currentBalance) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '3500';
+  overlay.innerHTML = `
+    <div class="modal-content" style="max-width: 320px; border-radius: var(--radius-xl);">
+      <div class="modal-header">
+        <div class="modal-title">残高の修正</div>
+        <button class="modal-close modal-close-btn">✕</button>
+      </div>
+      <div style="padding: 0 var(--space-md) var(--space-md);">
+        <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: var(--space-sm);">現在の残高: ¥${currentBalance.toLocaleString()}</div>
+        <div class="form-group">
+          <label class="form-label">新しい(実際の)金額を入力</label>
+          <input type="number" id="correction-target-amount" class="form-input" placeholder="0" inputmode="numeric">
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: var(--space-sm); line-height: 1.4;">
+          設定した金額になるよう、「差分」を記録します。メモには自動で「残高修正」が入ります。
+        </div>
+      </div>
+      <div class="form-actions" style="border-top: 1px solid var(--border-light); padding: var(--space-md); margin-top: 0;">
+        <button class="btn btn-secondary modal-cancel-btn">戻る</button>
+        <button class="btn btn-primary" id="go-to-correction" style="background: var(--color-accent); color: white;">次へ進む</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  const input = overlay.querySelector('#correction-target-amount');
+  setTimeout(() => input.focus(), 100);
+
+  const close = () => overlay.remove();
+  overlay.querySelector('.modal-close-btn').onclick = close;
+  overlay.querySelector('.modal-cancel-btn').onclick = close;
+
+  overlay.querySelector('#go-to-correction').onclick = () => {
+    const targetAmount = Number(input.value);
+    const diff = targetAmount - currentBalance;
+    
+    if (diff === 0) {
+      window.showToast?.('金額に変更がありません', 'error');
+      return;
+    }
+
+    const type = diff > 0 ? 'income' : 'expense';
+    const amount = Math.abs(diff);
+
+    const data = {
+      type: type,
+      amount: String(amount),
+      memo: '残高修正'
+    };
+
+    if (type === 'income') {
+      data.toAccount = account.name;
+    } else {
+      data.fromAccount = account.name;
+    }
+
+    setQuickInput(data);
+    close();
+    window.navigateTo?.('input');
+  };
 }
 
 function getChartColors() {
