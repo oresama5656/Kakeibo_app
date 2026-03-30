@@ -498,8 +498,8 @@ function refresh() {
   if (container) {
     container.removeEventListener('click', handleClick);
     render(container);
-    // Focus amount input after re-render (for single input mode)
-    if (!showBulkInput) {
+    // Focus amount input after re-render (for PC version only)
+    if (!showBulkInput && window.innerWidth >= 768) {
       setTimeout(() => {
         document.getElementById('amount-input')?.focus();
       }, 50);

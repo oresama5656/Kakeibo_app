@@ -141,9 +141,10 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.5;
-  overflow: hidden;
   height: 100dvh;
   width: 100vw;
+  overflow-x: hidden;
+  position: relative;
 }
 
 button {
@@ -263,6 +264,7 @@ input:focus, select:focus, textarea:focus {
   overflow-x: hidden;
   padding-bottom: calc(var(--bottom-tab-height) + 16px);
   -webkit-overflow-scrolling: touch;
+  width: 100%;
 }
 
 .screen.active {
@@ -336,10 +338,11 @@ input:focus, select:focus, textarea:focus {
 
 /* Type Toggle */
 .type-toggle {
-  display: flex;
   gap: var(--space-xs);
   padding: var(--space-md) var(--space-md) var(--space-sm);
   background: var(--bg-primary);
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .type-btn {
