@@ -28,7 +28,10 @@ export async function initGoogleAuth() {
             await gapi.client.load('drive', 'v3');
             
             const storedToken = localStorage.getItem('g_access_token');
-            if (storedToken) accessToken = storedToken;
+            if (storedToken) {
+              accessToken = storedToken;
+              gapi.client.setToken({ access_token: accessToken });
+            }
 
             // 2. GIS (OAuth2) の初期化
             tokenClient = google.accounts.oauth2.initTokenClient({
@@ -70,6 +73,7 @@ export function signIn() {
         return;
       }
       accessToken = resp.access_token;
+      gapi.client.setToken({ access_token: accessToken });
       localStorage.setItem('g_access_token', accessToken);
       resolve(accessToken);
     };

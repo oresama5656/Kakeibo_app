@@ -132,26 +132,25 @@ export function getAccountBalance(id) {
 }
 
 // ダッシュボード用の資産推移データ
-export function getAssetHistory(months = 6) {
+export function getAssetHistory(days = 90) {
   const history = [];
   const now = new Date();
   
-  for (let i = 0; i < months; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const label = `${d.getFullYear()}/${d.getMonth() + 1}`;
+  // 開始日から今日までの毎日の残高を計算
+  for (let i = 0; i <= days; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const dateStr = d.toISOString().split('T')[0];
     
-    // かなり簡易的な計算（本来は過去の全取引から逆算が必要だが、デモ用に現在値をベースにする）
-    // 実際の実装では snapshots テーブルなどを用意するのが望ましい
-    let monthlyBalance = getTotalBalance();
+    let dailyBalance = getTotalBalance();
     state.transactions.forEach(tx => {
-      const txDate = new Date(tx.date);
-      if (txDate > d) {
-        if (tx.type === 'income') monthlyBalance -= tx.amount;
-        if (tx.type === 'expense') monthlyBalance += tx.amount;
+      if (tx.date > dateStr) {
+        if (tx.type === 'income') dailyBalance -= tx.amount;
+        if (tx.type === 'expense') dailyBalance += tx.amount;
+        if (tx.type === 'transfer') { /* 振替は総資産に影響しない */ }
       }
     });
 
-    history.unshift({ label, balance: monthlyBalance });
+    history.unshift({ date: dateStr, total: dailyBalance });
   }
   return history;
 }

@@ -3,13 +3,13 @@
 // ============================================
 
 // バージョンを v3.3 に一気に引き上げて、古いキャッシュを完全に無視させる
-import { initStore } from './store.js?v=3.3';
-import * as auth from './auth.js?v=3.3';
-import { render as renderInput } from './screens/input.js?v=3.3';
-import { render as renderDashboard } from './screens/dashboard.js?v=3.3';
-import { render as renderHistory } from './screens/history.js?v=3.3';
-import { render as renderSettings, applyTheme } from './screens/settings.js?v=3.3';
-import * as store from './store.js?v=3.3';
+import { initStore } from './store.js';
+import * as auth from './auth.js';
+import { render as renderInput } from './screens/input.js';
+import { render as renderDashboard } from './screens/dashboard.js';
+import { render as renderHistory } from './screens/history.js';
+import { render as renderSettings, applyTheme } from './screens/settings.js';
+import * as store from './store.js';
 
 // --- Initialize ---
 async function initializeApp() {

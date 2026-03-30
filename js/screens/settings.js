@@ -107,10 +107,7 @@ export function render(container) {
             <div class="toggle-switch ${getDarkModeActive(settings) ? 'active' : ''}" id="dark-toggle"></div>
           </div>
         </div>
-      </div>
 
-        </div>
-      </div>
 
       <!-- Cloud Sync -->
       <div class="settings-section">
@@ -266,8 +263,9 @@ async function handleGoogleLogin() {
       window.showToast?.('準備中...後ほど自動同期されます', 'info');
     }
   } catch (err) {
-    console.error(err);
-    window.showToast?.('連携に失敗しました', 'error');
+    console.error('Login/Sync Error:', err);
+    const detail = err.message || (err.result?.error?.message) || JSON.stringify(err);
+    window.showToast?.(`連携に失敗しました: ${detail}`, 'error');
   }
 }
 
