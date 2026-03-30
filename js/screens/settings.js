@@ -4,6 +4,7 @@
 
 import * as store from '../store.js';
 import * as auth from '../auth.js';
+import { RECOMMENDED_EMOJIS } from '../data.js';
 
 export function render(container) {
   const settings = store.getSettings();
@@ -107,7 +108,7 @@ export function render(container) {
             <div class="toggle-switch ${getDarkModeActive(settings) ? 'active' : ''}" id="dark-toggle"></div>
           </div>
         </div>
-
+      </div>
 
       <!-- Cloud Sync -->
       <div class="settings-section">
@@ -290,6 +291,9 @@ function showAccountModal(id) {
       <div class="form-group">
         <label class="form-label">アイコン（絵文字）</label>
         <input class="form-input" type="text" id="acc-icon" value="${acc?.icon || '💰'}" style="font-size: 1.5rem; width: 80px; text-align: center;">
+        <div class="emoji-picker-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin-top: 10px; cursor: pointer;">
+          ${RECOMMENDED_EMOJIS.map(emoji => `<span class="emoji-option" data-emoji="${emoji}" style="font-size: 1.2rem; text-align: center;">${emoji}</span>`).join('')}
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">初期残高</label>
@@ -310,6 +314,12 @@ function showAccountModal(id) {
   let pinnedState = acc?.pinned || false;
 
   overlay.addEventListener('click', (e) => {
+    const emojiOption = e.target.closest('.emoji-option');
+    if (emojiOption) {
+      document.getElementById('acc-icon').value = emojiOption.dataset.emoji;
+      return;
+    }
+
     const act = e.target.closest('[data-action]')?.dataset.action;
     if (act === 'closeModal' || e.target === overlay) { overlay.remove(); return; }
     if (act === 'togglePin') {
@@ -370,6 +380,9 @@ function showCategoryModal(id, type) {
       <div class="form-group">
         <label class="form-label">アイコン（絵文字）</label>
         <input class="form-input" type="text" id="cat-icon" value="${cat?.icon || '📁'}" style="font-size: 1.5rem; width: 80px; text-align: center;">
+        <div class="emoji-picker-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin-top: 10px; cursor: pointer;">
+          ${RECOMMENDED_EMOJIS.map(emoji => `<span class="emoji-option" data-emoji="${emoji}" style="font-size: 1.2rem; text-align: center;">${emoji}</span>`).join('')}
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label">種類</label>
@@ -394,6 +407,12 @@ function showCategoryModal(id, type) {
   let pinnedState = cat?.pinned || false;
 
   overlay.addEventListener('click', (e) => {
+    const emojiOption = e.target.closest('.emoji-option');
+    if (emojiOption) {
+      document.getElementById('cat-icon').value = emojiOption.dataset.emoji;
+      return;
+    }
+
     const act = e.target.closest('[data-action]')?.dataset.action;
     if (act === 'closeModal' || e.target === overlay) { overlay.remove(); return; }
     if (act === 'togglePin') {

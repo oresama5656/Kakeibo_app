@@ -1198,7 +1198,43 @@ textarea:focus {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  z-index: 200;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+}
+
+.emoji-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
+  max-height: 200px;
+  overflow-y: auto;
+  padding: var(--space-sm);
+  background: var(--bg-hover);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.emoji-option {
+  font-size: 1.5rem;
+  text-align: center;
+  padding: 5px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast), transform 0.1s ease;
+}
+
+.emoji-option:hover {
+  background: var(--bg-card);
+  transform: scale(1.2);
+}
+.modal {
+  background: var(--bg-card);
+  width: 100%;
+  max-width: 480px;
+  padding: var(--space-lg);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  z-index: 2100;
   animation: modalFadeIn 0.2s ease;
 }
 
