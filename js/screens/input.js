@@ -140,7 +140,7 @@ function renderSingleInput(accounts, categories, shortcuts, showFromAccount, sho
         </div>
       ` : ''}
       ${showFromAccount ? renderIconGrid(accounts, state.fromAccount, state.accountsExpanded, 'selectFromAccount', 'toggleAccounts', state.type === 'transfer' ? '💴 出金元' : '💴 口座') : ''}
-      ${showToAccount ? renderIconGrid(accounts, state.toAccount, state.type === 'transfer' ? state.accountsExpanded : false, 'selectToAccount', 'toggleAccounts', state.type === 'transfer' ? '💴 入金先' : '💴 入金口座' ) : ''}
+      ${showToAccount ? renderIconGrid(accounts, state.toAccount, state.accountsExpanded, 'selectToAccount', 'toggleAccounts', state.type === 'transfer' ? '💴 入金先' : '💴 入金口座') : ''}
       ${showCategories ? renderIconGrid(categories, state.category, state.categoriesExpanded, 'selectCategory', 'toggleCategories', '📁 カテゴリー') : ''}
       <div class="selector-section">
         <div class="selector-header"><span class="selector-title">📅 日付</span></div>

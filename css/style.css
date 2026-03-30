@@ -481,13 +481,13 @@ textarea:focus {
 /* Icon Grid */
 .icon-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-md);
   width: 100%;
 }
 
 .icon-grid.expanded {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .icon-item {
