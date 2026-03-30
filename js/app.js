@@ -1,21 +1,19 @@
 // ============================================
-// メインアプリケーション (v3.2 - キャッシュ回避版)
+// メインアプリケーション (v3.3 - キャッシュ強制破棄・最終安定版)
 // ============================================
 
-const V = '?v=' + Date.now(); // 毎回最新を読み込ませる
-
-import { initStore } from './store.js?v=2.1';
-import * as auth from './auth.js?v=2.1';
-import { render as renderInput } from './screens/input.js?v=2.1';
-import { render as renderDashboard } from './screens/dashboard.js?v=2.1';
-import { render as renderHistory } from './screens/history.js?v=2.1';
-import { render as renderSettings, applyTheme } from './screens/settings.js?v=2.1';
-import { getSettings } from './store.js?v=2.1';
-import * as store from './store.js?v=2.1';
+// バージョンを v3.3 に一気に引き上げて、古いキャッシュを完全に無視させる
+import { initStore } from './store.js?v=3.3';
+import * as auth from './auth.js?v=3.3';
+import { render as renderInput } from './screens/input.js?v=3.3';
+import { render as renderDashboard } from './screens/dashboard.js?v=3.3';
+import { render as renderHistory } from './screens/history.js?v=3.3';
+import { render as renderSettings, applyTheme } from './screens/settings.js?v=3.3';
+import * as store from './store.js?v=3.3';
 
 // --- Initialize ---
 async function initializeApp() {
-  console.log('--- Kakeibo App [v3.2] Starting ---');
+  console.log('--- Kakeibo App [v3.3] Starting ---');
   try {
     store.initStore();
     
@@ -37,35 +35,37 @@ async function initGoogleBackground() {
   try {
     let retryCount = 0;
     const checkGoogle = async () => {
+      // 外部SDKが完全に揃うまで粘り強く待つ
       if (window.google && window.gapi) {
-        console.log('Google SDKs found. Initializing...');
+        console.log('Google SDKs found. Initializing stable auth...');
         await auth.initGoogleAuth();
         
-        const sheetId = await auth.getOrCreateSpreadsheet();
+        const sheetId = await auth.getOrCreateSpreadsheet().catch(e => {
+            console.log('Initial spreadsheet check silent failure (not logged in yet).');
+            return null;
+        });
+
         if (sheetId) {
           console.log('Cloud link detected. Pulling latest data...');
           const success = await store.loadFromCloud(sheetId);
           if (success) {
-            console.log('Cloud data loaded successfully. Refreshing UI.');
-            renderApp(); // Re-render everything with new data
+            renderApp(); // Re-render with new data
           }
         }
 
-        // Re-render settings if current
+        // Settings screen login status refresh
         if (localStorage.getItem('kakeibo_current_screen') === 'settings') {
           const container = document.getElementById('screen-settings');
           if (container) renderSettings(container);
         }
-      } else if (retryCount < 10) {
+      } else if (retryCount < 15) {
         retryCount++;
-        setTimeout(checkGoogle, 2000);
-      } else {
-        console.warn('Google SDK timeout.');
+        setTimeout(checkGoogle, 1000);
       }
     };
     checkGoogle();
   } catch (err) {
-    console.warn('Google Auth silent failure:', err);
+    console.warn('Google Auth background process skipped.');
   }
 }
 
@@ -106,15 +106,12 @@ function setupNavigation() {
   const navButtons = document.querySelectorAll('[data-screen]');
 
   function navigate(screenName) {
-    console.log('Navigating to:', screenName);
-
-    // Fallback
+    // Analysis is not ready
     if (screenName === 'analysis') {
       window.showToast?.('分析画面は準備中です', 'info');
       screenName = 'dashboard';
     }
 
-    // Toggle screen visibility
     Object.keys(screens).forEach(key => {
       if (screens[key]) {
         if (key === screenName) {
@@ -130,7 +127,6 @@ function setupNavigation() {
       }
     });
 
-    // Update buttons
     navButtons.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.screen === screenName);
     });
