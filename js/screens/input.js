@@ -172,6 +172,7 @@ function renderBulkInput(accounts, allCategories) {
           <span class="selector-title">📋 一括入力 (${getTypeLabel(state.type)})</span>
           <div style="display: flex; gap: var(--space-sm);">
             <button class="selector-expand" data-action="addBulkRow">＋ 行を追加</button>
+            <button class="selector-expand" data-action="downloadTemplate" style="background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-medium);">📄 見本をDL</button>
             <button class="selector-expand" data-action="triggerCsvImport" style="background: var(--color-income-light); color: var(--color-income-dark); border: 1px solid var(--color-income);">📥 CSVから読込</button>
             <input type="file" id="csv-import-input" accept=".csv" style="display: none;">
           </div>
@@ -253,6 +254,31 @@ function bindEvents(container) {
   });
 
   container.querySelector('#csv-import-input')?.addEventListener('change', handleCsvFile);
+}
+
+function downloadCsvTemplate() {
+  const accounts = store.getAccounts();
+  const categories = store.getCategories();
+  
+  const accName = accounts[0]?.name || '現金';
+  const catName = categories.find(c => c.type === 'expense')?.name || '食費';
+  const today = new Date().toISOString().split('T')[0];
+
+  const header = '日付,種類,カテゴリー,金額,口座,入金先,メモ\n';
+  const sampleData = `${today},支出,${catName},1500,${accName},,スーパーでお買い物\n`;
+  const sampleData2 = `${today},振替,,50000,銀行口座,${accName},生活費おろし\n`;
+
+  const csvContent = header + sampleData + sampleData2;
+  const bom = new Uint8Array([0xEF, 0xBB, 0xBF]); // Add UTF-8 BOM for Excel visibility
+  const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
+  
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute('download', 'kakeibo_import_template.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.showToast?.('見本をダウンロードしました ✓');
 }
 
 function handleCsvFile(e) {
@@ -366,6 +392,7 @@ function handleClick(e) {
       break;
     case 'submitBulk': submitBulk(); break;
     case 'triggerCsvImport': document.getElementById('csv-import-input')?.click(); break;
+    case 'downloadTemplate': downloadCsvTemplate(); break;
     case 'useShortcut':
       const sc = store.getShortcuts().find(s => s.id === target.dataset.id);
       if (sc) {
