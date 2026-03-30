@@ -86,8 +86,10 @@ function renderApp() {
   }
 }
 
-// Global Navigation Function
-window.navigateTo = (screenName) => {
+function setupNavigation() {
+  const sidebar = document.getElementById('sidebar');
+  const bottomTab = document.getElementById('bottom-tab');
+  
   const screens = {
     input: document.getElementById('screen-input'),
     dashboard: document.getElementById('screen-dashboard'),
@@ -106,42 +108,39 @@ window.navigateTo = (screenName) => {
 
   const navButtons = document.querySelectorAll('[data-screen]');
 
-  Object.keys(screens).forEach(key => {
-    if (screens[key]) {
-      if (key === screenName) {
-        screens[key].style.display = 'block';
-        screens[key].classList.add('active');
-        if (renderFunctions[key]) {
-          renderFunctions[key](screens[key]);
+  function navigate(screenName) {
+    Object.keys(screens).forEach(key => {
+      if (screens[key]) {
+        if (key === screenName) {
+          screens[key].style.display = 'block';
+          screens[key].classList.add('active');
+          if (renderFunctions[key]) {
+            renderFunctions[key](screens[key]);
+          }
+        } else {
+          screens[key].style.display = 'none';
+          screens[key].classList.remove('active');
         }
-      } else {
-        screens[key].style.display = 'none';
-        screens[key].classList.remove('active');
       }
-    }
-  });
+    });
 
-  navButtons.forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.screen === screenName);
-  });
+    navButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.screen === screenName);
+    });
 
-  localStorage.setItem('kakeibo_current_screen', screenName);
-};
-
-function setupNavigation() {
-  const sidebar = document.getElementById('sidebar');
-  const bottomTab = document.getElementById('bottom-tab');
+    localStorage.setItem('kakeibo_current_screen', screenName);
+  }
 
   const handleNavClick = (e) => {
     const btn = e.target.closest('[data-screen]');
-    if (btn) window.navigateTo(btn.dataset.screen);
+    if (btn) navigate(btn.dataset.screen);
   };
 
   if (sidebar) sidebar.onclick = handleNavClick;
   if (bottomTab) bottomTab.onclick = handleNavClick;
 
   const lastScreen = localStorage.getItem('kakeibo_current_screen') || 'input';
-  window.navigateTo(lastScreen);
+  navigate(lastScreen);
 }
 
 document.addEventListener('DOMContentLoaded', initializeApp);

@@ -1,250 +1,250 @@
 // ============================================
-// ダッシュボード画面 (v3.5 - 安全性強化版)
+// ダッシュボード画面 (v2 - 口座別残高推移追加)
 // ============================================
 
 import * as store from '../store.js';
-import { openModal, closeModal } from '../utils.js';
-import { setPreFillState } from './input.js';
 
 let totalChart = null;
 let accountChart = null;
-let currentPeriod = 30;
+let currentPeriod = 90;
 let selectedAccountId = null;
 
 export function render(container) {
-  try {
-    const accounts = store.getAccounts();
-    const totalBalance = store.getTotalBalance();
-    const history = store.getAssetHistory(currentPeriod) || [];
-    const isPositive = totalBalance >= 0;
+  const accounts = store.getAccounts();
+  const totalBalance = store.getTotalBalance();
+  const history = store.getAssetHistory(currentPeriod);
 
-    // 1. HTML構築
-    container.innerHTML = `
-      <div class="dashboard-screen">
-        <div class="dashboard-header">
-          <div class="total-label">総資産</div>
-          <div class="total-amount ${isPositive ? 'positive' : 'negative'}">
-            ¥${Math.abs(totalBalance).toLocaleString('ja-JP')}
-          </div>
-        </div>
+  const isPositive = totalBalance >= 0;
 
-        <!-- Total Asset Trend Chart -->
-        <div class="chart-card">
-          <div class="chart-card-title">📈 資産推移</div>
-          <select class="form-input" id="period-selector" style="margin-bottom: var(--space-md); font-size: var(--font-size-sm);">
-            <option value="30" ${currentPeriod === 30 ? 'selected' : ''}>過去1ヶ月</option>
-            <option value="90" ${currentPeriod === 90 ? 'selected' : ''}>過去3ヶ月</option>
-            <option value="180" ${currentPeriod === 180 ? 'selected' : ''}>過去6ヶ月</option>
-            <option value="365" ${currentPeriod === 365 ? 'selected' : ''}>過去1年</option>
-            <option value="9999" ${currentPeriod === 9999 ? 'selected' : ''}>全期間</option>
-          </select>
-          <div class="chart-container">
-            <canvas id="asset-chart"></canvas>
-          </div>
-          ${history.length === 0 ? `
-            <div style="text-align:center; padding: 40px 0; color: var(--text-muted);">
-              取引を入力するとグラフが表示されます
-            </div>
-          ` : ''}
-        </div>
-
-        <!-- Account Balance Trend Chart -->
-        <div class="chart-card">
-          <div class="chart-card-title">🏦 口座別残高推移</div>
-          <select class="form-input" id="account-selector" style="margin-bottom: var(--space-md); font-size: var(--font-size-sm);">
-            <option value="">口座を選択してください</option>
-            ${accounts.map(acc => `
-              <option value="${acc.id}" ${selectedAccountId === acc.id ? 'selected' : ''}>
-                ${acc.icon} ${acc.name}
-              </option>
-            `).join('')}
-          </select>
-          <div class="chart-container">
-            <canvas id="account-chart"></canvas>
-          </div>
-          ${!selectedAccountId ? `
-            <div style="text-align:center; padding: 30px 0; color: var(--text-muted);">
-              リストから口座を選択してください
-            </div>
-          ` : ''}
-        </div>
-
-        <!-- Account Balance Cards -->
-        <div class="chart-card">
-          <div class="chart-card-title">💰 口座別残高</div>
-          <div class="account-cards">
-            ${accounts.map(acc => {
-              const balance = store.getAccountBalance(acc.id);
-              return `
-                <div class="account-card" data-id="${acc.id}" style="cursor:pointer;">
-                  <span class="account-card-icon">${acc.icon}</span>
-                  <div class="account-card-info">
-                    <div class="account-card-name">${acc.name}</div>
-                    <div class="account-card-balance" style="color: ${balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}">
-                      ¥${Math.abs(balance).toLocaleString('ja-JP')}
-                    </div>
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
+  container.innerHTML = `
+    <div class="dashboard-screen">
+      <div class="dashboard-header">
+        <div class="total-label">総資産</div>
+        <div class="total-amount ${isPositive ? 'positive' : 'negative'}">
+          ¥${Math.abs(totalBalance).toLocaleString('ja-JP')}
         </div>
       </div>
-    `;
 
-    // 2. グラフ描画 (Error Guard付)
-    try {
-      if (history.length > 0 && typeof Chart !== 'undefined') renderTotalChart(history);
-      if (selectedAccountId && typeof Chart !== 'undefined') renderAccountChart(selectedAccountId);
-    } catch (chartErr) {
-      console.error('Dashboard Chart Error:', chartErr);
-    }
+      <!-- Total Asset Trend Chart -->
+      <div class="chart-card">
+        <div class="chart-card-title">📈 資産推移</div>
+        <select class="form-input" id="period-selector" style="margin-bottom: var(--space-md); font-size: var(--font-size-sm);">
+          <option value="30" ${currentPeriod === 30 ? 'selected' : ''}>過去1ヶ月</option>
+          <option value="90" ${currentPeriod === 90 ? 'selected' : ''}>過去3ヶ月</option>
+          <option value="180" ${currentPeriod === 180 ? 'selected' : ''}>過去6ヶ月</option>
+          <option value="365" ${currentPeriod === 365 ? 'selected' : ''}>過去1年</option>
+          <option value="9999" ${currentPeriod === 9999 ? 'selected' : ''}>全期間</option>
+        </select>
+        <div class="chart-container">
+          <canvas id="asset-chart"></canvas>
+        </div>
+        ${history.length === 0 ? `
+          <div style="text-align:center; padding: 40px 0; color: var(--text-muted);">
+            <div style="font-size: 2rem; margin-bottom: 8px;">📊</div>
+            取引を入力するとグラフが表示されます
+          </div>
+        ` : ''}
+      </div>
 
-    // 3. イベント登録
-    const refresh = () => render(container);
+      <!-- Account Balance Trend Chart -->
+      <div class="chart-card">
+        <div class="chart-card-title">🏦 口座別残高推移</div>
+        <select class="form-input" id="account-selector" style="margin-bottom: var(--space-md); font-size: var(--font-size-sm);">
+          <option value="">口座を選択してください</option>
+          ${accounts.map(acc => `
+            <option value="${acc.id}" ${selectedAccountId === acc.id ? 'selected' : ''}>
+              ${acc.icon} ${acc.name}
+            </option>
+          `).join('')}
+        </select>
+        <div class="chart-container">
+          <canvas id="account-chart"></canvas>
+        </div>
+        ${!selectedAccountId ? `
+          <div style="text-align:center; padding: 30px 0; color: var(--text-muted);">
+            リストから口座を選択してください
+          </div>
+        ` : ''}
+      </div>
 
-    container.onclick = (e) => {
-      const card = e.target.closest('.account-card');
-      if (card && !e.target.closest('.sortable-ghost')) {
-        openAccountMenu(card.dataset.id, refresh);
-      }
-    };
+      <!-- Account Balance Cards -->
+      <div class="chart-card">
+        <div class="chart-card-title">💰 口座別残高</div>
+        <div class="account-cards">
+          ${accounts.map(acc => {
+            const balance = store.getAccountBalance(acc.id);
+            return `
+              <div class="account-card" data-action="selectAccount" data-id="${acc.id}" style="cursor:pointer;">
+                <span class="account-card-icon">${acc.icon}</span>
+                <div class="account-card-info">
+                  <div class="account-card-name">${acc.name}</div>
+                  <div class="account-card-balance" style="color: ${balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}">
+                    ¥${Math.abs(balance).toLocaleString('ja-JP')}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
 
-    container.querySelector('#period-selector')?.onchange = (e) => {
-      currentPeriod = Number(e.target.value);
-      refresh();
-    };
-
-    container.querySelector('#account-selector')?.onchange = (e) => {
-      selectedAccountId = e.target.value;
-      refresh();
-    };
-
-    // 4. ドラッグ＆ドロップ (PCのみ)
-    setupDragAndDrop(container, refresh);
-
-  } catch (err) {
-    console.error('CRITICAL: Dashboard render failed:', err);
-    container.innerHTML = `<div style="padding:20px; color:red;">ダッシュボードの読み込みに失敗しました: ${err.message}</div>`;
+  // Render charts
+  if (history.length > 0) {
+    renderTotalChart(history);
   }
-}
+  if (selectedAccountId) {
+    renderAccountChart(selectedAccountId);
+  }
 
-function openAccountMenu(accountId, refresh) {
-  const acc = store.getAccounts().find(a => a.id === accountId);
-  if (!acc) return;
+  container.addEventListener('click', handleClick);
+  container.querySelector('#period-selector')?.addEventListener('change', e => {
+    currentPeriod = Number(e.target.value);
+    refresh();
+  });
+  container.querySelector('#account-selector')?.addEventListener('change', e => {
+    selectedAccountId = e.target.value;
+    refresh();
+  });
 
-  openModal(`
-    <div style="text-align: center; margin-bottom: var(--space-md);">
-      <div style="font-size: 3rem; margin-bottom: var(--space-sm);">${acc.icon}</div>
-      <div style="font-weight: bold; font-size: 1.2rem;">${acc.name}</div>
-    </div>
-    <div class="grid grid-2 gap-md">
-      <button class="btn btn-expense" id="quick-expense">🧾 支出</button>
-      <button class="btn btn-income" id="quick-income">💰 収入</button>
-      <button class="btn btn-transfer" id="quick-transfer">🔄 振替</button>
-      <button class="btn btn-secondary" id="quick-adjust">🔢 調整</button>
-    </div>
-  `);
-
-  document.getElementById('quick-expense').onclick = () => {
-    setPreFillState({ type: 'expense', account: acc.name });
-    closeModal();
-    window.navigateTo('input');
-  };
-  document.getElementById('quick-income').onclick = () => {
-    setPreFillState({ type: 'income', account: acc.name });
-    closeModal();
-    window.navigateTo('input');
-  };
-  document.getElementById('quick-transfer').onclick = () => {
-    setPreFillState({ type: 'transfer', account: acc.name });
-    closeModal();
-    window.navigateTo('input');
-  };
-  document.getElementById('quick-adjust').onclick = () => {
-    const currentVal = store.getAccountBalance(acc.id);
-    const input = prompt(`「${acc.name}」の本当の残高を入力してください：`, currentVal);
-    if (input !== null && !isNaN(input)) {
-        const targetVal = Number(input);
-        const diff = targetVal - currentVal;
-        if (diff !== 0) {
-          store.addTransaction({
-            date: new Date().toISOString().split('T')[0],
-            type: diff > 0 ? 'income' : 'expense',
-            amount: Math.abs(diff),
-            category: '残高調整',
-            fromAccount: diff < 0 ? acc.name : '',
-            toAccount: diff > 0 ? acc.name : '',
-            memo: '残高調整'
-          });
-          window.showToast?.(`残高を ¥${targetVal.toLocaleString()} に修正しました`);
-        }
-        closeModal();
-        refresh();
-    }
-  };
-}
-
-function setupDragAndDrop(container, refresh) {
+  // Initialize Drag & Drop (PC版のみ有効)
   const isPC = window.innerWidth >= 768;
   const el = container.querySelector('.account-cards');
+  let currentTarget = null; 
+
   if (isPC && el && window.Sortable) {
     Sortable.create(el, {
       sort: false, 
       animation: 150,
+      ghostClass: 'sortable-ghost',
+      dragClass: 'sortable-drag',
+      delay: 0, // PC版は即座にドラッグ開始できるように
       onMove: (evt) => {
-        container.querySelectorAll('.account-card').forEach(c => c.classList.remove('drag-over'));
-        if (evt.related) evt.related.classList.add('drag-over');
+        el.querySelectorAll('.account-card').forEach(c => c.classList.remove('drag-over'));
+        if (evt.related && evt.related.classList.contains('account-card')) {
+          currentTarget = evt.related;
+          currentTarget.classList.add('drag-over');
+        } else {
+          currentTarget = null;
+        }
       },
       onEnd: (evt) => {
-        container.querySelectorAll('.account-card').forEach(c => c.classList.remove('drag-over'));
+        el.querySelectorAll('.account-card').forEach(c => c.classList.remove('drag-over'));
         const item = evt.item;
         const originalPointerEvents = item.style.pointerEvents;
         item.style.pointerEvents = 'none';
 
         const touch = evt.originalEvent.changedTouches ? evt.originalEvent.changedTouches[0] : evt.originalEvent;
         const targetEl = document.elementFromPoint(touch.clientX, touch.clientY)?.closest('.account-card');
+        
         item.style.pointerEvents = originalPointerEvents;
 
         if (targetEl && targetEl !== item) {
-          openQuickTransferModal(item.dataset.id, targetEl.dataset.id, refresh);
-        } else {
-          refresh();
+          const fromId = item.dataset.id;
+          const toId = targetEl.dataset.id;
+          openQuickTransferModal(fromId, toId);
         }
+        
+        // sort: false でも位置が戻るので、明示的にリフレッシュしなくても大丈夫ですが
+        // 念のため画面全体を最新にする
+        refresh(); 
       }
     });
   }
 }
 
-function openQuickTransferModal(fromId, toId, refresh) {
-  const fromAcc = store.getAccounts().find(a => a.id === fromId);
-  const toAcc = store.getAccounts().find(a => a.id === toId);
+function openQuickTransferModal(fromId, toId) {
+  const accounts = store.getAccounts();
+  const fromAcc = accounts.find(a => a.id === fromId);
+  const toAcc = accounts.find(a => a.id === toId);
   if (!fromAcc || !toAcc) return;
 
-  openModal(`
-    <div class="modal-title">クイック振替 🔄</div>
-    <div style="display:flex; justify-content:space-around; padding: 20px 0;">
-      <div>${fromAcc.icon} ${fromAcc.name}</div>
-      <div>➡</div>
-      <div>${toAcc.icon} ${toAcc.name}</div>
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '3000';
+  overlay.innerHTML = `
+    <div class="modal-content" style="margin: auto; border-radius: var(--radius-xl);">
+      <div class="modal-header">
+        <div class="modal-title">クイック振替 🔄</div>
+        <button class="modal-close-btn">✕</button>
+      </div>
+      <div class="quick-transfer-header">
+        <div style="text-align:center">
+          <div style="font-size:2rem">${fromAcc.icon}</div>
+          <div style="font-size:0.8rem">${fromAcc.name}</div>
+        </div>
+        <div class="transfer-arrow">➡</div>
+        <div style="text-align:center">
+          <div style="font-size:2rem">${toAcc.icon}</div>
+          <div style="font-size:0.8rem">${toAcc.name}</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">移動する金額</label>
+        <input type="number" id="quick-transfer-amount" class="form-input" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary modal-cancel-btn">キャンセル</button>
+        <button class="btn btn-primary" id="execute-quick-transfer">移動する</button>
+      </div>
     </div>
-    <input type="number" id="quick-transfer-amount" class="form-input" placeholder="金額を入力">
-    <div class="form-actions" style="margin-top:20px;">
-      <button class="btn btn-secondary" onclick="closeModal()">キャンセル</button>
-      <button class="btn btn-primary" id="execute-quick-transfer">移動</button>
-    </div>
-  `);
+  `;
 
-  document.getElementById('execute-quick-transfer').onclick = () => {
-    const amount = Number(document.getElementById('quick-transfer-amount').value);
-    if (amount > 0) {
-      store.addTransaction({
-        date: new Date().toISOString().split('T')[0], type: 'transfer',
-        amount, fromAccount: fromAcc.name, toAccount: toAcc.name, memo: 'クイック振替'
-      });
-      closeModal();
-      refresh();
+  document.body.appendChild(overlay);
+  const input = overlay.querySelector('#quick-transfer-amount');
+  setTimeout(() => input.focus(), 100);
+
+  const close = () => { overlay.remove(); };
+  overlay.querySelector('.modal-close-btn').onclick = close;
+  overlay.querySelector('.modal-cancel-btn').onclick = close;
+  
+  overlay.querySelector('#execute-quick-transfer').onclick = () => {
+    const amount = Number(input.value);
+    if (!amount || amount <= 0) {
+      window.showToast?.('金額を入力してください', 'error');
+      return;
     }
+
+    const tx = {
+      date: new Date().toISOString().split('T')[0],
+      type: 'transfer',
+      amount: amount,
+      category: '',
+      fromAccount: fromAcc.name,
+      toAccount: toAcc.name,
+      memo: 'クイック振替'
+    };
+
+    store.addTransaction(tx);
+    window.showToast?.('振替を完了しました ✓');
+    close();
+    refresh();
+  };
+}
+
+function handleClick(e) {
+  const target = e.target.closest('[data-action]');
+  if (!target) return;
+
+  if (target.dataset.action === 'setPeriod') {
+    currentPeriod = Number(target.dataset.days);
+    refresh();
+  } else if (target.dataset.action === 'selectAccount') {
+    selectedAccountId = target.dataset.id;
+    refresh();
+  }
+}
+
+function getChartColors() {
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches ||
+    document.documentElement.getAttribute('data-theme') === 'dark';
+  return {
+    gridColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+    textColor: isDark ? '#9ca3b8' : '#6b7280',
+    tooltipBg: isDark ? '#1e1e35' : '#ffffff',
+    tooltipBody: isDark ? '#e8e8f0' : '#1a1a2e',
+    tooltipBorder: isDark ? '#2d2d4a' : '#e5e7eb',
   };
 }
 
@@ -252,17 +252,30 @@ function renderTotalChart(history) {
   const canvas = document.getElementById('asset-chart');
   if (!canvas) return;
   if (totalChart) totalChart.destroy();
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+  const c = getChartColors();
+
   totalChart = new Chart(canvas, {
     type: 'line',
     data: {
-      labels: history.map(h => h.date.slice(5)),
+      labels: history.map(h => {
+        const d = new Date(h.date);
+        return `${d.getMonth() + 1}/${d.getDate()}`;
+      }),
       datasets: [{
-        label: '総資産', data: history.map(h => h.total),
-        borderColor: '#6366f1', tension: 0.3, fill: true, backgroundColor: 'rgba(99, 102, 241, 0.1)'
-      }]
+        label: '総資産',
+        data: history.map(h => h.total),
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.3,
+        pointRadius: history.length > 30 ? 0 : 3,
+        pointHoverRadius: 5,
+        pointBackgroundColor: '#6366f1',
+      }],
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    options: chartOptions(c),
   });
 }
 
@@ -270,38 +283,127 @@ function renderAccountChart(accountId) {
   const canvas = document.getElementById('account-chart');
   if (!canvas) return;
   if (accountChart) accountChart.destroy();
-  const acc = store.getAccounts().find(a => a.id === accountId);
-  if (!acc) return;
-  const history = getAccountHistory(acc.name, currentPeriod);
+
+  const accounts = store.getAccounts();
+  const account = accounts.find(a => a.id === accountId);
+  if (!account) return;
+
+  const history = getAccountHistory(account.name, currentPeriod);
+  if (history.length === 0) return;
+
+  const c = getChartColors();
+
   accountChart = new Chart(canvas, {
     type: 'line',
     data: {
-      labels: history.map(h => h.date.slice(5)),
+      labels: history.map(h => {
+        const d = new Date(h.date);
+        return `${d.getMonth() + 1}/${d.getDate()}`;
+      }),
       datasets: [{
-        label: acc.name, data: history.map(h => h.balance),
-        borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16, 185, 129, 0.1)'
-      }]
+        label: account.name,
+        data: history.map(h => h.balance),
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.3,
+        pointRadius: history.length > 30 ? 0 : 3,
+        pointHoverRadius: 5,
+        pointBackgroundColor: '#10b981',
+      }],
     },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    options: chartOptions(c),
   });
 }
 
-function getAccountHistory(name, days) {
-  const txs = store.getTransactions().sort((a,b) => a.date.localeCompare(b.date));
-  const acc = store.getAccounts().find(a => a.name === name);
-  let bal = acc?.initialBalance || 0;
-  const map = {};
-  txs.forEach(t => {
-    const a = Number(t.amount) || 0;
-    if (t.type === 'income' && t.toAccount === name) bal += a;
-    else if (t.type === 'expense' && t.fromAccount === name) bal -= a;
-    else if (t.type === 'transfer') {
-      if (t.fromAccount === name) bal -= a;
-      if (t.toAccount === name) bal += a;
+function getAccountHistory(accountName, days) {
+  const transactions = store.getTransactions()
+    .filter(t => t.date)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (transactions.length === 0) return [];
+
+  const accounts = store.getAccounts();
+  const account = accounts.find(a => a.name === accountName);
+  let balance = account?.initialBalance || 0;
+
+  const dailyBalances = {};
+
+  for (const tx of transactions) {
+    const amount = Number(tx.amount) || 0;
+    if (tx.type === 'income' && tx.toAccount === accountName) {
+      balance += amount;
+    } else if (tx.type === 'expense' && tx.fromAccount === accountName) {
+      balance -= amount;
+    } else if (tx.type === 'transfer') {
+      if (tx.fromAccount === accountName) balance -= amount;
+      if (tx.toAccount === accountName) balance += amount;
     }
-    map[t.date] = bal;
-  });
-  const start = new Date(); start.setDate(start.getDate() - days);
-  const startStr = start.toISOString().split('T')[0];
-  return Object.entries(map).filter(([d]) => d >= startStr).map(([d, b]) => ({ date: d, balance: b }));
+    dailyBalances[tx.date] = balance;
+  }
+
+  const endDate = new Date();
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - days);
+  const startStr = startDate.toISOString().split('T')[0];
+
+  const result = [];
+  for (const [date, bal] of Object.entries(dailyBalances).sort(([a], [b]) => a.localeCompare(b))) {
+    if (date >= startStr) {
+      result.push({ date, balance: bal });
+    }
+  }
+
+  const todayStr = endDate.toISOString().split('T')[0];
+  if (result.length === 0 || result[result.length - 1].date !== todayStr) {
+    result.push({ date: todayStr, balance });
+  }
+
+  return result;
+}
+
+function chartOptions(c) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { intersect: false, mode: 'index' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: c.tooltipBg,
+        titleColor: c.textColor,
+        bodyColor: c.tooltipBody,
+        borderColor: c.tooltipBorder,
+        borderWidth: 1,
+        padding: 12,
+        displayColors: false,
+        callbacks: {
+          label: ctx => `¥${ctx.parsed.y.toLocaleString('ja-JP')}`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: { color: c.gridColor },
+        ticks: { color: c.textColor, maxTicksLimit: 8, font: { size: 11 } },
+      },
+      y: {
+        grid: { color: c.gridColor },
+        ticks: {
+          color: c.textColor,
+          font: { size: 11 },
+          callback: val => `¥${(val / 1000).toFixed(0)}K`,
+        },
+      },
+    },
+  };
+}
+
+function refresh() {
+  const container = document.getElementById('screen-dashboard');
+  if (container) {
+    container.removeEventListener('click', handleClick);
+    render(container);
+  }
 }
