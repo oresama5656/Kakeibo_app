@@ -39,7 +39,7 @@ function getPeriodDates() {
       end = new Date(now); 
       break;
     case 'custom': 
-      start = analysisState.customStart ? new Date(analysisState.customStart) : new Date(now.getFullYear(), now.getMonth(), 1); 
+      start = analysisState.customStart ? new Date(analysisState.customStart + 'T00:00:00') : new Date(now.getFullYear(), now.getMonth(), 1); 
       end = analysisState.customEnd ? new Date(analysisState.customEnd + 'T23:59:59') : new Date(now); 
       break;
     default: 
@@ -313,7 +313,17 @@ function calculateCategoryTotals(txs) {
 function bindEvents(container) {
   container.querySelectorAll('[data-action="setTab"]').forEach(b => b.onclick = (e) => { analysisState.tab = e.currentTarget.dataset.tab; render(container); });
   container.querySelectorAll('[data-action="setViewType"]').forEach(b => b.onclick = (e) => { analysisState.viewType = e.currentTarget.dataset.type; render(container); });
-  container.querySelectorAll('[data-action="setPeriod"]').forEach(b => b.onclick = (e) => { analysisState.periodType = e.currentTarget.dataset.val; render(container); });
+  
+  container.querySelectorAll('[data-action="setPeriod"]').forEach(b => b.onclick = (e) => { 
+    const val = e.currentTarget.dataset.val;
+    if (val === 'custom') {
+      showCustomPeriodModal(container);
+    } else {
+      analysisState.periodType = val; 
+      render(container); 
+    }
+  });
+  
   container.querySelectorAll('[data-action="setChartMode"]').forEach(b => b.onclick = (e) => { analysisState.chartMode = e.currentTarget.dataset.val; render(container); });
   
   container.querySelectorAll('[data-action="drillDown"]').forEach(row => {
@@ -336,6 +346,102 @@ function bindEvents(container) {
       analysisState.selectedAccountId = e.target.value;
     }
     render(container); 
+  };
+}
+
+function showCustomPeriodModal(container) {
+  // すでにモーダルがあれば削除
+  const existing = document.getElementById('custom-period-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'custom-period-modal';
+  modal.className = 'premium-modal-overlay fadeIn';
+  
+  const now = new Date();
+  const defaultStart = analysisState.customStart || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const defaultEnd = analysisState.customEnd || now.toISOString().split('T')[0];
+
+  modal.innerHTML = `
+    <div class="premium-modal-content slideUp">
+      <div class="modal-header">
+        <h3>📅 期間を指定</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="date-input-group">
+          <label>開始日</label>
+          <input type="date" id="modal-start-date" value="${defaultStart}">
+        </div>
+        <div class="date-input-group">
+          <label>終了日</label>
+          <input type="date" id="modal-end-date" value="${defaultEnd}">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-apply-btn">この期間で表示</button>
+      </div>
+    </div>
+
+    <style>
+      .premium-modal-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        z-index: 2000;
+        display: flex; align-items: center; justify-content: center; padding: 20px;
+      }
+      .premium-modal-content {
+        background: var(--bg-card);
+        width: 100%; max-width: 400px;
+        border-radius: 28px;
+        box-shadow: var(--shadow-xl);
+        border: 1px solid var(--border-light);
+        overflow: hidden;
+      }
+      .modal-header { padding: 20px 24px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
+      .modal-header h3 { font-size: 1.1rem; font-weight: 800; margin: 0; }
+      .modal-close-btn { font-size: 1.8rem; line-height: 1; color: var(--text-muted); padding: 0 8px; }
+      
+      .modal-body { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+      .date-input-group { display: flex; flex-direction: column; gap: 8px; }
+      .date-input-group label { font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); }
+      .date-input-group input { 
+        width: 100%; padding: 12px 16px; border-radius: 12px; 
+        border: 1px solid var(--border-color); background: var(--bg-hover);
+        font-size: 1rem; font-weight: 700;
+      }
+      
+      .modal-footer { padding: 16px 24px 24px; }
+      .modal-apply-btn { 
+        width: 100%; padding: 14px; border-radius: 14px; 
+        background: var(--color-accent); color: white;
+        font-weight: 800; font-size: 1rem;
+        box-shadow: 0 4px 12px var(--color-accent-light);
+        transition: all 0.2s;
+      }
+      .modal-apply-btn:active { transform: scale(0.97); }
+
+      .slideUp { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+      @keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+    </style>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector('.modal-close-btn').onclick = () => modal.remove();
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+  modal.querySelector('.modal-apply-btn').onclick = () => {
+    analysisState.customStart = document.getElementById('modal-start-date').value;
+    analysisState.customEnd = document.getElementById('modal-end-date').value;
+    analysisState.periodType = 'custom';
+    modal.remove();
+    render(container);
   };
 }
 
