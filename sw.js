@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kakeibo-cache-v4.5';
+const CACHE_NAME = 'kakeibo-cache-v4.7';
 const ASSETS = [
   './',
   './index.html',
@@ -10,11 +10,12 @@ const ASSETS = [
   './js/screens/input.js',
   './js/screens/history.js',
   './js/screens/dashboard.js',
+  './js/screens/analysis.js',
   './js/screens/settings.js',
   './icon.png'
 ];
 
-// Install: プリキャッシュ
+// Install: キャッシュへの登録
 self.addEventListener('install', (e) => {
   self.skipWaiting();
   e.waitUntil(
@@ -22,31 +23,38 @@ self.addEventListener('install', (e) => {
   );
 });
 
-// Activate: 旧キャッシュの削除
+// Activate: 旧キャッシュの破棄
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      );
-    })
+    Promise.all([
+      self.clients.claim(), // 制御を即時に開始
+      caches.keys().then((keys) => {
+        return Promise.all(
+          keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        );
+      })
+    ])
   );
 });
 
-// Fetch: キャッシュがあればそれを返しつつ、バックグラウンドで最新を取得（Stale-While-Revalidate）
+// Fetch: ネットワーク優先 (Network First)
+// 開発中や更新頻度が高い場合は、最新をまず見に行くこの方法が「スマート」です。
 self.addEventListener('fetch', (e) => {
-  // スプレッドシートAPIなどの外部リクエストはキャッシュしない
   if (e.request.url.includes('googleapis.com')) return;
 
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      const fetchPromise = fetch(e.request).then((networkResponse) => {
+    fetch(e.request)
+      .then((response) => {
+        // ネットワークが成功したらキャッシュを更新
+        const respClone = response.clone();
         caches.open(CACHE_NAME).then((cache) => {
-          cache.put(e.request, networkResponse.clone());
+          cache.put(e.request, respClone);
         });
-        return networkResponse;
-      });
-      return cachedResponse || fetchPromise;
-    })
+        return response;
+      })
+      .catch(() => {
+        // ネットワークがダメな時だけキャッシュを返す
+        return caches.match(e.request);
+      })
   );
 });
