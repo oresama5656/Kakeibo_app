@@ -1,5 +1,5 @@
 // ============================================
-// データ管理モジュール (v3.8 - 取引更新機能 復旧版)
+// データ管理モジュール (v3.9 - 標準カテゴリー自動補充版)
 // ============================================
 
 import * as auth from './auth.js';
@@ -11,8 +11,10 @@ const DEFAULT_CATEGORIES = [
   { id: 'cat_04', name: '交際費', icon: '🍻', type: 'expense', order: 4 },
   { id: 'cat_05', name: '居住費', icon: '🏠', type: 'expense', order: 5 },
   { id: 'cat_06', name: '娯楽', icon: '🎮', type: 'expense', order: 6 },
+  { id: 'cat_99', name: '残高修正', icon: '⚖️', type: 'expense', order: 99 }, // 標準装備
   { id: 'cat_07', name: '給与', icon: '💰', type: 'income', order: 7 },
-  { id: 'cat_08', name: '他収入', icon: '🧧', type: 'income', order: 8 }
+  { id: 'cat_08', name: '他収入', icon: '🧧', type: 'income', order: 8 },
+  { id: 'cat_100', name: '残高修正', icon: '⚖️', type: 'income', order: 100 } // 標準装備
 ];
 
 const DEFAULT_ACCOUNTS = [
@@ -40,8 +42,26 @@ export function initStore() {
     state = JSON.parse(localData);
     if (!state.shortcuts) state.shortcuts = [];
     if (!state.deletedIds) state.deletedIds = [];
-    if (!state.categories || state.categories.length === 0) state.categories = [...DEFAULT_CATEGORIES];
-    if (!state.accounts || state.accounts.length === 0) state.accounts = [...DEFAULT_ACCOUNTS];
+    
+    // カテゴリーの初期チェックと補充
+    if (!state.categories || state.categories.length === 0) {
+      state.categories = [...DEFAULT_CATEGORIES];
+    } else {
+      // 「残高修正」がない既存ユーザーのために自動補充
+      const hasExpenseCorrection = state.categories.find(c => c.name === '残高修正' && c.type === 'expense');
+      const hasIncomeCorrection = state.categories.find(c => c.name === '残高修正' && c.type === 'income');
+      
+      if (!hasExpenseCorrection) {
+        state.categories.push({ id: 'cat_fix_e', name: '残高修正', icon: '⚖️', type: 'expense', order: 99 });
+      }
+      if (!hasIncomeCorrection) {
+        state.categories.push({ id: 'cat_fix_i', name: '残高修正', icon: '⚖️', type: 'income', order: 100 });
+      }
+    }
+    
+    if (!state.accounts || state.accounts.length === 0) {
+      state.accounts = [...DEFAULT_ACCOUNTS];
+    }
   } else {
     state.categories = [...DEFAULT_CATEGORIES];
     state.accounts = [...DEFAULT_ACCOUNTS];
@@ -164,16 +184,10 @@ export function addTransaction(tx) {
   updateAccountBalances();
   save();
 }
-
 export function updateTransaction(id, updates) {
   const idx = state.transactions.findIndex(t => t.id === id);
-  if (idx !== -1) {
-    state.transactions[idx] = { ...state.transactions[idx], ...updates };
-    updateAccountBalances();
-    save();
-  }
+  if (idx !== -1) { state.transactions[idx] = { ...state.transactions[idx], ...updates }; updateAccountBalances(); save(); }
 }
-
 export function deleteTransaction(id) {
   if (!id) return;
   if (!state.deletedIds.includes(id)) state.deletedIds.push(id);
@@ -181,7 +195,6 @@ export function deleteTransaction(id) {
   updateAccountBalances();
   save();
 }
-
 export function addAccount(a) { a.id = 'acc_' + Date.now(); state.accounts.push(a); updateAccountBalances(); save(); }
 export function updateAccount(id, d) { const i = state.accounts.findIndex(a => a.id === id); if (i !== -1) { state.accounts[i] = { ...state.accounts[i], ...d }; updateAccountBalances(); save(); } }
 export function deleteAccount(id) { state.accounts = state.accounts.filter(a => a.id !== id); save(); }
