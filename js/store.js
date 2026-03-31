@@ -161,6 +161,7 @@ export async function loadFromCloud(sheetId) {
     }
     
     updateAccountBalances();
+    fixDuplicateIds();
     localStorage.setItem('kakeibo_data', JSON.stringify(state));
     isCloudSyncReady = true; // 同期準備完了！
     return true;
@@ -274,10 +275,30 @@ export function getAccountHistory(accountName, days = 90) {
 
 // --- Setters (Transactions) ---
 export function addTransaction(tx) {
-  const id = 'tx_' + Date.now();
+  // ミリ秒 + ランダム文字列で重複を確実に防ぐ
+  const id = 'tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   state.transactions.unshift({ ...tx, id });
-  updateAccountBalances(); // 保存前に計算！
+  updateAccountBalances();
   save();
+}
+
+/**
+ * 既存の重複したIDを修復する
+ */
+export function fixDuplicateIds() {
+  const ids = new Set();
+  let fixed = false;
+  state.transactions.forEach(tx => {
+    if (!tx.id || ids.has(tx.id)) {
+      tx.id = 'tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      fixed = true;
+    }
+    ids.add(tx.id);
+  });
+  if (fixed) {
+    console.log('Duplicate IDs found and fixed.');
+    save();
+  }
 }
 
 export function updateTransaction(id, data) {
