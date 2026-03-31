@@ -1,5 +1,5 @@
 // ============================================
-// データ管理モジュール (v3.6 - API完全復旧版)
+// データ管理モジュール (v3.7 - 安全な並べ替え対応)
 // ============================================
 
 import * as auth from './auth.js';
@@ -45,6 +45,7 @@ export function initStore() {
   } else {
     state.categories = [...DEFAULT_CATEGORIES];
     state.accounts = [...DEFAULT_ACCOUNTS];
+    state.deletedIds = [];
   }
 }
 
@@ -174,11 +175,29 @@ export function deleteTransaction(id) {
 export function addAccount(a) { a.id = 'acc_' + Date.now(); state.accounts.push(a); updateAccountBalances(); save(); }
 export function updateAccount(id, d) { const i = state.accounts.findIndex(a => a.id === id); if (i !== -1) { state.accounts[i] = { ...state.accounts[i], ...d }; updateAccountBalances(); save(); } }
 export function deleteAccount(id) { state.accounts = state.accounts.filter(a => a.id !== id); save(); }
-export function reorderAccounts(ids) { state.accounts = ids.map((id, i) => ({ ...state.accounts.find(a => a.id === id), order: i + 1 })); save(); }
+export function reorderAccounts(ids) {
+  // 安全な並べ替え: 指定されたIDセットだけを現在の順番で上書きし、他は維持
+  const newOrderMap = new Map(ids.map((id, index) => [id, index + 1]));
+  state.accounts.forEach(acc => {
+    if (newOrderMap.has(acc.id)) {
+      acc.order = newOrderMap.get(acc.id);
+    }
+  });
+  save();
+}
 export function addCategory(c) { c.id = 'cat_' + Date.now(); state.categories.push(c); save(); }
 export function updateCategory(id, d) { const i = state.categories.findIndex(c => c.id === id); if (i !== -1) { state.categories[i] = { ...state.categories[i], ...d }; save(); } }
 export function deleteCategory(id) { state.categories = state.categories.filter(c => c.id !== id); save(); }
-export function reorderCategories(ids) { state.categories = ids.map((id, i) => ({ ...state.categories.find(c => c.id === id), order: i + 1 })); save(); }
+export function reorderCategories(ids) {
+  // 安全な並べ替え: 他のタイプのカテゴリーを消さないように
+  const newOrderMap = new Map(ids.map((id, index) => [id, index + 1]));
+  state.categories.forEach(cat => {
+    if (newOrderMap.has(cat.id)) {
+      cat.order = newOrderMap.get(cat.id);
+    }
+  });
+  save();
+}
 export function updateSettings(s) { state.settings = { ...state.settings, ...s }; save(); }
 export function clearAllData() { state.transactions = []; state.deletedIds = []; updateAccountBalances(); save(); }
 export function importAllData(d) { state = d; save(); }
@@ -188,10 +207,11 @@ export function exportAllData() { return state; }
 export function getAssetHistory(days = 30) {
   const history = [];
   const now = new Date();
+  const totalRaw = getTotalBalance();
   for (let i = 0; i <= days; i++) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
     const dStr = d.toISOString().split('T')[0];
-    let bal = getTotalBalance();
+    let bal = totalRaw;
     state.transactions.forEach(tx => {
       if (tx.date > dStr) {
         if (tx.type === 'income') bal -= tx.amount;
@@ -206,11 +226,12 @@ export function getAssetHistory(days = 30) {
 export function getAccountHistory(accountName, days = 30) {
   const history = [];
   const now = new Date();
+  const accObj = state.accounts.find(a => a.name === accountName);
+  const currentAccBal = accObj?.balance || 0;
   for (let i = 0; i <= days; i++) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
     const dStr = d.toISOString().split('T')[0];
-    const acc = state.accounts.find(a => a.name === accountName);
-    let bal = acc?.balance || 0;
+    let bal = currentAccBal;
     state.transactions.forEach(tx => {
       if (tx.date > dStr) {
         if (tx.type === 'income' && tx.toAccount === accountName) bal -= tx.amount;

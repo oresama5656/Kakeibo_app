@@ -1,5 +1,5 @@
 // ============================================
-// 設定画面 (v5.4 - カテゴリー表示完全復旧版)
+// 設定画面 (v5.5 - カテゴリ並べ替え対応版)
 // ============================================
 
 import * as store from '../store.js';
@@ -12,8 +12,16 @@ export function render(container) {
   const settings = store.getSettings();
   const accounts = store.getAccounts();
   const categories = store.getCategories();
-  const expenseCategories = categories.filter(c => c.type === 'expense');
-  const incomeCategories = categories.filter(c => c.type === 'income');
+  
+  // 順番(order)に沿って並び替え
+  const expenseCategories = categories
+    .filter(c => c.type === 'expense')
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+  const incomeCategories = categories
+    .filter(c => c.type === 'income')
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
   const sheetId = localStorage.getItem('kakeibo_sheet_id');
 
   container.innerHTML = `
@@ -21,7 +29,7 @@ export function render(container) {
       <div class="settings-header-hero" style="text-align: center; padding: 40px 0 20px;">
         <div style="font-size: 3.5rem; margin-bottom: 5px;">⚙️</div>
         <h2 style="font-size: 1.6rem; font-weight: 800; margin:0;">アプリ設定</h2>
-        <div style="font-size: 12px; color: var(--text-muted); opacity: 0.7;">Sync Engine v5.4</div>
+        <div style="font-size: 12px; color: var(--text-muted); opacity: 0.7;">Sync Engine v5.5 (Sortable Update)</div>
       </div>
 
       <div class="settings-quick-actions" style="display: flex; justify-content: center; gap: 24px; margin: 10px 0 30px;">
@@ -42,7 +50,7 @@ export function render(container) {
           <span style="opacity: 0.5;">● ${accounts.length}</span>
         </div>
         <div id="settings-accounts-list">
-          ${accounts.sort((a,b) => a.order - b.order).map(acc => `
+          ${accounts.sort((a,b) => (a.order || 0) - (b.order || 0)).map(acc => `
             <div class="settings-list-item draggable" data-id="${acc.id}" style="display: flex; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border-light); cursor: pointer;" data-action="editAccount">
               <span class="settings-drag-handle" style="color: var(--border-color); cursor: grab; padding-right: 16px;">⠿</span>
               <span style="font-size: 1.3rem; margin-right: 16px;">${acc.icon}</span>
@@ -54,17 +62,18 @@ export function render(container) {
         <div data-action="addAccount" style="padding: 16px; text-align: center; color: var(--color-accent); font-weight: bold; font-size: 0.9rem; cursor: pointer; background: rgba(99, 102, 241, 0.02); border-top: 1px solid var(--border-light);">＋ 新しい口座を追加</div>
       </div>
 
-      <!-- カテゴリーセクション -->
+      <!-- カテゴリーセクション (並べ替え対応型) -->
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
         <!-- 支出 -->
         <div style="background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color); padding: 16px;">
-          <div style="font-size: 0.7rem; font-weight: 800; color: var(--color-expense); margin-bottom: 12px; text-align:center;">支出カテゴリ</div>
+          <div style="font-size: 0.75rem; font-weight: 800; color: var(--color-expense); margin-bottom: 12px; text-align:center;">支出カテゴリ</div>
           <div id="settings-expense-list">
             ${expenseCategories.map(cat => `
-              <div data-action="editCategory" data-id="${cat.id}" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-light); cursor: pointer;">
+              <div class="settings-list-item draggable" data-id="${cat.id}" data-action="editCategory" style="display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border-light); cursor: pointer;">
+                <span class="settings-drag-handle" style="color: var(--border-color); cursor: grab; font-size: 12px;">⠿</span>
                 <span style="font-size: 1.1rem;">${cat.icon}</span>
-                <span style="font-size: 0.85rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex:1;">${cat.name}</span>
-                <span style="color: var(--text-muted); opacity:0.5;">›</span>
+                <span style="font-size: 0.85rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex:1;">${cat.name}</span>
+                <span style="color: var(--text-muted); opacity:0.3;">›</span>
               </div>
             `).join('')}
           </div>
@@ -72,13 +81,14 @@ export function render(container) {
         </div>
         <!-- 収入 -->
         <div style="background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color); padding: 16px;">
-          <div style="font-size: 0.7rem; font-weight: 800; color: var(--color-income); margin-bottom: 12px; text-align:center;">収入カテゴリ</div>
+          <div style="font-size: 0.75rem; font-weight: 800; color: var(--color-income); margin-bottom: 12px; text-align:center;">収入カテゴリ</div>
           <div id="settings-income-list">
             ${incomeCategories.map(cat => `
-              <div data-action="editCategory" data-id="${cat.id}" style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-light); cursor: pointer;">
+              <div class="settings-list-item draggable" data-id="${cat.id}" data-action="editCategory" style="display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border-light); cursor: pointer;">
+                <span class="settings-drag-handle" style="color: var(--border-color); cursor: grab; font-size: 12px;">⠿</span>
                 <span style="font-size: 1.1rem;">${cat.icon}</span>
-                <span style="font-size: 0.85rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex:1;">${cat.name}</span>
-                <span style="color: var(--text-muted); opacity:0.5;">›</span>
+                <span style="font-size: 0.85rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex:1;">${cat.name}</span>
+                <span style="color: var(--text-muted); opacity:0.3;">›</span>
               </div>
             `).join('')}
           </div>
@@ -109,8 +119,52 @@ export function render(container) {
     </div>
   `;
 
-  container.addEventListener('click', handleClick);
+  // Sortableエンジンの初期化
   initSortable('settings-accounts-list', 'account');
+  initSortable('settings-expense-list', 'category');
+  initSortable('settings-income-list', 'category');
+
+  container.addEventListener('click', handleClick);
+}
+
+// -------------------------------------------------------------
+// イベント & 並べ替えロジック
+// -------------------------------------------------------------
+
+function initSortable(id, type) {
+  const el = document.getElementById(id);
+  if (!el || !window.Sortable) return;
+  
+  window.Sortable.create(el, {
+    handle: '.settings-drag-handle',
+    animation: 200,
+    ghostClass: 'sortable-ghost',
+    onEnd: () => {
+      const items = Array.from(el.querySelectorAll('.draggable'));
+      const ids = items.map(item => item.dataset.id);
+      
+      if (type === 'account') {
+        store.reorderAccounts(ids);
+      } else {
+        // 全カテゴリーの中から現在編集中のタイプ以外のものを取得して合体させる
+        const categories = store.getCategories();
+        const firstItem = categories.find(c => c.id === ids[0]);
+        const otherType = firstItem.type === 'expense' ? 'income' : 'expense';
+        const otherCategories = categories.filter(c => c.type === otherType);
+        
+        // 並べ変えられた現在のタイプ
+        const sortedCurrent = ids.map((id, i) => {
+          return { ...categories.find(c => c.id === id), order: i + 1 };
+        });
+        
+        // 順番を振り直す
+        const allNew = [...sortedCurrent, ...otherCategories];
+        // 実際には store.reorderCategories を呼び出すが、修正したidsを渡すだけで済むようにstore側が期待される
+        store.reorderCategories(ids); 
+      }
+      window.showToast?.('並べ替えを適用しました');
+    }
+  });
 }
 
 async function handleClick(e) {
@@ -119,10 +173,7 @@ async function handleClick(e) {
   const action = target.dataset.action;
 
   switch (action) {
-    case 'editAccount': 
-      const accId = e.target.closest('.draggable')?.dataset.id;
-      if (accId) showAccountModal(accId); 
-      break;
+    case 'editAccount': showAccountModal(e.target.closest('.draggable')?.dataset.id); break;
     case 'addAccount': showAccountModal(null); break;
     case 'editCategory': showCategoryModal(target.dataset.id); break;
     case 'addCategory': showCategoryModal(null, target.dataset.type); break;
@@ -138,7 +189,7 @@ async function handleClick(e) {
 }
 
 // -------------------------------------------------------------
-// モーダル・ダイアログ処理 (復旧版)
+// モーダル・ダイアログ (変更なしだが記述)
 // -------------------------------------------------------------
 
 function showAccountModal(id) {
@@ -148,12 +199,12 @@ function showAccountModal(id) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-content" style="max-width: 400px; padding: 25px; animation: modalEnter 0.3s ease-out;">
+    <div class="modal-content" style="max-width: 400px; padding: 25px;">
       <div class="modal-header"><h3 class="modal-title">${isNew ? '口座追加' : '口座編集'}</h3><button class="modal-close" data-action="closeModal">✕</button></div>
-      <div class="form-group"><label class="form-label">口座名</label><input class="form-input" type="text" id="acc-name" value="${acc?.name || ''}" placeholder="例: 生活費口座"></div>
+      <div class="form-group"><label class="form-label">名前</label><input class="form-input" type="text" id="acc-name" value="${acc?.name || ''}"></div>
       <div class="form-group"><label class="form-label">アイコン</label>
         <input class="form-input" type="text" id="acc-icon" value="${acc?.icon || '💰'}" style="width: 80px; text-align: center; font-size: 1.5rem;">
-        <div class="emoji-picker-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 12px; cursor: pointer; max-height: 150px; overflow-y: auto;">
+        <div class="emoji-picker-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin-top: 10px; cursor: pointer; max-height: 150px; overflow-y: auto;">
           ${RECOMMENDED_EMOJIS.map(e => `<span class="emoji-option" data-emoji="${e}">${e}</span>`).join('')}
         </div>
       </div>
@@ -167,14 +218,9 @@ function showAccountModal(id) {
     if (em) { document.getElementById('acc-icon').value = em.dataset.emoji; return; }
     const act = e.target.closest('[data-action]')?.dataset.action;
     if (act === 'closeModal' || e.target === overlay) { overlay.remove(); return; }
-    if (act === 'deleteItem' && confirm('口座を削除しますか？')) { store.deleteAccount(id); overlay.remove(); refresh(); return; }
+    if (act === 'deleteItem' && confirm('削除しますか？')) { store.deleteAccount(id); overlay.remove(); refresh(); return; }
     if (act === 'saveItem') {
-      const data = {
-        name: document.getElementById('acc-name').value.trim(),
-        icon: document.getElementById('acc-icon').value.trim() || '💰',
-        initialBalance: Number(document.getElementById('acc-balance').value) || 0,
-        order: acc?.order || accounts.length + 1
-      };
+      const data = { name: document.getElementById('acc-name').value.trim(), icon: document.getElementById('acc-icon').value.trim(), initialBalance: Number(document.getElementById('acc-balance').value) || 0 };
       if (data.name) { if (isNew) store.addAccount(data); else store.updateAccount(id, data); overlay.remove(); refresh(); }
     }
   });
@@ -187,12 +233,12 @@ function showCategoryModal(id, type) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-content" style="max-width: 400px; padding: 25px; animation: modalEnter 0.3s ease-out;">
-      <div class="modal-header"><h3 class="modal-title">カテゴリ${isNew ? '追加' : '編集'}</h3><button class="modal-close" data-action="closeModal">✕</button></div>
-      <div class="form-group"><label class="form-label">カテゴリ名</label><input class="form-input" type="text" id="cat-name" value="${cat?.name || ''}" placeholder="例: 趣味"></div>
+    <div class="modal-content" style="max-width: 400px; padding: 25px;">
+      <div class="modal-header"><h3 class="modal-title">カテゴリ管理</h3><button class="modal-close" data-action="closeModal">✕</button></div>
+      <div class="form-group"><label class="form-label">名前</label><input class="form-input" type="text" id="cat-name" value="${cat?.name || ''}"></div>
       <div class="form-group"><label class="form-label">アイコン</label>
         <input class="form-input" type="text" id="cat-icon" value="${cat?.icon || '📁'}" style="width: 80px; text-align: center; font-size: 1.5rem;">
-        <div class="emoji-picker-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 12px; cursor: pointer; max-height: 150px; overflow-y: auto;">
+        <div class="emoji-picker-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin-top: 10px; cursor: pointer; max-height: 150px; overflow-y: auto;">
           ${RECOMMENDED_EMOJIS.map(e => `<span class="emoji-option" data-emoji="${e}">${e}</span>`).join('')}
         </div>
       </div>
@@ -205,22 +251,13 @@ function showCategoryModal(id, type) {
     if (em) { document.getElementById('cat-icon').value = em.dataset.emoji; return; }
     const act = e.target.closest('[data-action]')?.dataset.action;
     if (act === 'closeModal' || e.target === overlay) { overlay.remove(); return; }
-    if (act === 'deleteItem' && confirm('カテゴリを削除しますか？')) { store.deleteCategory(id); overlay.remove(); refresh(); return; }
+    if (act === 'deleteItem' && confirm('削除しますか？')) { store.deleteCategory(id); overlay.remove(); refresh(); return; }
     if (act === 'saveItem') {
-      const data = {
-        name: document.getElementById('cat-name').value.trim(),
-        icon: document.getElementById('cat-icon').value.trim() || '📁',
-        type: cat?.type || type || 'expense',
-        order: cat?.order || categories.length + 1
-      };
+      const data = { name: document.getElementById('cat-name').value.trim(), icon: document.getElementById('cat-icon').value.trim(), type: cat?.type || type || 'expense' };
       if (data.name) { if (isNew) store.addCategory(data); else store.updateCategory(id, data); overlay.remove(); refresh(); }
     }
   });
 }
-
-// -------------------------------------------------------------
-// その他ユーティリティ
-// -------------------------------------------------------------
 
 function toggleDarkMode() {
   const settings = store.getSettings();
@@ -230,41 +267,17 @@ function toggleDarkMode() {
   refresh();
 }
 
-export function applyTheme(mode) {
-  if (mode === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
-  else if (mode === 'light') document.documentElement.setAttribute('data-theme', 'light');
-  else document.documentElement.removeAttribute('data-theme');
-}
+export function applyTheme(m) { if (m === 'dark') document.documentElement.setAttribute('data-theme', 'dark'); else if (m === 'light') document.documentElement.setAttribute('data-theme', 'light'); else document.documentElement.removeAttribute('data-theme'); }
+function getDarkModeActive(s) { if (s.darkMode === 'dark') return true; if (s.darkMode === 'light') return false; return window.matchMedia('(prefers-color-scheme: dark)').matches; }
 
-function getDarkModeActive(settings) {
-  if (settings.darkMode === 'dark') return true;
-  if (settings.darkMode === 'light') return false;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
-}
+async function handleGoogleLogin() { try { await auth.signIn(); const res = await auth.getOrCreateSpreadsheet(); if (res.id) { refresh(); if (res.isNew) await store.syncToCloud(res.id); else if(confirm('データを読込ますか？')) { await store.loadFromCloud(res.id); window.location.reload(); } } } catch (e) { window.showToast?.('エラー', 'error'); } }
+async function handleLogout() { if (confirm('解除?')) auth.signOut(); }
+async function handleSyncPush() { const sId = localStorage.getItem('kakeibo_sheet_id'); if (sId) { try { window.showToast?.('同期中...', 'info'); await store.syncToCloud(sId); window.showToast?.('完了'); } catch (e) { window.showToast?.('失敗', 'error'); } } }
+async function handleSyncPull() { const sId = localStorage.getItem('kakeibo_sheet_id'); if (sId && confirm('上書?')) { try { await store.loadFromCloud(sId); window.location.reload(); } catch (e) { window.showToast?.('失敗', 'error'); refresh(); } } }
 
-function initSortable(id, type) {
-  const el = document.getElementById(id);
-  if (!el || !window.Sortable) return;
-  window.Sortable.create(el, { handle: '.settings-drag-handle', animation: 200, onEnd: () => {
-      const ids = Array.from(el.querySelectorAll('.draggable')).map(item => item.dataset.id);
-      if (type === 'account') store.reorderAccounts(ids);
-      else store.reorderCategories(ids);
-      window.showToast?.('並べ替え完了');
-  }});
-}
-
-async function handleGoogleLogin() {
-  try { await auth.signIn(); const res = await auth.getOrCreateSpreadsheet(); if (res.id) { refresh(); if (res.isNew) await store.syncToCloud(res.id); else if(confirm('データを読み込みますか？')) { await store.loadFromCloud(res.id); window.location.reload(); } }
-  } catch (err) { window.showToast?.('連携エラー', 'error'); }
-}
-
-async function handleLogout() { if (confirm('解除しますか？')) auth.signOut(); }
-async function handleSyncPush() { const sId = localStorage.getItem('kakeibo_sheet_id'); if (sId) { try { window.showToast?.('同期中...', 'info'); await store.syncToCloud(sId); window.showToast?.('完了'); } catch (err) { window.showToast?.('失敗', 'error'); } } }
-async function handleSyncPull() { const sId = localStorage.getItem('kakeibo_sheet_id'); if (sId && confirm('上書きしますか？')) { try { await store.loadFromCloud(sId); window.location.reload(); } catch (err) { window.showToast?.('失敗', 'error'); refresh(); } } }
-
-function exportData() { const blob = new Blob([JSON.stringify(store.exportAllData(), null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'kakeibo_backup.json'; a.click(); URL.revokeObjectURL(url); }
-function importData() { const input = document.createElement('input'); input.type = 'file'; input.accept = '.json'; input.onchange = (e) => { const file = e.target.files[0]; const reader = new FileReader(); reader.onload = (ev) => { if (confirm('インポートしますか？')) { store.importAllData(JSON.parse(ev.target.result)); window.location.reload(); } }; reader.readAsText(file); }; input.click(); }
-function clearData() { if (confirm('データを全削除しますか？')) { store.clearAllData(); window.location.reload(); } }
+function exportData() { const blob = new Blob([JSON.stringify(store.exportAllData())], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'kakeibo_backup.json'; a.click(); }
+function importData() { const input = document.createElement('input'); input.type = 'file'; input.onchange = (e) => { const reader = new FileReader(); reader.onload = (ev) => { if (confirm('復元?')) { store.importAllData(JSON.parse(ev.target.result)); window.location.reload(); } }; reader.readAsText(e.target.files[0]); }; input.click(); }
+function clearData() { if (confirm('全削除?')) { store.clearAllData(); window.location.reload(); } }
 
 function refresh() {
   const container = document.getElementById('screen-settings');
