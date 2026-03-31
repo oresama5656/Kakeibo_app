@@ -36,12 +36,36 @@ let isCloudSyncReady = false;
 
 // --- Core API ---
 
+function normalizeDate(d) {
+  if (!d) return '';
+  if (typeof d !== 'string') return d;
+  
+  // yyyy/m/d や yyyy-m-d を yyyy-mm-dd に
+  const parts = d.split(/[/\-]/);
+  if (parts.length === 3) {
+    let y = parts[0].trim();
+    if (y.length === 2) y = '20' + y;
+    const m = parts[1].trim().padStart(2, '0');
+    const dVal = parts[2].trim().split(' ')[0].padStart(2, '0');
+    return `${y}-${m}-${dVal}`;
+  }
+  return d.trim();
+}
+
 export function initStore() {
   const localData = localStorage.getItem('kakeibo_data');
   if (localData) {
     state = JSON.parse(localData);
     if (!state.shortcuts) state.shortcuts = [];
     if (!state.deletedIds) state.deletedIds = [];
+    
+    // 既存データの正規化
+    if (state.transactions) {
+      state.transactions = state.transactions.map(tx => ({
+        ...tx,
+        date: normalizeDate(tx.date)
+      }));
+    }
     
     // カテゴリーの初期チェックと補充
     if (!state.categories || state.categories.length === 0) {
@@ -112,6 +136,10 @@ export async function syncToCloud(sheetId, options = { merge: true }) {
     state.categories = mergeData(state.categories, cloudCat);
     state.accounts = mergeData(state.accounts, cloudAcc);
     state.shortcuts = mergeData(state.shortcuts, cloudSc);
+    
+    // 同期データも常に正規化
+    state.transactions = state.transactions.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));
+    
     updateAccountBalances();
   }
   const txRows = state.transactions.map(t => [t.id, t.date, t.amount, t.type, t.category, t.fromAccount, t.memo, t.toAccount || '']);
@@ -143,7 +171,7 @@ async function readAllFromCloud(sheetId) {
   ]);
   const p = (rows, fn) => (rows.length > 0 && rows[0][0] !== 'EMPTY') ? rows.map(fn) : [];
   return [
-    p(t, r => ({ id: r[0], date: r[1], amount: Number(r[2]), type: r[3], category: r[4], fromAccount: r[5], memo: r[6] || '', toAccount: r[7] || '' })),
+    p(t, r => ({ id: r[0], date: normalizeDate(r[1]), amount: Number(r[2]), type: r[3], category: r[4], fromAccount: r[5], memo: r[6] || '', toAccount: r[7] || '' })),
     p(c, r => ({ id: r[0], name: r[1], icon: r[2], type: r[3], order: Number(r[4] || 0) })),
     p(a, r => ({ id: r[0], name: r[1], icon: r[2], balance: Number(r[3] || 0), initialBalance: Number(r[4] || 0), order: Number(r[5] || 0) })),
     p(s, r => ({ id: r[0], name: r[1], type: r[2], amount: Number(r[3] || 0), category: r[4], fromAccount: r[5], toAccount: r[6], order: Number(r[7] || 0) }))
@@ -156,6 +184,10 @@ export async function loadFromCloud(sheetId) {
   state.categories = mergeData(state.categories, cat);
   state.accounts = mergeData(state.accounts, acc);
   state.shortcuts = mergeData(state.shortcuts, sc);
+  
+  // 明示的な正規化
+  state.transactions = state.transactions.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));
+  
   updateAccountBalances();
   isCloudSyncReady = true;
   save();
@@ -179,6 +211,7 @@ export function updateAccountBalances() {
 
 // --- Setters ---
 function sanitizeTransaction(tx) {
+  tx.date = normalizeDate(tx.date);
   if (tx.type === 'expense') {
     tx.toAccount = '';
   } else if (tx.type === 'income') {

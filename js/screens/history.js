@@ -69,18 +69,26 @@ export function render(container) {
       return true;
     })
     .sort((a, b) => {
+      // 日付で降順 (新しい順)
       const dateA = a.date || '0000-00-00';
       const dateB = b.date || '0000-00-00';
       const dateComp = dateB.localeCompare(dateA);
       if (dateComp !== 0) return dateComp;
-      return (b.id || '').localeCompare(a.id || '');
+      
+      // 同じ日付ならIDで降順 (作成が新しい順)
+      const idA = a.id || '';
+      const idB = b.id || '';
+      return idB.localeCompare(idA);
     });
 
-  // Group by date
-  const groups = {};
+  // グルーピング (配列を使って表示順序を保証)
+  const groupedTransactions = [];
   for (const tx of transactions) {
-    if (!groups[tx.date]) groups[tx.date] = [];
-    groups[tx.date].push(tx);
+    if (groupedTransactions.length === 0 || groupedTransactions[groupedTransactions.length - 1].date !== tx.date) {
+      groupedTransactions.push({ date: tx.date, items: [tx] });
+    } else {
+      groupedTransactions[groupedTransactions.length - 1].items.push(tx);
+    }
   }
 
   container.innerHTML = `
@@ -102,15 +110,15 @@ export function render(container) {
       </div>
 
       <div class="history-list">
-        ${transactions.length === 0 ? `
+        ${groupedTransactions.length === 0 ? `
           <div class="history-empty">
             <div class="history-empty-icon">📋</div>
             <div>取引データがありません</div>
           </div>
-        ` : Object.entries(groups).map(([date, txs]) => `
+        ` : groupedTransactions.map(group => `
           <div class="history-date-group">
-            <div class="history-date-label">${formatDateLabel(date)}</div>
-            ${txs.map(tx => renderHistoryItem(tx, txRunningBalances[tx.id])).join('')}
+            <div class="history-date-label">${formatDateLabel(group.date)}</div>
+            ${group.items.map(tx => renderHistoryItem(tx, txRunningBalances[tx.id])).join('')}
           </div>
         `).join('')}
       </div>
@@ -183,11 +191,19 @@ function renderHistoryItem(tx, balance) {
 }
 
 function formatDateLabel(dateStr) {
-  const d = new Date(dateStr);
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  const d = parseInt(parts[2], 10);
+  const dateObj = new Date(y, m - 1, d);
+  
   const days = ['日', '月', '火', '水', '木', '金', '土'];
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
-  const dow = days[d.getDay()];
+  const month = dateObj.getMonth() + 1;
+  const day = dateObj.getDate();
+  const dow = days[dateObj.getDay()];
   return `${month}月${day}日（${dow}）`;
 }
 
