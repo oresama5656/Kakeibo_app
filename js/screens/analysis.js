@@ -19,6 +19,7 @@ let analysisState = {
   bsPeriod: 90,
   selectedAccountId: null,
   referenceDate: new Date(),
+  excludedCategoryIds: [], // 除外リスト
 };
 
 function getPeriodDates() {
@@ -93,9 +94,14 @@ export function render(container) {
       const { start, end } = getPeriodDates();
       const txs = store.getTransactions().filter(tx => tx.type === analysisState.viewType && tx.date >= start && tx.date <= end);
       const totals = calculateCategoryTotals(txs);
-      const sorted = Object.values(totals).sort((a,b) => b.total - a.total);
-      if (analysisState.chartMode === 'pie') renderPieChart(sorted);
-      else renderPLLineChart(txs, start, end);
+      
+      // 除外されていないカテゴリーのみを抽出してグラフに渡す
+      const activeSorted = Object.values(totals)
+        .filter(c => !analysisState.excludedCategoryIds.includes(c.id))
+        .sort((a,b) => b.total - a.total);
+        
+      if (analysisState.chartMode === 'pie') renderPieChart(activeSorted);
+      else renderPLLineChart(txs, start, end, analysisState.excludedCategoryIds);
     } else {
       const accounts = store.getAccounts();
       renderBSBalanceChart(accounts);
@@ -112,7 +118,12 @@ function renderPLContent() {
   const { start, end } = getPeriodDates();
   const txs = store.getTransactions().filter(tx => tx.type === analysisState.viewType && tx.date >= start && tx.date <= end);
   const totals = calculateCategoryTotals(txs);
-  const grandTotal = Object.values(totals).reduce((sum, c) => sum + c.total, 0);
+  
+  // 総計の計算（除外リストに含まれないもののみ）
+  const grandTotal = Object.values(totals)
+    .filter(c => !analysisState.excludedCategoryIds.includes(c.id))
+    .reduce((sum, c) => sum + c.total, 0);
+    
   const sorted = Object.values(totals).sort((a,b) => b.total - a.total);
 
   return `
@@ -149,19 +160,27 @@ function renderPLContent() {
       </div>
 
       <div class="category-list">
-        ${sorted.map(c => `
-          <div class="category-item-v2" data-action="drillDown" data-category-id="${c.id}">
-            <div class="cat-icon-v2">${c.icon}</div>
-            <div class="cat-details-v2">
-              <div class="cat-top-v2">
-                <span class="cat-name">${c.name}</span>
-                <span class="cat-money">¥${c.total.toLocaleString()}</span>
+        ${sorted.map(c => {
+          const isExcluded = analysisState.excludedCategoryIds.includes(c.id);
+          return `
+            <div class="category-item-v2 ${isExcluded ? 'excluded' : ''}" data-id="${c.id}">
+              <div class="cat-check-v2">
+                <input type="checkbox" class="cat-checkbox" data-id="${c.id}" ${isExcluded ? '' : 'checked'}>
               </div>
-              <div class="cat-bar-bg-v2"><div class="cat-bar-v2 ${analysisState.viewType}" style="width: ${grandTotal > 0 ? (c.total/grandTotal)*100 : 0}%"></div></div>
+              <div class="cat-clickable-v2" data-action="drillDown" data-category-id="${c.id}">
+                <div class="cat-icon-v2">${c.icon}</div>
+                <div class="cat-details-v2">
+                  <div class="cat-top-v2">
+                    <span class="cat-name">${c.name}</span>
+                    <span class="cat-money">¥${c.total.toLocaleString()}</span>
+                  </div>
+                  <div class="cat-bar-bg-v2"><div class="cat-bar-v2 ${analysisState.viewType}" style="width: ${grandTotal > 0 && !isExcluded ? (c.total/grandTotal)*100 : 0}%"></div></div>
+                </div>
+                <div class="cat-pct-v2">${grandTotal > 0 && !isExcluded ? ((c.total/grandTotal)*100).toFixed(0) : 0}%</div>
+              </div>
             </div>
-            <div class="cat-pct-v2">${grandTotal > 0 ? ((c.total/grandTotal)*100).toFixed(0) : 0}%</div>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
     </div>
 
@@ -188,7 +207,12 @@ function renderPLContent() {
       .total-amount.expense { color: var(--color-expense); }
       .total-amount.income { color: var(--color-income); }
 
-      .category-item-v2 { display: flex; align-items: center; gap: 16px; padding: 16px; background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-light); margin-bottom: 12px; cursor: pointer; }
+      .category-item-v2 { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-light); margin-bottom: 12px; transition: all 0.2s; }
+      .category-item-v2.excluded { opacity: 0.4; filter: grayscale(1); }
+      .cat-check-v2 { display: flex; align-items: center; justify-content: center; }
+      .cat-checkbox { width: 20px; height: 20px; border-radius: 6px; cursor: pointer; accent-color: var(--color-accent); }
+      .cat-clickable-v2 { display: flex; flex: 1; align-items: center; gap: 16px; cursor: pointer; }
+      
       .cat-icon-v2 { font-size: 1.5rem; width: 44px; height: 44px; background: var(--bg-hover); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
       .cat-details-v2 { flex: 1; }
       .cat-top-v2 { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 800; font-size: 0.95rem; }
@@ -284,11 +308,27 @@ function bindEvents(container) {
     render(container);
   });
   container.querySelectorAll('[data-action="setChartMode"]').forEach(b => b.onclick = (e) => { analysisState.chartMode = e.currentTarget.dataset.val; render(container); });
-  container.querySelectorAll('[data-action="drillDown"]').forEach(row => { row.onclick = () => {
+  container.querySelectorAll('[data-action="drillDown"]').forEach(row => { row.onclick = (e) => {
+      // チェックボックス自体やその周り（cat-check-v2）をクリックした場合は動作させない
+      if (e.target.closest('.cat-check-v2')) return;
+      
       const { start, end } = getPeriodDates();
       setHistoryFilters({ startDate: start, endDate: end, accountId: '', categoryId: row.dataset.categoryId });
       window.navigateTo?.('history');
   }; });
+  
+  // チェックボックスのイベント
+  container.querySelectorAll('.cat-checkbox').forEach(cb => cb.onchange = (e) => {
+    const id = e.target.dataset.id;
+    if (e.target.checked) {
+      analysisState.excludedCategoryIds = analysisState.excludedCategoryIds.filter(cid => cid !== id);
+    } else {
+      if (!analysisState.excludedCategoryIds.includes(id)) {
+        analysisState.excludedCategoryIds.push(id);
+      }
+    }
+    render(container);
+  });
   const bsSel = container.querySelector('#bs-period-selector');
   if (bsSel) bsSel.onchange = e => { analysisState.bsPeriod = Number(e.target.value); render(container); };
   const accSel = container.querySelector('#analysis-account-selector');
@@ -372,7 +412,7 @@ function renderPieChart(sorted) {
 /**
  * チャート描画: 折れ線 (PL)
  */
-function renderPLLineChart(txs, start, end) {
+function renderPLLineChart(txs, start, end, excludedIds = []) {
   const ctx = document.getElementById('analysis-chart')?.getContext('2d');
   if (!ctx) return;
   if (plChart) plChart.destroy();
@@ -380,7 +420,12 @@ function renderPLLineChart(txs, start, end) {
   let cur = new Date(start);
   const fin = new Date(end);
   while (cur <= fin) { days[cur.toISOString().split('T')[0]] = 0; cur.setDate(cur.getDate() + 1); }
-  txs.forEach(tx => { if (days[tx.date] !== undefined) days[tx.date] += Number(tx.amount); });
+  
+  txs.forEach(tx => { 
+    if (days[tx.date] !== undefined && !excludedIds.includes(tx.categoryId)) {
+      days[tx.date] += Number(tx.amount); 
+    }
+  });
   const color = analysisState.viewType === 'expense' ? '#f43f5e' : '#10b981';
   plChart = new Chart(ctx, { 
     type: 'line', 
