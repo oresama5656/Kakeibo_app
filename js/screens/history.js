@@ -199,7 +199,7 @@ function showEditModal(txId) {
 
       <div class="form-group">
         <label class="form-label">日付</label>
-        <input class="form-input" type="date" id="edit-date" value="${tx.date}">
+        <input class="form-input" type="date" id="edit-date" value="${(tx.date || '').replace(/\//g, '-')}">
       </div>
 
       <div class="form-group">
@@ -261,8 +261,13 @@ function showEditModal(txId) {
         refresh();
       }
     } else if (action === 'saveTx') {
+      const date = document.getElementById('edit-date').value;
+      if (!date) {
+        window.showToast?.('日付を入力してください', 'error');
+        return;
+      }
       const updates = {
-        date: document.getElementById('edit-date').value,
+        date: date,
         amount: Number(document.getElementById('edit-amount').value),
         category: document.getElementById('edit-category')?.value || tx.category,
         fromAccount: document.getElementById('edit-from')?.value || tx.fromAccount,
