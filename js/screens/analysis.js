@@ -1,5 +1,5 @@
 // ============================================
-// 分析画面 (PL: 損益 / BS: 資産分析)
+// 分析画面 (PL: 損益 / BS: 資産分析) - シンプル・スマホ重視版
 // ============================================
 
 import * as store from '../store.js';
@@ -10,12 +10,12 @@ let totalAssetChart = null;
 let accountTrendChart = null;
 
 let analysisState = {
-  tab: 'pl', // pl | bs
-  viewType: 'expense', // expense | income
-  periodType: 'month', // day | week | month | custom
+  tab: 'pl', 
+  viewType: 'expense', 
+  periodType: 'month', 
   customStart: '',
   customEnd: '',
-  chartMode: 'pie', // pie | trend
+  chartMode: 'pie', 
   bsPeriod: 90,
   selectedAccountId: null,
 };
@@ -31,7 +31,7 @@ function getPeriodDates() {
       break;
     case 'week':
       start = new Date(now);
-      start.setDate(start.getDate() - start.getDay()); // Sunday
+      start.setDate(start.getDate() - start.getDay());
       start.setHours(0,0,0,0);
       end = new Date(now); end.setHours(23,59,59,999);
       break;
@@ -67,20 +67,13 @@ function getPeriodLabel() {
 }
 
 export function render(container) {
+  // Simple Tab Header
   container.innerHTML = `
-    <div class="analysis-screen">
-      <div class="analysis-header-main">
-        <h2 class="analysis-title">📊 分析レポート</h2>
-        
-        <!-- Tab Selection (PL / BS) -->
-        <div class="analysis-tab-nav">
-          <button class="nav-tab-btn ${analysisState.tab === 'pl' ? 'active' : ''}" data-tab="pl" data-action="setTab">
-            収支 (PL)
-          </button>
-          <button class="nav-tab-btn ${analysisState.tab === 'bs' ? 'active' : ''}" data-tab="bs" data-action="setTab">
-            資産 (BS)
-          </button>
-        </div>
+    <div class="analysis-screen simple-mode">
+      <!-- 1. PL/BS Toggle (Simple Horizontal) -->
+      <div class="tab-toggle" style="margin-bottom: var(--space-md);">
+        <button class="type-btn ${analysisState.tab === 'pl' ? 'active' : ''}" data-tab="pl" data-action="setTab" style="flex:1;">収支 (PL)</button>
+        <button class="type-btn ${analysisState.tab === 'bs' ? 'active' : ''}" data-tab="bs" data-action="setTab" style="flex:1;">資産 (BS)</button>
       </div>
 
       <div class="analysis-body">
@@ -89,7 +82,7 @@ export function render(container) {
     </div>
   `;
 
-  // Chart Rendering after DOM update
+  // Chart Rendering
   setTimeout(() => {
     if (analysisState.tab === 'pl') {
       const { start, end } = getPeriodDates();
@@ -119,74 +112,74 @@ function renderPLContent() {
   const sortedCategories = Object.values(categoryTotals).sort((a, b) => b.total - a.total);
 
   return `
-    <div class="analysis-content-grid">
-      <!-- 1. Hero Summary -->
-      <div class="analysis-hero-card ${analysisState.viewType}">
-        <div class="hero-label">${label} の合計${analysisState.viewType === 'expense' ? '支出' : '収入'}</div>
-        <div class="hero-amount">¥${grandTotal.toLocaleString('ja-JP')}</div>
-        
-        <div class="hero-type-selector">
-          <button class="hero-type-btn ${analysisState.viewType === 'expense' ? 'active' : ''}" data-type="expense" data-action="setViewType">支出</button>
-          <button class="hero-type-btn ${analysisState.viewType === 'income' ? 'active' : ''}" data-type="income" data-action="setViewType">収入</button>
+    <div class="pl-content">
+      <!-- 2. Type Toggle (Expense / Income) -->
+      <div class="type-toggle" style="margin-bottom: var(--space-md);">
+        <button class="type-btn ${analysisState.viewType === 'expense' ? 'active' : ''}" style="border-radius: var(--radius-full) 0 0 var(--radius-full); border-color: var(--color-expense); color: var(--color-expense); ${analysisState.viewType === 'expense' ? 'background: var(--color-expense); color: #fff;' : ''}" data-type="expense" data-action="setViewType">支出</button>
+        <button class="type-btn ${analysisState.viewType === 'income' ? 'active' : ''}" style="border-radius: 0 var(--radius-full) var(--radius-full) 0; border-color: var(--color-income); color: var(--color-income); ${analysisState.viewType === 'income' ? 'background: var(--color-income); color: #fff;' : ''}" data-type="income" data-action="setViewType">収入</button>
+      </div>
+
+      <!-- 3. Summary (Clean Centered) -->
+      <div class="simple-summary" style="text-align: center; margin-bottom: var(--space-lg); padding: var(--space-md) 0;">
+        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">${label} の合計</div>
+        <div style="font-size: var(--font-size-3xl); font-weight: bold; color: ${analysisState.viewType === 'expense' ? 'var(--color-expense)' : 'var(--color-income)'};">
+          ¥${grandTotal.toLocaleString('ja-JP')}
         </div>
       </div>
 
-      <!-- 2. Controls & Chart -->
-      <div class="analysis-card">
-        <div class="card-header-row">
-          <h3 class="card-title">📊 グラフレポート</h3>
-          <div class="card-actions">
-            <select class="minimal-select" id="chart-mode-selector">
-              <option value="pie" ${analysisState.chartMode === 'pie' ? 'selected' : ''}>内訳</option>
-              <option value="trend" ${analysisState.chartMode === 'trend' ? 'selected' : ''}>推移</option>
-            </select>
-            <select class="minimal-select" id="analysis-period-selector">
-              <option value="day" ${analysisState.periodType === 'day' ? 'selected' : ''}>今日</option>
-              <option value="week" ${analysisState.periodType === 'week' ? 'selected' : ''}>今週</option>
-              <option value="month" ${analysisState.periodType === 'month' ? 'selected' : ''}>今月</option>
-              <option value="custom" ${analysisState.periodType === 'custom' ? 'selected' : ''}>期間指定</option>
-            </select>
-          </div>
+      <!-- 4. Controls & Chart (Consolidated Card) -->
+      <div class="chart-card">
+        <div class="header-flex" style="display:flex; justify-content: space-between; align-items:center; margin-bottom: var(--space-md); gap: var(--space-sm);">
+          <select class="form-input" id="analysis-period-selector" style="flex:1; height: 36px; font-size: var(--font-size-xs);">
+            <option value="day" ${analysisState.periodType === 'day' ? 'selected' : ''}>今日</option>
+            <option value="week" ${analysisState.periodType === 'week' ? 'selected' : ''}>今週</option>
+            <option value="month" ${analysisState.periodType === 'month' ? 'selected' : ''}>今月</option>
+            <option value="custom" ${analysisState.periodType === 'custom' ? 'selected' : ''}>期間指定</option>
+          </select>
+          <select class="form-input" id="chart-mode-selector" style="flex:1; height: 36px; font-size: var(--font-size-xs);">
+            <option value="pie" ${analysisState.chartMode === 'pie' ? 'selected' : ''}>内訳グラフ</option>
+            <option value="trend" ${analysisState.chartMode === 'trend' ? 'selected' : ''}>推移グラフ</option>
+          </select>
         </div>
 
         ${analysisState.periodType === 'custom' ? `
-          <div class="custom-date-inputs">
-            <input type="date" value="${analysisState.customStart}" data-action="setCustomStart">
+          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: var(--space-md);">
+            <input type="date" value="${analysisState.customStart}" data-action="setCustomStart" style="flex:1; font-size:var(--font-size-xs);">
             <span>〜</span>
-            <input type="date" value="${analysisState.customEnd}" data-action="setCustomEnd">
+            <input type="date" value="${analysisState.customEnd}" data-action="setCustomEnd" style="flex:1; font-size:var(--font-size-xs);">
           </div>
         ` : ''}
 
-        <div class="chart-wrapper">
+        <div class="chart-container" style="height: 260px; position: relative;">
           <canvas id="analysis-chart"></canvas>
-          ${sortedCategories.length === 0 ? `<div class="chart-placeholder">データがありません</div>` : ''}
+          ${sortedCategories.length === 0 ? `<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:var(--font-size-sm);">データがありません</div>` : ''}
         </div>
       </div>
 
-      <!-- 3. Category Details -->
-      <div class="analysis-card">
-        <h3 class="card-title">📁 カテゴリー内訳</h3>
-        <div class="analysis-list">
-          ${sortedCategories.length === 0 ? `<div class="chart-placeholder">データがありません</div>` : sortedCategories.map(cat => {
+      <!-- 5. List -->
+      ${sortedCategories.length > 0 ? `
+        <div class="chart-card" style="margin-top: var(--space-md);">
+          <div class="chart-card-title">カテゴリー内訳</div>
+          ${sortedCategories.map(cat => {
             const pct = grandTotal > 0 ? ((cat.total / grandTotal) * 100).toFixed(1) : 0;
             return `
-              <div class="analysis-list-item">
-                <span class="item-icon">${cat.icon}</span>
-                <div class="item-body">
-                  <div class="item-meta">
-                    <span class="item-name">${cat.name}</span>
-                    <span class="item-amount">¥${cat.total.toLocaleString('ja-JP')}</span>
+              <div class="analysis-row" style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-light);">
+                <span style="font-size: 1.2rem; min-width: 24px; text-align:center;">${cat.icon}</span>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span style="font-size: var(--font-size-sm); font-weight: 500;">${cat.name}</span>
+                    <span style="font-size: var(--font-size-sm); font-weight: bold; font-variant-numeric: tabular-nums;">¥${cat.total.toLocaleString('ja-JP')}</span>
                   </div>
-                  <div class="item-progress">
-                    <div class="progress-bar ${analysisState.viewType}" style="width: ${pct}%"></div>
+                  <div style="height: 4px; background: var(--bg-input); border-radius: 2px;">
+                    <div style="height: 100%; width: ${pct}%; background: ${analysisState.viewType === 'expense' ? 'var(--color-expense)' : 'var(--color-income)'}; border-radius: 2px;"></div>
                   </div>
                 </div>
-                <span class="item-pct">${pct}%</span>
+                <span style="font-size: var(--font-size-xs); color: var(--text-muted); min-width: 40px; text-align: right;">${pct}%</span>
               </div>
             `;
           }).join('')}
         </div>
-      </div>
+      ` : ''}
     </div>
   `;
 }
@@ -196,45 +189,37 @@ function renderBSContent() {
   const totalBalance = store.getTotalBalance();
 
   return `
-    <div class="analysis-content-grid">
-      <!-- 1. Hero Summary -->
-      <div class="analysis-hero-card bs">
-        <div class="hero-label">現在の純資産総額</div>
-        <div class="hero-amount">¥${totalBalance.toLocaleString('ja-JP')}</div>
+    <div class="bs-content">
+      <div class="simple-summary" style="text-align: center; margin-bottom: var(--space-lg); padding: var(--space-md) 0;">
+        <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">現在の純資産総額</div>
+        <div style="font-size: var(--font-size-3xl); font-weight: bold; color: var(--color-accent);">¥${totalBalance.toLocaleString('ja-JP')}</div>
       </div>
 
-      <!-- 2. Asset Trend -->
-      <div class="analysis-card">
-        <div class="card-header-row">
-          <h3 class="card-title">📈 総資産推移</h3>
-          <div class="card-actions">
-            <select class="minimal-select" id="bs-period-selector">
-              <option value="30" ${analysisState.bsPeriod === 30 ? 'selected' : ''}>1ヶ月</option>
-              <option value="90" ${analysisState.bsPeriod === 90 ? 'selected' : ''}>3ヶ月</option>
-              <option value="180" ${analysisState.bsPeriod === 180 ? 'selected' : ''}>6ヶ月</option>
-              <option value="365" ${analysisState.bsPeriod === 365 ? 'selected' : ''}>1年</option>
-            </select>
-          </div>
+      <div class="chart-card">
+        <div class="header-flex" style="display:flex; justify-content: space-between; align-items:center; margin-bottom: var(--space-md);">
+          <div class="chart-card-title" style="margin: 0; font-size: var(--font-size-sm);">📈 総資産推移</div>
+          <select class="form-input" id="bs-period-selector" style="width: 100px; height: 32px; font-size: var(--font-size-xs);">
+            <option value="30" ${analysisState.bsPeriod === 30 ? 'selected' : ''}>1ヶ月</option>
+            <option value="90" ${analysisState.bsPeriod === 90 ? 'selected' : ''}>3ヶ月</option>
+            <option value="365" ${analysisState.bsPeriod === 365 ? 'selected' : ''}>1年</option>
+          </select>
         </div>
-        <div class="chart-wrapper">
+        <div class="chart-container" style="height: 220px;">
           <canvas id="total-asset-chart"></canvas>
         </div>
       </div>
 
-      <!-- 3. Account Trends -->
-      <div class="analysis-card">
-        <div class="card-header-row">
-          <h3 class="card-title">🏦 口座別推移</h3>
-          <div class="card-actions">
-            <select class="minimal-select" id="bs-account-selector">
-              <option value="">口座を選択</option>
-              ${accounts.map(acc => `<option value="${acc.id}" ${analysisState.selectedAccountId === acc.id ? 'selected' : ''}>${acc.icon} ${acc.name}</option>`).join('')}
-            </select>
-          </div>
+      <div class="chart-card" style="margin-top: var(--space-md);">
+        <div class="header-flex" style="display:flex; justify-content: space-between; align-items:center; margin-bottom: var(--space-md);">
+          <div class="chart-card-title" style="margin: 0; font-size: var(--font-size-sm);">🏦 口座別推移</div>
+          <select class="form-input" id="bs-account-selector" style="width: 140px; height: 32px; font-size: var(--font-size-xs);">
+            <option value="">選択...</option>
+            ${accounts.map(acc => `<option value="${acc.id}" ${analysisState.selectedAccountId === acc.id ? 'selected' : ''}>${acc.icon} ${acc.name}</option>`).join('')}
+          </select>
         </div>
-        <div class="chart-wrapper">
+        <div class="chart-container" style="height: 220px; position:relative;">
           <canvas id="account-trend-chart"></canvas>
-          ${!analysisState.selectedAccountId ? `<div class="chart-placeholder">リストから口座を選択してください</div>` : ''}
+          ${!analysisState.selectedAccountId ? `<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:var(--font-size-xs);">口座を選択してください</div>` : ''}
         </div>
       </div>
     </div>
@@ -256,27 +241,10 @@ function calculateCategoryTotals(transactions) {
 
 function bindEvents(container) {
   container.addEventListener('click', handleClick);
-  
-  container.querySelector('#analysis-period-selector')?.addEventListener('change', e => {
-    analysisState.periodType = e.target.value;
-    refresh();
-  });
-
-  container.querySelector('#chart-mode-selector')?.addEventListener('change', e => {
-    analysisState.chartMode = e.target.value;
-    refresh();
-  });
-
-  container.querySelector('#bs-period-selector')?.addEventListener('change', e => {
-    analysisState.bsPeriod = Number(e.target.value);
-    refresh();
-  });
-
-  container.querySelector('#bs-account-selector')?.addEventListener('change', e => {
-    analysisState.selectedAccountId = e.target.value;
-    refresh();
-  });
-
+  container.querySelector('#analysis-period-selector')?.addEventListener('change', e => { analysisState.periodType = e.target.value; refresh(); });
+  container.querySelector('#chart-mode-selector')?.addEventListener('change', e => { analysisState.chartMode = e.target.value; refresh(); });
+  container.querySelector('#bs-period-selector')?.addEventListener('change', e => { analysisState.bsPeriod = Number(e.target.value); refresh(); });
+  container.querySelector('#bs-account-selector')?.addEventListener('change', e => { analysisState.selectedAccountId = e.target.value; refresh(); });
   container.querySelector('[data-action="setCustomStart"]')?.addEventListener('change', e => { analysisState.customStart = e.target.value; refresh(); });
   container.querySelector('[data-action="setCustomEnd"]')?.addEventListener('change', e => { analysisState.customEnd = e.target.value; refresh(); });
 }
@@ -299,16 +267,13 @@ function getCommonChartOptions(isDark) {
   const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
   const textColor = isDark ? '#9ca3b8' : '#6b7280';
   return {
-    responsive: true,
-    maintainAspectRatio: false,
+    responsive: true, maintainAspectRatio: false,
     interaction: { intersect: false, mode: 'index' },
     plugins: {
-      legend: {
-        labels: { color: textColor, font: { size: 10 }, padding: 10, usePointStyle: true }
-      }
+      legend: { labels: { color: textColor, font: { size: 10 }, padding: 10, usePointStyle: true } }
     },
     scales: {
-      x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 }, maxTicksLimit: 8 } },
+      x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 }, maxTicksLimit: 6 } },
       y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 10 }, callback: v => '¥' + v.toLocaleString() } }
     }
   };
@@ -319,10 +284,8 @@ function renderPieChart(sortedCategories) {
   if (!canvas) return;
   if (pieChart) pieChart.destroy();
   if (trendChart) { trendChart.destroy(); trendChart = null; }
-
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const colors = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899'];
-
   pieChart = new Chart(canvas, {
     type: 'doughnut',
     data: {
@@ -337,7 +300,7 @@ function renderPieChart(sortedCategories) {
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'right', labels: { color: isDark ? '#e8e8f0' : '#1a1a2e', font: { size: 11 }, usePointStyle: true } },
+        legend: { position: 'bottom', labels: { color: isDark ? '#e8e8f0' : '#1a1a2e', font: { size: 10 }, usePointStyle: true, padding: 15 } },
         tooltip: { callbacks: { label: ctx => `${ctx.label}: ¥${ctx.parsed.toLocaleString()}` } }
       }
     }
@@ -349,10 +312,8 @@ function renderTrendChart(start, end) {
   if (!canvas) return;
   if (trendChart) trendChart.destroy();
   if (pieChart) { pieChart.destroy(); pieChart = null; }
-
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const transactions = store.getTransactions().filter(tx => tx.type === analysisState.viewType && tx.date >= start && tx.date <= end);
-  
   const categoryDates = {};
   const allDates = new Set();
   for (const tx of transactions) {
@@ -360,21 +321,18 @@ function renderTrendChart(start, end) {
     categoryDates[tx.category][tx.date] = (categoryDates[tx.category][tx.date] || 0) + tx.amount;
     allDates.add(tx.date);
   }
-
   const sortedDates = [...allDates].sort();
   const categories = store.getCategories();
   const colors = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#3b82f6'];
-
   const datasets = Object.entries(categoryDates).map(([name, dates], i) => {
     const cat = categories.find(c => c.name === name);
     return {
-      label: `${cat?.icon || ''} ${name}`,
+      label: `${cat?.name || name}`,
       data: sortedDates.map(d => dates[d] || 0),
       borderColor: colors[i % colors.length],
-      tension: 0.3, fill: false
+      tension: 0.3, fill: false, pointRadius: 2
     };
   });
-
   trendChart = new Chart(canvas, {
     type: 'line',
     data: { labels: sortedDates.map(d => d.split('-').slice(1).join('/')), datasets },
@@ -386,11 +344,9 @@ function renderTotalAssetChart(history) {
   const canvas = document.getElementById('total-asset-chart');
   if (!canvas) return;
   if (totalAssetChart) totalAssetChart.destroy();
-
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const opts = getCommonChartOptions(isDark);
   opts.plugins.legend.display = false;
-
   totalAssetChart = new Chart(canvas, {
     type: 'line',
     data: {
@@ -411,15 +367,12 @@ function renderAccountTrendChart(accountId) {
   const canvas = document.getElementById('account-trend-chart');
   if (!canvas) return;
   if (accountTrendChart) accountTrendChart.destroy();
-
   const account = store.getAccounts().find(a => a.id === accountId);
   if (!account) return;
-
   const history = store.getAccountHistory(account.name, analysisState.bsPeriod);
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const opts = getCommonChartOptions(isDark);
   opts.plugins.legend.display = false;
-
   accountTrendChart = new Chart(canvas, {
     type: 'line',
     data: {
