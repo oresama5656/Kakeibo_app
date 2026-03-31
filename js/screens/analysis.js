@@ -198,13 +198,72 @@ function renderBSContent() {
   const accounts = store.getAccounts();
   const totalBalance = store.getTotalBalance();
 
+  // 資産と負債の計算
+  const positiveAccounts = accounts.filter(a => (a.balance || 0) >= 0);
+  const negativeAccounts = accounts.filter(a => (a.balance || 0) < 0);
+  const totalAssets = positiveAccounts.reduce((sum, a) => sum + a.balance, 0);
+  const totalLiabilities = Math.abs(negativeAccounts.reduce((sum, a) => sum + a.balance, 0));
+  const netWorth = totalAssets - totalLiabilities;
+
+  // 最大高さを決める（左右の合計は常にAssetと一致するはず）
+  const maxHeight = Math.max(totalAssets, totalLiabilities + netWorth, 1);
+
   return `
     <div class="bs-content">
+      <!-- 1. Summary Header -->
       <div class="simple-summary" style="text-align: center; margin-bottom: var(--space-lg); padding: var(--space-md) 0;">
         <div style="font-size: var(--font-size-sm); color: var(--text-secondary);">現在の純資産総額</div>
         <div style="font-size: var(--font-size-3xl); font-weight: bold; color: var(--color-accent);">¥${totalBalance.toLocaleString('ja-JP')}</div>
       </div>
 
+      <!-- 2. BS Block Visualization -->
+      <div class="chart-card" style="margin-bottom: var(--space-md);">
+        <div class="chart-card-title" style="margin-bottom: var(--space-lg); text-align: center;">バランスシート構成</div>
+        <div class="bs-block-container" style="display: flex; gap: 12px; height: 320px; align-items: flex-end; padding: 0 10px;">
+          
+          <!-- 左列: 資産 (Assets) -->
+          <div class="bs-column" style="flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px;">
+            <div style="text-align: center; font-size: var(--font-size-xs); font-weight: bold; margin-bottom: 4px; color: var(--text-secondary);">資産</div>
+            ${positiveAccounts.length > 0 ? positiveAccounts.sort((a,b) => b.balance - a.balance).map(acc => {
+              const h = (acc.balance / maxHeight) * 100;
+              if (h < 5 && acc.balance > 0) return ''; // 小さすぎるのはスキップ
+              return `
+                <div style="height: ${h}%; background: #4f46e5; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; color: white; padding: 4px; min-height: 20px; transition: transform 0.2s;" title="${acc.name}">
+                  <span style="font-size: 10px; font-weight: bold; white-space: nowrap;">${acc.name}</span>
+                  <span style="font-size: 9px; opacity: 0.9;">¥${(acc.balance/10000).toFixed(1)}万</span>
+                </div>
+              `;
+            }).join('') : `<div style="height: 100%; background: var(--bg-hover); border-radius: 4px;"></div>`}
+          </div>
+
+          <!-- 右列: 負債 & 純資産 (Liabilities & Net Worth) -->
+          <div class="bs-column" style="flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px;">
+            <div style="text-align: center; font-size: var(--font-size-xs); font-weight: bold; margin-bottom: 4px; color: var(--text-secondary);">負債・純資産</div>
+            
+            <!-- 純資産 (Net Worth) -->
+            ${netWorth > 0 ? `
+              <div style="height: ${(netWorth / maxHeight) * 100}%; background: var(--color-accent); border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 4px; min-height: 20px;">
+                <span style="font-size: 10px; font-weight: bold;">純資産</span>
+                <span style="font-size: 9px; opacity: 0.9;">¥${(netWorth/10000).toFixed(1)}万</span>
+              </div>
+            ` : ''}
+
+            <!-- 負債 (Liabilities) -->
+            ${negativeAccounts.map(acc => {
+              const val = Math.abs(acc.balance);
+              const h = (val / maxHeight) * 100;
+              return `
+                <div style="height: ${h}%; background: #f43f5e; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; color: white; padding: 4px; min-height: 20px;" title="${acc.name}">
+                  <span style="font-size: 10px; font-weight: bold; white-space: nowrap;">${acc.name}</span>
+                  <span style="font-size: 9px; opacity: 0.9;">¥${(val/10000).toFixed(1)}万</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Balance Trend -->
       <div class="chart-card">
         <div class="header-flex" style="display:flex; justify-content: space-between; align-items:center; margin-bottom: var(--space-md);">
           <div class="chart-card-title" style="margin: 0; font-size: var(--font-size-sm);">📈 総資産推移</div>
@@ -214,11 +273,12 @@ function renderBSContent() {
             <option value="365" ${analysisState.bsPeriod === 365 ? 'selected' : ''}>1年</option>
           </select>
         </div>
-        <div class="chart-container" style="height: 220px;">
+        <div class="chart-container" style="height: 200px;">
           <canvas id="total-asset-chart"></canvas>
         </div>
       </div>
 
+      <!-- 4. Account Trends -->
       <div class="chart-card" style="margin-top: var(--space-md);">
         <div class="header-flex" style="display:flex; justify-content: space-between; align-items:center; margin-bottom: var(--space-md);">
           <div class="chart-card-title" style="margin: 0; font-size: var(--font-size-sm);">🏦 口座別推移</div>
@@ -227,7 +287,7 @@ function renderBSContent() {
             ${accounts.map(acc => `<option value="${acc.id}" ${analysisState.selectedAccountId === acc.id ? 'selected' : ''}>${acc.icon} ${acc.name}</option>`).join('')}
           </select>
         </div>
-        <div class="chart-container" style="height: 220px; position:relative;">
+        <div class="chart-container" style="height: 200px; position:relative;">
           <canvas id="account-trend-chart"></canvas>
           ${!analysisState.selectedAccountId ? `<div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:var(--font-size-xs);">口座を選択してください</div>` : ''}
         </div>
