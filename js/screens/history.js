@@ -22,7 +22,44 @@ export function setHistoryFilters(data) {
 }
 
 export function render(container) {
-  const transactions = store.getTransactions()
+  const allTransactions = store.getTransactions();
+  const accounts = store.getAccounts();
+  
+  // --- 1. すべての取引を使って残高推移を事前計算 (通帳形式のため) ---
+  // 日付順（古い順）に並べ替えて計算
+  const sortedForCalc = [...allTransactions].sort((a, b) => {
+    const d = (a.date || '').localeCompare(b.date || '');
+    if (d !== 0) return d;
+    return (a.id || '').localeCompare(b.id || '');
+  });
+
+  const accountBalances = {};
+  accounts.forEach(a => accountBalances[a.name] = Number(a.initialBalance || 0));
+  let totalBalance = accounts.reduce((sum, a) => sum + Number(a.initialBalance || 0), 0);
+
+  const txRunningBalances = {}; // txId -> { balance: Number }
+
+  for (const tx of sortedForCalc) {
+    const amt = Number(tx.amount) || 0;
+    if (tx.type === 'income') {
+      if (accountBalances[tx.toAccount] !== undefined) accountBalances[tx.toAccount] += amt;
+      totalBalance += amt;
+    } else if (tx.type === 'expense') {
+      if (accountBalances[tx.fromAccount] !== undefined) accountBalances[tx.fromAccount] -= amt;
+      totalBalance -= amt;
+    } else if (tx.type === 'transfer') {
+      if (accountBalances[tx.fromAccount] !== undefined) accountBalances[tx.fromAccount] -= amt;
+      if (accountBalances[tx.toAccount] !== undefined) accountBalances[tx.toAccount] += amt;
+    }
+    
+    // フィルタ中の口座があればその残高、なければ総資産を記録
+    txRunningBalances[tx.id] = filters.account 
+      ? (accountBalances[filters.account] || 0)
+      : totalBalance;
+  }
+
+  // --- 2. フィルタと表示用のソートを適用 ---
+  const transactions = allTransactions
     .filter(tx => {
       if (filters.startDate && tx.date < filters.startDate) return false;
       if (filters.endDate && tx.date > filters.endDate) return false;
@@ -34,11 +71,8 @@ export function render(container) {
       const dateB = b.date || '0000-00-00';
       const dateComp = dateB.localeCompare(dateA);
       if (dateComp !== 0) return dateComp;
-      // 同日の場合はID（作成日時が含まれる）で降順
       return (b.id || '').localeCompare(a.id || '');
     });
-
-  const accounts = store.getAccounts();
 
   // Group by date
   const groups = {};
@@ -55,7 +89,7 @@ export function render(container) {
           <span style="color:var(--text-muted)">〜</span>
           <input type="date" value="${filters.endDate}" data-action="filterEnd" placeholder="終了日">
           <select data-action="filterAccount">
-            <option value="">全口座</option>
+            <option value="">全口座 (資産推移)</option>
             ${accounts.map(a => `<option value="${a.name}" ${filters.account === a.name ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
           </select>
         </div>
@@ -70,7 +104,7 @@ export function render(container) {
         ` : Object.entries(groups).map(([date, txs]) => `
           <div class="history-date-group">
             <div class="history-date-label">${formatDateLabel(date)}</div>
-            ${txs.map(tx => renderHistoryItem(tx)).join('')}
+            ${txs.map(tx => renderHistoryItem(tx, txRunningBalances[tx.id])).join('')}
           </div>
         `).join('')}
       </div>
@@ -102,7 +136,7 @@ function handleClick(e) {
   showEditModal(txId);
 }
 
-function renderHistoryItem(tx) {
+function renderHistoryItem(tx, balance) {
   const categories = store.getCategories();
   const cat = categories.find(c => c.name === tx.category);
   const icon = cat ? cat.icon : (tx.type === 'transfer' ? '🔄' : '❓');
@@ -126,8 +160,13 @@ function renderHistoryItem(tx) {
         <div class="history-item-category">${category}${tx.memo ? ` - ${tx.memo}` : ''}</div>
         <div class="history-item-account">${accountLabel}</div>
       </div>
-      <div class="history-item-amount ${tx.type}">
-        ${typeLabel}¥${Number(tx.amount).toLocaleString('ja-JP')}
+      <div class="history-item-amount-group" style="text-align: right;">
+        <div class="history-item-amount ${tx.type}">
+          ${typeLabel}¥${Number(tx.amount).toLocaleString('ja-JP')}
+        </div>
+        <div class="history-item-running-balance" style="font-size: var(--font-size-xs); color: var(--text-muted); font-variant-numeric: tabular-nums;">
+          残: ¥${(balance || 0).toLocaleString('ja-JP')}
+        </div>
       </div>
     </div>
   `;
