@@ -14,7 +14,8 @@ let state = {
   category: null,
   date: new Date().toISOString().split('T')[0],
   memo: '',
-  accountsExpanded: false,
+  fromAccountsExpanded: false,
+  toAccountsExpanded: false,
   categoriesExpanded: false,
 };
 
@@ -30,7 +31,8 @@ export function setQuickInput(data) {
   state = {
     ...state,
     ...data,
-    accountsExpanded: false,
+    fromAccountsExpanded: false,
+    toAccountsExpanded: false,
     categoriesExpanded: false,
   };
   // 必要に応じて他のフィールドをリセット
@@ -51,7 +53,8 @@ function resetState() {
     toAccount: null,
     category: null,
     memo: '',
-    accountsExpanded: false,
+    fromAccountsExpanded: false,
+    toAccountsExpanded: false,
     categoriesExpanded: false,
   };
 }
@@ -176,8 +179,8 @@ function renderSingleInput(accounts, categories, shortcuts, showFromAccount, sho
           </div>
         </div>
       ` : ''}
-      ${showFromAccount ? renderIconGrid(accounts, state.fromAccount, state.accountsExpanded, 'selectFromAccount', 'toggleAccounts', state.type === 'transfer' ? '💴 出金元' : '💴 口座') : ''}
-      ${showToAccount ? renderIconGrid(accounts, state.toAccount, state.accountsExpanded, 'selectToAccount', 'toggleAccounts', state.type === 'transfer' ? '💴 入金先' : '💴 入金口座') : ''}
+      ${showFromAccount ? renderIconGrid(accounts, state.fromAccount, state.fromAccountsExpanded, 'selectFromAccount', 'toggleFromAccounts', state.type === 'transfer' ? '💴 出金元' : '💴 口座') : ''}
+      ${showToAccount ? renderIconGrid(accounts, state.toAccount, state.toAccountsExpanded, 'selectToAccount', 'toggleToAccounts', state.type === 'transfer' ? '💴 入金先' : '💴 入金口座') : ''}
       ${showCategories ? renderIconGrid(categories, state.category, state.categoriesExpanded, 'selectCategory', 'toggleCategories', '📁 カテゴリー') : ''}
       <div class="selector-section">
         <div class="selector-header"><span class="selector-title">📅 日付</span></div>
@@ -414,10 +417,11 @@ function handleClick(e) {
       bulkRows = [];
       refresh();
       break;
-    case 'selectFromAccount': state.fromAccount = target.dataset.name; state.accountsExpanded = false; refresh(); break;
-    case 'selectToAccount': state.toAccount = target.dataset.name; state.accountsExpanded = false; refresh(); break;
+    case 'selectFromAccount': state.fromAccount = target.dataset.name; state.fromAccountsExpanded = false; refresh(); break;
+    case 'selectToAccount': state.toAccount = target.dataset.name; state.toAccountsExpanded = false; refresh(); break;
     case 'selectCategory': state.category = target.dataset.name; state.categoriesExpanded = false; refresh(); break;
-    case 'toggleAccounts': state.accountsExpanded = !state.accountsExpanded; refresh(); break;
+    case 'toggleFromAccounts': state.fromAccountsExpanded = !state.fromAccountsExpanded; refresh(); break;
+    case 'toggleToAccounts': state.toAccountsExpanded = !state.toAccountsExpanded; refresh(); break;
     case 'toggleCategories': state.categoriesExpanded = !state.categoriesExpanded; refresh(); break;
     case 'dateToday': state.date = getTodayStr(); refresh(); break;
     case 'dateLast': if (lastUsedDate) { state.date = lastUsedDate; refresh(); } break;
@@ -440,7 +444,8 @@ function handleClick(e) {
         state.category = sc.category || null;
         state.fromAccount = sc.fromAccount || null;
         state.toAccount = sc.toAccount || null;
-        state.accountsExpanded = false;
+        state.fromAccountsExpanded = false;
+        state.toAccountsExpanded = false;
         state.categoriesExpanded = false;
         refresh();
       }
