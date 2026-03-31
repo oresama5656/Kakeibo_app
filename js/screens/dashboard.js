@@ -1,5 +1,6 @@
 import * as store from '../store.js';
 import { setQuickInput } from './input.js';
+import { setHistoryFilters } from './history.js';
 
 export function render(container) {
   const accounts = store.getAccounts();
@@ -183,7 +184,8 @@ function showQuickMenu(accountId) {
         <button class="btn btn-primary quick-menu-btn" data-type="expense" style="background: var(--color-expense); height: 60px; font-size: 1rem;">支出</button>
         <button class="btn btn-primary quick-menu-btn" data-type="income" style="background: var(--color-income); height: 60px; font-size: 1rem;">収入</button>
         <button class="btn btn-primary quick-menu-btn" data-type="transfer" style="background: var(--color-accent); height: 60px; font-size: 1rem; color: white;">振替</button>
-        <button class="btn btn-secondary quick-menu-btn" data-type="correction" style="height: 60px; font-size: 1rem; border: 1px solid var(--border-medium);">修正 (調整)</button>
+        <button class="btn btn-primary quick-menu-btn" data-type="history" style="background: #6366f1; height: 60px; font-size: 1rem; color: white;">履歴</button>
+        <button class="btn btn-secondary quick-menu-btn" data-type="correction" style="height: 60px; font-size: 1rem; border: 1px solid var(--border-medium); grid-column: span 2;">残高の修正 (調整)</button>
       </div>
     </div>
   `;
@@ -200,6 +202,9 @@ function showQuickMenu(accountId) {
 
       if (type === 'correction') {
         openCorrectionModal(account, currentBalance);
+      } else if (type === 'history') {
+        setHistoryFilters({ account: account.name, startDate: '', endDate: '' });
+        window.navigateTo?.('history');
       } else {
         const data = { type };
         if (type === 'expense' || type === 'transfer') data.fromAccount = account.name;

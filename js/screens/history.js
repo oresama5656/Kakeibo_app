@@ -10,6 +10,17 @@ let filters = {
   account: '',
 };
 
+/**
+ * 外部からフィルターをセットするための関数
+ * @param {Object} data { startDate, endDate, account }
+ */
+export function setHistoryFilters(data) {
+  filters = {
+    ...filters,
+    ...data
+  };
+}
+
 export function render(container) {
   const transactions = store.getTransactions()
     .filter(tx => {
