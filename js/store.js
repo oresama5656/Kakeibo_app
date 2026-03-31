@@ -155,11 +155,20 @@ export function getAccountBalance(id) {
 
 // --- Sync Logic ---
 
-function mergeData(local, cloud, deletedIds = []) {
+function mergeData(local, cloud, deletedIds = [], priority = 'local') {
   const map = new Map();
   const delSet = new Set(deletedIds);
-  cloud.forEach(item => { if (item?.id && !delSet.has(item.id)) map.set(item.id, item); });
-  local.forEach(item => { if (item?.id) map.set(item.id, item); });
+  
+  if (priority === 'local') {
+    // クラウドを先に、ローカルを後に上書き
+    cloud.forEach(item => { if (item?.id && !delSet.has(item.id)) map.set(item.id, item); });
+    local.forEach(item => { if (item?.id) map.set(item.id, item); });
+  } else {
+    // ローカルを先に、クラウドを後に上書き（初期読込用）
+    local.forEach(item => { if (item?.id) map.set(item.id, item); });
+    cloud.forEach(item => { if (item?.id && !delSet.has(item.id)) map.set(item.id, item); });
+  }
+  
   return Array.from(map.values());
 }
 
@@ -167,10 +176,10 @@ export async function syncToCloud(sheetId, options = { merge: true }) {
   if (!auth.isLoggedIn()) return;
   if (options.merge) {
     const [cloudTx, cloudCat, cloudAcc, cloudSc] = await readAllFromCloud(sheetId);
-    state.transactions = mergeData(state.transactions, cloudTx, state.deletedIds);
-    state.categories = mergeData(state.categories, cloudCat);
-    state.accounts = mergeData(state.accounts, cloudAcc);
-    state.shortcuts = mergeData(state.shortcuts, cloudSc);
+    state.transactions = mergeData(state.transactions, cloudTx, state.deletedIds, 'local');
+    state.categories = mergeData(state.categories, cloudCat, [], 'local');
+    state.accounts = mergeData(state.accounts, cloudAcc, [], 'local');
+    state.shortcuts = mergeData(state.shortcuts, cloudSc, [], 'local');
     
     // 同期データも常に正規化とID補完
     state.transactions = state.transactions.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));
@@ -234,10 +243,11 @@ async function readAllFromCloud(sheetId) {
 
 export async function loadFromCloud(sheetId) {
   const [tx, cat, acc, sc] = await readAllFromCloud(sheetId);
-  state.transactions = mergeData(state.transactions, tx, state.deletedIds);
-  state.categories = mergeData(state.categories, cat);
-  state.accounts = mergeData(state.accounts, acc);
-  state.shortcuts = mergeData(state.shortcuts, sc);
+  // 初回読込（環境移行）時は、クラウド側のデータを絶対優先する
+  state.transactions = mergeData(state.transactions, tx, state.deletedIds, 'cloud');
+  state.categories = mergeData(state.categories, cat, [], 'cloud');
+  state.accounts = mergeData(state.accounts, acc, [], 'cloud');
+  state.shortcuts = mergeData(state.shortcuts, sc, [], 'cloud');
   
   // 明示的な正規化とID補完
   state.transactions = state.transactions.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));
