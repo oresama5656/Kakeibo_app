@@ -260,11 +260,11 @@ function handleClick(e) {
 }
 
 function downloadCsvTemplate() {
-  const header = "日付\t種類\tカテゴリー\t金額\t口座\t入金先\tメモ\n";
-  const row1 = `2026/3/1\t収入\t利息\t2\tSBI新生(固定費・ボーナス)\t\t税引前利息\n`;
-  const row2 = `2026/2/7\t振替\t\t30000\tSBI新生(固定費・ボーナス)\t現金\tATM 現金出金（提携取引）\n`;
+  const header = "日付,種類,カテゴリー,金額,口座,入金先,メモ\n";
+  const row1 = `2026/3/1,収入,利息,2,SBI新生(固定費・ボーナス),,税引前利息\n`;
+  const row2 = `2026/2/7,振替,,30000,SBI新生(固定費・ボーナス),現金,ATM 現金出金（提携取引）\n`;
   
-  // 文字化け防止のためのBOM (Byte Order Mark) を追加
+  // 文字化け防止対策（BOM付きUTF-8）
   const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
   const blob = new Blob([bom, header + row1 + row2], { type: 'text/csv;charset=utf-8;' });
   
@@ -282,7 +282,6 @@ function handleCsvFile(e) {
   const file = e.target.files[0];
   if (!file) return;
 
-  // PapaParseで読み込み。タブ区切りの可能性が高いので自動判別を有効に
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
@@ -296,14 +295,27 @@ function handleCsvFile(e) {
         let fromAccount = r['口座'] || r.fromAccount || '';
         let toAccount = r['入金先'] || r.toAccount || '';
 
-        // 収入の場合は「口座」に入力されたものを「入金先」として扱う（ユーザーの利便性のため）
+        // 収入の場合は「口座」に入力されたものを「入金先」として扱う
         if (mappedType === 'income' && !toAccount) {
           toAccount = fromAccount;
           fromAccount = '';
         }
 
+        // 日付の正規化 (YYYY/M/D -> YYYY-MM-DD) - input[type=date]に必要
+        let rawDate = r['日付'] || r.date || state.date;
+        let date = rawDate;
+        if (typeof rawDate === 'string') {
+          const parts = rawDate.split(/[\/\-]/);
+          if (parts.length === 3) {
+            const y = parts[0];
+            const m = parts[1].padStart(2, '0');
+            const d = parts[2].padStart(2, '0');
+            date = `${y}-${m}-${d}`;
+          }
+        }
+
         return {
-          date: r['日付'] || r.date || state.date,
+          date: date,
           type: mappedType,
           amount: String(r['金額'] || r.amount || ''),
           category: r['カテゴリー'] || r.category || '',
