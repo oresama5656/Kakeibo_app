@@ -140,8 +140,9 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
 }
 
 function renderBulkInput(accounts, allCategories) {
-  const catOptions = state.type === 'transfer' ? [] : allCategories.filter(c => c.type === state.type || c.type === 'both');
-  if (bulkRows.length === 0) bulkRows = [{ date: state.date, amount: '', category: '', fromAccount: '', toAccount: '', memo: '' }];
+  if (bulkRows.length === 0) {
+    bulkRows = [{ date: state.date, type: state.type, amount: '', category: '', fromAccount: '', toAccount: '', memo: '' }];
+  }
 
   return `
     <div class="bulk-input-container" style="background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color); padding: 20px; overflow-x: hidden;">
@@ -156,30 +157,57 @@ function renderBulkInput(accounts, allCategories) {
       <div style="max-height: 400px; overflow: auto; border: 1px solid var(--border-light); border-radius: 12px;">
         <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
           <thead style="background: var(--bg-hover); position: sticky; top:0; z-index:1;">
-            <tr><th style="padding:10px;">日付</th><th style="padding:10px;">金額</th>${state.type!=='transfer'?'<th style="padding:10px;">カテゴリ</th>':''}<th style="padding:10px;">口座/先</th><th></th></tr>
+            <tr>
+              <th style="padding:10px; text-align:left;">日付</th>
+              <th style="padding:10px; text-align:left;">種類</th>
+              <th style="padding:10px; text-align:left;">カテゴリー</th>
+              <th style="padding:10px; text-align:left;">金額</th>
+              <th style="padding:10px; text-align:left;">口座/${state.type === 'transfer' ? '元' : ''}</th>
+              <th style="padding:10px; text-align:left;">入金先</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
-            ${bulkRows.map((row, i) => `
+            ${bulkRows.map((row, i) => {
+              const rowType = row.type || state.type;
+              const catOptions = rowType === 'transfer' ? [] : allCategories.filter(c => c.type === rowType || c.type === 'both');
+              
+              return `
               <tr style="border-bottom: 1px solid var(--border-light);">
                 <td style="padding:4px;"><input type="date" value="${row.date}" data-field="date" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent;"></td>
-                <td style="padding:4px;"><input type="number" value="${row.amount}" data-field="amount" data-row="${i}" class="bulk-input" placeholder="0" style="width:100%; border:none; background:transparent;"></td>
-                ${state.type!=='transfer' ? `
-                  <td style="padding:4px;"><select data-field="category" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent;">
+                <td style="padding:4px;">
+                  <select data-field="type" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent;">
+                    <option value="expense" ${rowType === 'expense' ? 'selected' : ''}>支出</option>
+                    <option value="income" ${rowType === 'income' ? 'selected' : ''}>収入</option>
+                    <option value="transfer" ${rowType === 'transfer' ? 'selected' : ''}>振替</option>
+                  </select>
+                </td>
+                <td style="padding:4px;">
+                  <select data-field="category" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent; ${rowType === 'transfer' ? 'opacity:0.3;' : ''}" ${rowType === 'transfer' ? 'disabled' : ''}>
                     <option value="">-</option>
                     ${catOptions.map(c => `<option value="${c.name}" ${c.name === row.category ? 'selected' : ''}>${c.name}</option>`).join('')}
-                  </select></td>
-                ` : ''}
-                <td style="padding:4px;"><select data-field="${state.type==='income'?'toAccount':'fromAccount'}" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent;">
-                  <option value="">-</option>
-                  ${accounts.map(a => `<option value="${a.name}" ${a.name === (state.type==='income'?row.toAccount:row.fromAccount) ? 'selected' : ''}>${a.name}</option>`).join('')}
-                </select></td>
-                <td style="padding:4px; text-align:center;"><button data-action="deleteBulkRow" data-row="${i}" style="color:var(--color-danger);">✕</button></td>
-              </tr>
-            `).join('')}
+                  </select>
+                </td>
+                <td style="padding:4px;"><input type="number" value="${row.amount}" data-field="amount" data-row="${i}" class="bulk-input" placeholder="0" style="width:100%; border:none; background:transparent; font-weight:bold;"></td>
+                <td style="padding:4px;">
+                  <select data-field="fromAccount" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent; ${rowType === 'income' ? 'opacity:0.3;' : ''}" ${rowType === 'income' ? 'disabled' : ''}>
+                    <option value="">-</option>
+                    ${accounts.map(a => `<option value="${a.name}" ${a.name === row.fromAccount ? 'selected' : ''}>${a.name}</option>`).join('')}
+                  </select>
+                </td>
+                <td style="padding:4px;">
+                  <select data-field="toAccount" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent; ${rowType === 'expense' ? 'opacity:0.3;' : ''}" ${rowType === 'expense' ? 'disabled' : ''}>
+                    <option value="">-</option>
+                    ${accounts.map(a => `<option value="${a.name}" ${a.name === row.toAccount ? 'selected' : ''}>${a.name}</option>`).join('')}
+                  </select>
+                </td>
+                <td style="padding:4px; text-align:center;"><button data-action="deleteBulkRow" data-row="${i}" style="color:var(--color-danger); border:none; background:transparent; font-size:1rem; cursor:pointer;">✕</button></td>
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>
       </div>
-      <button data-action="submitBulk" style="width:100%; margin-top:20px; height:50px; background:var(--color-accent); color:white; border-radius:12px; font-weight:800;">${bulkRows.length}件を一括登録</button>
+      <button data-action="submitBulk" style="width:100%; margin-top:20px; height:50px; background:var(--color-accent); color:white; border-radius:12px; font-weight:800; border:none; cursor:pointer; font-size:1rem;">${bulkRows.length}件を一括登録</button>
     </div>
   `;
 }
@@ -197,7 +225,13 @@ function bindEvents(container) {
   container.querySelector('#memo-input')?.addEventListener('input', (e) => { state.memo = e.target.value; });
   container.querySelector('[data-action="setDate"]')?.addEventListener('change', (e) => { state.date = e.target.value; });
   container.querySelectorAll('.bulk-input').forEach(inp => {
-    inp.addEventListener('change', e => { const { field, row } = e.target.dataset; if (bulkRows[row]) bulkRows[row][field] = e.target.value; });
+    inp.addEventListener('change', e => { 
+      const { field, row } = e.target.dataset; 
+      if (bulkRows[row]) {
+        bulkRows[row][field] = e.target.value;
+        if (field === 'type') refresh(); 
+      }
+    });
   });
   container.querySelector('#csv-import-input')?.addEventListener('change', handleCsvFile);
 }
@@ -226,9 +260,14 @@ function handleClick(e) {
 }
 
 function downloadCsvTemplate() {
-  const header = "date,amount,category,fromAccount,toAccount,memo\n";
-  const row = `${state.date},1000,食費,現金,,スーパーにて購入\n`;
-  const blob = new Blob([header + row], { type: 'text/csv;charset=utf-8;' });
+  const header = "日付\t種類\tカテゴリー\t金額\t口座\t入金先\tメモ\n";
+  const row1 = `2026/3/1\t収入\t利息\t2\tSBI新生(固定費・ボーナス)\t\t税引前利息\n`;
+  const row2 = `2026/2/7\t振替\t\t30000\tSBI新生(固定費・ボーナス)\t現金\tATM 現金出金（提携取引）\n`;
+  
+  // 文字化け防止のためのBOM (Byte Order Mark) を追加
+  const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+  const blob = new Blob([bom, header + row1 + row2], { type: 'text/csv;charset=utf-8;' });
+  
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
   link.setAttribute("href", url);
@@ -242,18 +281,39 @@ function downloadCsvTemplate() {
 function handleCsvFile(e) {
   const file = e.target.files[0];
   if (!file) return;
+
+  // PapaParseで読み込み。タブ区切りの可能性が高いので自動判別を有効に
   Papa.parse(file, {
-    header: true, skipEmptyLines: true,
+    header: true,
+    skipEmptyLines: true,
     complete: (res) => {
-      bulkRows = res.data.map(r => ({
-        date: r.date || r['日付'] || state.date,
-        amount: r.amount || r['金額'] || '',
-        category: r.category || r['カテゴリー'] || '',
-        fromAccount: r.fromAccount || r['口座'] || r['出金元'] || '',
-        toAccount: r.toAccount || r['入金先'] || '',
-        memo: r.memo || r['メモ'] || ''
-      }));
-      refresh(); window.showToast?.(`${bulkRows.length}件を読み込みました`);
+      const typeMap = { '支出': 'expense', '収入': 'income', '振替': 'transfer' };
+      
+      bulkRows = res.data.map(r => {
+        const rawType = r['種類'] || r.type || '';
+        const mappedType = typeMap[rawType] || state.type;
+        
+        let fromAccount = r['口座'] || r.fromAccount || '';
+        let toAccount = r['入金先'] || r.toAccount || '';
+
+        // 収入の場合は「口座」に入力されたものを「入金先」として扱う（ユーザーの利便性のため）
+        if (mappedType === 'income' && !toAccount) {
+          toAccount = fromAccount;
+          fromAccount = '';
+        }
+
+        return {
+          date: r['日付'] || r.date || state.date,
+          type: mappedType,
+          amount: String(r['金額'] || r.amount || ''),
+          category: r['カテゴリー'] || r.category || '',
+          fromAccount,
+          toAccount,
+          memo: r['メモ'] || r.memo || ''
+        };
+      });
+      refresh();
+      window.showToast?.(`${bulkRows.length}件を読み込みました`);
     }
   });
 }
@@ -268,7 +328,13 @@ function submit() {
 function submitBulk() {
   const vs = bulkRows.filter(r => Number(r.amount) > 0);
   if (vs.length === 0) return;
-  vs.forEach(r => store.addTransaction({ ...r, type: state.type, amount: Number(r.amount) }));
+  
+  vs.forEach(r => {
+    // 種類(type)がCSVから取得できていればそれを使用し、なければ現在のタブの種類を使用
+    const finalType = r.type || state.type;
+    store.addTransaction({ ...r, type: finalType, amount: Number(r.amount) });
+  });
+  
   window.showToast?.(`${vs.length}件を登録 ✓`); bulkRows = []; refresh();
 }
 
