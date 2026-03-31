@@ -1,5 +1,9 @@
-const CACHE_NAME = 'kakeibo-cache-v4.7';
-const ASSETS = [
+/**
+ * Service Worker (v5.0 - 強制リフレッシュ対応・ネットワーク優先)
+ */
+
+const CACHE_NAME = 'kakeibo-cache-v5.0';
+const FILES_TO_CACHE = [
   './',
   './index.html',
   './css/style.css',
@@ -8,53 +12,57 @@ const ASSETS = [
   './js/store.js',
   './js/data.js',
   './js/screens/input.js',
-  './js/screens/history.js',
   './js/screens/dashboard.js',
+  './js/screens/history.js',
   './js/screens/analysis.js',
   './js/screens/settings.js',
+  './manifest.json',
   './icon.png'
 ];
 
-// Install: キャッシュへの登録
-self.addEventListener('install', (e) => {
-  self.skipWaiting();
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+// --- Install Event ---
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[SW] Caching all files for v5.0...');
+      return cache.addAll(FILES_TO_CACHE);
+    }).then(() => self.skipWaiting()) // インストール直後に有効化
   );
 });
 
-// Activate: 旧キャッシュの破棄
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    Promise.all([
-      self.clients.claim(), // 制御を即時に開始
-      caches.keys().then((keys) => {
-        return Promise.all(
-          keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-        );
-      })
-    ])
+// --- Activate Event (Delete old caches) ---
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('[SW] Clearing old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
   );
 });
 
-// Fetch: ネットワーク優先 (Network First)
-// 開発中や更新頻度が高い場合は、最新をまず見に行くこの方法が「スマート」です。
-self.addEventListener('fetch', (e) => {
-  if (e.request.url.includes('googleapis.com')) return;
+// --- Fetch Event (Network First Strategy) ---
+self.addEventListener('fetch', (event) => {
+  // skip if non-GET
+  if (event.request.method !== 'GET') return;
 
-  e.respondWith(
-    fetch(e.request)
+  event.respondWith(
+    fetch(event.request)
       .then((response) => {
-        // ネットワークが成功したらキャッシュを更新
-        const respClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(e.request, respClone);
+        // ネットワークが正常ならキャッシュを更新して返す
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, response.clone());
+          return response;
         });
-        return response;
       })
       .catch(() => {
-        // ネットワークがダメな時だけキャッシュを返す
-        return caches.match(e.request);
+        // オフライン時はキャッシュから返す
+        return caches.match(event.request);
       })
   );
 });

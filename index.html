@@ -15,12 +15,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- ブラウザのキャッシュ対策（GitHub Pages用） -->
+  <!-- ブラウザのキャッシュ対策（強制リフレッシュを促す） -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
 
-  <link rel="stylesheet" href="css/style.css?v=4.5">
+  <link rel="stylesheet" href="css/style.css?v=5.0">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -63,14 +63,25 @@
     </nav>
   </div>
 
-  <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <script type="module" src="js/app.js?v=4.4"></script>
+  <script type="module" src="js/app.js?v=5.0"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=4.4');
+        // v5.0にアップグレードして確実に再インストールさせる
+        navigator.serviceWorker.register('./sw.js?v=5.0').then(reg => {
+          reg.onupdatefound = () => {
+             const installingWorker = reg.installing;
+             installingWorker.onstatechange = () => {
+               if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                 // 強制リロードを促すトーストなどは適宜
+                 console.log('New content available; please refresh.');
+                 window.location.reload(); 
+               }
+             };
+          };
+        });
       });
     }
   </script>
