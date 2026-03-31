@@ -1,5 +1,5 @@
 // ============================================
-// データ管理モジュール (v3.7 - 安全な並べ替え対応)
+// データ管理モジュール (v3.8 - 取引更新機能 復旧版)
 // ============================================
 
 import * as auth from './auth.js';
@@ -45,7 +45,6 @@ export function initStore() {
   } else {
     state.categories = [...DEFAULT_CATEGORIES];
     state.accounts = [...DEFAULT_ACCOUNTS];
-    state.deletedIds = [];
   }
 }
 
@@ -165,6 +164,16 @@ export function addTransaction(tx) {
   updateAccountBalances();
   save();
 }
+
+export function updateTransaction(id, updates) {
+  const idx = state.transactions.findIndex(t => t.id === id);
+  if (idx !== -1) {
+    state.transactions[idx] = { ...state.transactions[idx], ...updates };
+    updateAccountBalances();
+    save();
+  }
+}
+
 export function deleteTransaction(id) {
   if (!id) return;
   if (!state.deletedIds.includes(id)) state.deletedIds.push(id);
@@ -172,30 +181,21 @@ export function deleteTransaction(id) {
   updateAccountBalances();
   save();
 }
+
 export function addAccount(a) { a.id = 'acc_' + Date.now(); state.accounts.push(a); updateAccountBalances(); save(); }
 export function updateAccount(id, d) { const i = state.accounts.findIndex(a => a.id === id); if (i !== -1) { state.accounts[i] = { ...state.accounts[i], ...d }; updateAccountBalances(); save(); } }
 export function deleteAccount(id) { state.accounts = state.accounts.filter(a => a.id !== id); save(); }
 export function reorderAccounts(ids) {
-  // 安全な並べ替え: 指定されたIDセットだけを現在の順番で上書きし、他は維持
-  const newOrderMap = new Map(ids.map((id, index) => [id, index + 1]));
-  state.accounts.forEach(acc => {
-    if (newOrderMap.has(acc.id)) {
-      acc.order = newOrderMap.get(acc.id);
-    }
-  });
+  const map = new Map(ids.map((id, idx) => [id, idx + 1]));
+  state.accounts.forEach(a => { if (map.has(a.id)) a.order = map.get(a.id); });
   save();
 }
 export function addCategory(c) { c.id = 'cat_' + Date.now(); state.categories.push(c); save(); }
 export function updateCategory(id, d) { const i = state.categories.findIndex(c => c.id === id); if (i !== -1) { state.categories[i] = { ...state.categories[i], ...d }; save(); } }
 export function deleteCategory(id) { state.categories = state.categories.filter(c => c.id !== id); save(); }
 export function reorderCategories(ids) {
-  // 安全な並べ替え: 他のタイプのカテゴリーを消さないように
-  const newOrderMap = new Map(ids.map((id, index) => [id, index + 1]));
-  state.categories.forEach(cat => {
-    if (newOrderMap.has(cat.id)) {
-      cat.order = newOrderMap.get(cat.id);
-    }
-  });
+  const map = new Map(ids.map((id, idx) => [id, idx + 1]));
+  state.categories.forEach(c => { if (map.has(c.id)) c.order = map.get(c.id); });
   save();
 }
 export function updateSettings(s) { state.settings = { ...state.settings, ...s }; save(); }
