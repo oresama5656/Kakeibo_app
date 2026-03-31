@@ -8,11 +8,11 @@ let filters = {
   startDate: '',
   endDate: '',
   account: '',
+  category: '',
 };
 
 /**
  * 外部からフィルターをセットするための関数
- * @param {Object} data { startDate, endDate, account }
  */
 export function setHistoryFilters(data) {
   filters = {
@@ -24,6 +24,7 @@ export function setHistoryFilters(data) {
 export function render(container) {
   const allTransactions = store.getTransactions();
   const accounts = store.getAccounts();
+  const categories = store.getCategories();
   
   // --- 1. すべての取引を使って残高推移を事前計算 (通帳形式のため) ---
   // 日付順（古い順）に並べ替えて計算
@@ -64,6 +65,7 @@ export function render(container) {
       if (filters.startDate && tx.date < filters.startDate) return false;
       if (filters.endDate && tx.date > filters.endDate) return false;
       if (filters.account && tx.fromAccount !== filters.account && tx.toAccount !== filters.account) return false;
+      if (filters.category && tx.category !== filters.category) return false;
       return true;
     })
     .sort((a, b) => {
@@ -91,6 +93,10 @@ export function render(container) {
           <select data-action="filterAccount">
             <option value="">全口座 (資産推移)</option>
             ${accounts.map(a => `<option value="${a.name}" ${filters.account === a.name ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
+          </select>
+          <select data-action="filterCategory">
+            <option value="">全カテゴリー</option>
+            ${categories.map(c => `<option value="${c.name}" ${filters.category === c.name ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -122,6 +128,10 @@ export function render(container) {
   });
   container.querySelector('[data-action="filterAccount"]')?.addEventListener('change', e => {
     filters.account = e.target.value;
+    refresh();
+  });
+  container.querySelector('[data-action="filterCategory"]')?.addEventListener('change', e => {
+    filters.category = e.target.value;
     refresh();
   });
 
