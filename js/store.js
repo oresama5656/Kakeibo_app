@@ -178,15 +178,30 @@ export function updateAccountBalances() {
 }
 
 // --- Setters ---
+function sanitizeTransaction(tx) {
+  if (tx.type === 'expense') {
+    tx.toAccount = '';
+  } else if (tx.type === 'income') {
+    tx.fromAccount = '';
+  } else if (tx.type === 'transfer') {
+    tx.category = '';
+  }
+  return tx;
+}
+
 export function addTransaction(tx) {
   tx.id = 'tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-  state.transactions.unshift(tx);
+  state.transactions.unshift(sanitizeTransaction(tx));
   updateAccountBalances();
   save();
 }
 export function updateTransaction(id, updates) {
   const idx = state.transactions.findIndex(t => t.id === id);
-  if (idx !== -1) { state.transactions[idx] = { ...state.transactions[idx], ...updates }; updateAccountBalances(); save(); }
+  if (idx !== -1) {
+    state.transactions[idx] = sanitizeTransaction({ ...state.transactions[idx], ...updates });
+    updateAccountBalances();
+    save();
+  }
 }
 export function deleteTransaction(id) {
   if (!id) return;

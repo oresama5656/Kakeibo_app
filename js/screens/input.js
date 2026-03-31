@@ -190,13 +190,13 @@ function renderBulkInput(accounts, allCategories) {
                 </td>
                 <td style="padding:4px;"><input type="number" value="${row.amount}" data-field="amount" data-row="${i}" class="bulk-input" placeholder="0" style="width:100%; border:none; background:transparent; font-weight:bold;"></td>
                 <td style="padding:4px;">
-                  <select data-field="fromAccount" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent; ${rowType === 'income' ? 'opacity:0.3;' : ''}" ${rowType === 'income' ? 'disabled' : ''}>
+                  <select data-field="fromAccount" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent;">
                     <option value="">-</option>
                     ${accounts.map(a => `<option value="${a.name}" ${a.name === row.fromAccount ? 'selected' : ''}>${a.name}</option>`).join('')}
                   </select>
                 </td>
                 <td style="padding:4px;">
-                  <select data-field="toAccount" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent; ${rowType === 'expense' ? 'opacity:0.3;' : ''}" ${rowType === 'expense' ? 'disabled' : ''}>
+                  <select data-field="toAccount" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent; ${rowType !== 'transfer' ? 'opacity:0.3;' : ''}" ${rowType !== 'transfer' ? 'disabled' : ''}>
                     <option value="">-</option>
                     ${accounts.map(a => `<option value="${a.name}" ${a.name === row.toAccount ? 'selected' : ''}>${a.name}</option>`).join('')}
                   </select>
@@ -292,16 +292,10 @@ function handleCsvFile(e) {
         const rawType = r['種類'] || r.type || '';
         const mappedType = typeMap[rawType] || state.type;
         
-        let fromAccount = r['口座'] || r.fromAccount || '';
-        let toAccount = r['入金先'] || r.toAccount || '';
+        let account = r['口座'] || r.fromAccount || '';
+        let toAccount = r['入金先'] || r.toAccount || r['入金先'] || '';
 
-        // 収入の場合は「口座」に入力されたものを「入金先」として扱う
-        if (mappedType === 'income' && !toAccount) {
-          toAccount = fromAccount;
-          fromAccount = '';
-        }
-
-        // 日付の正規化 (YYYY/M/D -> YYYY-MM-DD) - input[type=date]に必要
+        // 日付の正規化 (YYYY/M/D -> YYYY-MM-DD)
         let rawDate = r['日付'] || r.date || state.date;
         let date = rawDate;
         if (typeof rawDate === 'string') {
@@ -319,8 +313,8 @@ function handleCsvFile(e) {
           type: mappedType,
           amount: String(r['金額'] || r.amount || ''),
           category: r['カテゴリー'] || r.category || '',
-          fromAccount,
-          toAccount,
+          fromAccount: account, // UI上は「口座」列として扱う
+          toAccount: toAccount, // UI上は「入金先」列として扱う
           memo: r['メモ'] || r.memo || ''
         };
       });
@@ -342,9 +336,21 @@ function submitBulk() {
   if (vs.length === 0) return;
   
   vs.forEach(r => {
-    // 種類(type)がCSVから取得できていればそれを使用し、なければ現在のタブの種類を使用
     const finalType = r.type || state.type;
-    store.addTransaction({ ...r, type: finalType, amount: Number(r.amount) });
+    let tx = { ...r, type: finalType, amount: Number(r.amount) };
+
+    // 種類の性質に合わせて、UI上の「口座」の値を内部フィールドにマッピング
+    if (finalType === 'income') {
+      // 収入の場合、「口座」列の値を「入金先」として扱う
+      tx.toAccount = r.fromAccount || r.toAccount;
+      tx.fromAccount = '';
+    } else if (finalType === 'expense') {
+      // 支出の場合、「口座」列の値がそのまま「出金元」
+      tx.toAccount = '';
+    }
+    // 振替の場合は、fromAccount(口座) と toAccount(入金先) がそのまま使われる
+
+    store.addTransaction(tx);
   });
   
   window.showToast?.(`${vs.length}件を登録 ✓`); bulkRows = []; refresh();
