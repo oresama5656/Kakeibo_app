@@ -1,3 +1,6 @@
+import * as store from '../store.js';
+import { setQuickInput } from './input.js';
+
 export function render(container) {
   const accounts = store.getAccounts();
   const totalBalance = store.getTotalBalance();
