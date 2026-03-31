@@ -210,6 +210,14 @@ export function updateAccountBalances() {
 }
 
 // --- Setters ---
+
+// ID生成用のカウンター（ミリ秒が同じ場合の順序維持用）
+let idCounter = 0;
+function generateId() {
+  idCounter++;
+  return 'tx_' + Date.now() + '_' + String(idCounter).padStart(5, '0');
+}
+
 function sanitizeTransaction(tx) {
   tx.date = normalizeDate(tx.date);
   if (tx.type === 'expense') {
@@ -223,7 +231,7 @@ function sanitizeTransaction(tx) {
 }
 
 export function addTransaction(tx) {
-  tx.id = 'tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+  if (!tx.id) tx.id = generateId();
   state.transactions.unshift(sanitizeTransaction(tx));
   updateAccountBalances();
   save();
