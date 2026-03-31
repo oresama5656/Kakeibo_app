@@ -85,7 +85,7 @@ export function render(container) {
   const showCategories = state.type !== 'transfer';
 
   container.innerHTML = `
-    <div class="input-screen" style="max-width: 100%; box-sizing: border-box; overflow-x: hidden; padding-bottom: 40px;">
+    <div class="input-screen" style="max-width: 100%; box-sizing: border-box; overflow-x: hidden;">
       <div class="type-toggle" style="margin-bottom: 20px;">
         <button class="type-btn ${state.type === 'expense' ? 'active' : ''}" data-action="setType" data-type="expense">支出</button>
         <button class="type-btn ${state.type === 'income' ? 'active' : ''}" data-action="setType" data-type="income">収入</button>

@@ -272,7 +272,7 @@ textarea:focus {
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--space-md);
-  padding-bottom: calc(var(--bottom-tab-height) + 40px);
+  padding-bottom: calc(var(--bottom-tab-height) + 16px);
   -webkit-overflow-scrolling: touch;
   background: var(--bg-primary);
 }
