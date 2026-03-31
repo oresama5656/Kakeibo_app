@@ -158,34 +158,73 @@ function renderPLContent() {
 }
 
 function renderBSContent() {
+  const accounts = store.getAccounts();
   const actualNetWorth = store.getTotalBalance();
+  const positiveAccounts = accounts.filter(a => Number(a.balance) > 0).sort((a,b) => b.balance - a.balance);
+  const negativeAccounts = accounts.filter(a => Number(a.balance) < 0).sort((a,b) => a.balance - b.balance);
+  const totalAssets = positiveAccounts.reduce((sum, a) => sum + Number(a.balance), 0);
+  const totalLiabilities = Math.abs(negativeAccounts.reduce((sum, a) => sum + Number(a.balance), 0));
+  
+  // BSの均衡：資産(Left) = 負債 + 純資産(Right)
+  // 純資産がマイナスの場合（債務超過）は、資産側に純資産のマイナス分を表示
+  const leftTotal = totalAssets + (actualNetWorth < 0 ? Math.abs(actualNetWorth) : 0);
+  const rightTotal = totalLiabilities + (actualNetWorth > 0 ? actualNetWorth : 0);
+  const maxHeight = Math.max(leftTotal, rightTotal, 1);
 
   return `
     <div class="bs-content">
-      <div style="background: linear-gradient(135deg, var(--color-accent), #4f46e5); border-radius: 24px; padding: 24px; color: white; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);">
-        <div style="font-size: 0.85rem; opacity: 0.8; margin-bottom: 8px;">現在の純資産</div>
-        <div style="font-size: 2.4rem; font-weight: 800;">¥${actualNetWorth.toLocaleString()}</div>
-        <div style="display: flex; gap: 20px; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.2);">
-          <div><div style="font-size: 0.7rem; opacity: 0.7;">資産計</div><div style="font-size: 1rem; font-weight: 800;">¥${store.getAccounts().filter(a=>a.balance>0).reduce((s,a)=>s+a.balance, 0).toLocaleString()}</div></div>
-          <div><div style="font-size: 0.7rem; opacity: 0.7;">負債計</div><div style="font-size: 1rem; font-weight: 800;">¥${Math.abs(store.getAccounts().filter(a=>a.balance<0).reduce((s,a)=>s+a.balance, 0)).toLocaleString()}</div></div>
+      <!-- BS構成図 (バランス形式) -->
+      <div class="chart-card" style="padding: 24px; margin-bottom: 24px;">
+        <h4 style="font-size: 0.95rem; font-weight: 800; text-align: center; margin-bottom: 20px;">🏛️ 現時点のバランスシート</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; height: 320px; align-items: flex-end; position: relative;">
+          
+          <!-- 左側：資産の部 -->
+          <div style="height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px;">
+            <div style="text-align: center; font-size: 0.75rem; font-weight: bold; margin-bottom: 8px; color: var(--text-secondary);">[ 資産 ]</div>
+            ${positiveAccounts.map(acc => {
+              const h = (acc.balance / maxHeight) * 100;
+              return `<div class="bs-segment asset" style="height: ${h}%; background: #4f46e5; border-radius: 4px; padding: 4px; min-height: 4px;" title="${acc.name}: ¥${acc.balance.toLocaleString()}">${h > 8 ? `<span style="color:white; font-size:10px; font-weight:bold; overflow:hidden; white-space:nowrap; display:block;">${acc.name}</span>` : ''}</div>`;
+            }).join('')}
+            ${actualNetWorth < 0 ? `<div class="bs-segment" style="height: ${(Math.abs(actualNetWorth) / maxHeight) * 100}%; background: #94a3b8; border-radius: 4px; border: 1px dashed white;"></div>` : ''}
+          </div>
+
+          <!-- 右側：負債・純資産の部 -->
+          <div style="height: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px;">
+            <div style="text-align: center; font-size: 0.75rem; font-weight: bold; margin-bottom: 8px; color: var(--text-secondary);">[ 負債・純資産 ]</div>
+            ${actualNetWorth > 0 ? `<div class="bs-segment equity" style="height: ${(actualNetWorth / maxHeight) * 100}%; background: var(--color-accent); border-radius: 4px; padding: 4px; min-height: 4px;" title="純資産: ¥${actualNetWorth.toLocaleString()}">${(actualNetWorth/maxHeight) > 0.08 ? '<span style="color:white; font-size:10px; font-weight:bold;">純資産</span>' : ''}</div>` : ''}
+            ${negativeAccounts.map(acc => {
+              const h = (Math.abs(acc.balance) / maxHeight) * 100;
+              return `<div class="bs-segment liability" style="height: ${h}%; background: #f43f5e; border-radius: 4px; padding: 4px; min-height: 4px;" title="${acc.name}: ¥${Math.abs(acc.balance).toLocaleString()}">${h > 8 ? `<span style="color:white; font-size:10px; font-weight:bold; overflow:hidden; white-space:nowrap; display:block;">${acc.name}</span>` : ''}</div>`;
+            }).join('')}
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 16px; font-size: 0.8rem; font-weight: bold; color: var(--text-secondary);">
+          <div style="text-align: center; flex:1;">資産計: ¥${totalAssets.toLocaleString()}</div>
+          <div style="text-align: center; flex:1;">負債+純資産: ¥${(totalLiabilities + Math.max(actualNetWorth, 0)).toLocaleString()}</div>
         </div>
       </div>
 
-      <div class="chart-card" style="padding: 20px; margin-bottom: 24px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-          <h4 style="font-size: 0.95rem; font-weight: 800;">💎 資産構成の推移 (積み上げ)</h4>
-          <select id="bs-period-selector" style="font-size: 0.8rem; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border-color);">
-            <option value="30" ${analysisState.bsPeriod === 30 ? 'selected' : ''}>1ヶ月</option>
-            <option value="90" ${analysisState.bsPeriod === 90 ? 'selected' : ''}>3ヶ月</option>
-            <option value="180" ${analysisState.bsPeriod === 180 ? 'selected' : ''}>6ヶ月</option>
-          </select>
+      <!-- 残高のトレンド -->
+      <div class="chart-card" style="padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 12px;">
+          <div>
+            <h4 style="font-size: 0.95rem; font-weight: 800;">📈 推移グラフ</h4>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">口座別、または全体の推移</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+            <select id="analysis-account-selector" style="font-size: 0.75rem; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-hover); max-width: 150px;">
+              <option value="total">📊 全体（純資産）</option>
+              ${accounts.map(a => `<option value="${a.id}" ${a.id === analysisState.selectedAccountId ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
+            </select>
+            <select id="bs-period-selector" style="font-size: 0.75rem; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <option value="30" ${analysisState.bsPeriod === 30 ? 'selected' : ''}>1ヶ月</option>
+              <option value="90" ${analysisState.bsPeriod === 90 ? 'selected' : ''}>3ヶ月</option>
+              <option value="180" ${analysisState.bsPeriod === 180 ? 'selected' : ''}>半年</option>
+              <option value="365" ${analysisState.bsPeriod === 365 ? 'selected' : ''}>1年</option>
+            </select>
+          </div>
         </div>
-        <div style="height: 250px;"><canvas id="bs-stacked-chart"></canvas></div>
-      </div>
-
-      <div class="chart-card" style="padding: 20px; margin-bottom: 24px;">
-        <h4 style="font-size: 0.95rem; font-weight: 800; margin-bottom: 16px;">📈 純資産のトレンド (全体)</h4>
-        <div style="height: 180px;"><canvas id="total-asset-chart"></canvas></div>
+        <div style="height: 240px;"><canvas id="total-asset-chart"></canvas></div>
       </div>
     </div>
   `;
@@ -202,38 +241,6 @@ function calculateCategoryTotals(txs) {
     totals[tx.category].total += Number(tx.amount) || 0;
   });
   return totals;
-}
-
-function getAssetCompositionHistory(days = 90) {
-  const history = [];
-  const accounts = store.getAccounts();
-  const transactions = store.getTransactions();
-  const now = new Date();
-  
-  for (let i = 0; i <= days; i += Math.max(1, Math.floor(days/30))) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const dStr = d.toISOString().split('T')[0];
-    
-    const point = { date: dStr, balances: {} };
-    accounts.forEach(acc => {
-      let bal = acc.balance;
-      // この日より後の取引を逆算して、この時点の残高を出す
-      transactions.forEach(tx => {
-        if (tx.date > dStr) {
-          const val = Number(tx.amount) || 0;
-          if (tx.type === 'income' && tx.toAccount === acc.name) bal -= val;
-          else if (tx.type === 'expense' && tx.fromAccount === acc.name) bal += val;
-          else if (tx.type === 'transfer') {
-            if (tx.fromAccount === acc.name) bal += val;
-            if (tx.toAccount === acc.name) bal -= val;
-          }
-        }
-      });
-      point.balances[acc.name] = bal;
-    });
-    history.unshift(point);
-  }
-  return history;
 }
 
 function bindEvents(container) {
@@ -253,6 +260,16 @@ function bindEvents(container) {
 
   const bsSel = container.querySelector('#bs-period-selector');
   if (bsSel) bsSel.onchange = e => { analysisState.bsPeriod = Number(e.target.value); render(container); };
+  
+  const accSel = container.querySelector('#analysis-account-selector');
+  if (accSel) accSel.onchange = e => { 
+    if (e.target.value === 'total') {
+      analysisState.selectedAccountId = null;
+    } else {
+      analysisState.selectedAccountId = e.target.value;
+    }
+    render(container); 
+  };
 }
 
 function renderPieChart(sorted) {
@@ -320,62 +337,58 @@ function renderPLLineChart(txs, start, end) {
   });
 }
 
-function renderBSStackedChart(history) {
-  const ctx = document.getElementById('bs-stacked-chart')?.getContext('2d');
-  if (!ctx) return;
-  if (bsStackedChart) bsStackedChart.destroy();
-
-  const accounts = store.getAccounts();
-  const datasets = accounts.map((acc, idx) => {
-    const colors = ['#6366f1', '#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6'];
-    return {
-      label: acc.name,
-      data: history.map(h => h.balances[acc.name] || 0),
-      backgroundColor: colors[idx % colors.length],
-      stack: 'stack0'
-    };
-  });
-
-  bsStackedChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: history.map(h => h.date.split('-').slice(1).join('/')),
-      datasets: datasets
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } },
-      scales: {
-        x: { stacked: true, ticks: { font: { size: 8 } } },
-        y: { stacked: true, ticks: { font: { size: 9 } } }
-      }
-    }
-  });
-}
-
 function renderTotalAssetChart(history) {
   const ctx = document.getElementById('total-asset-chart')?.getContext('2d');
   if (!ctx || totalAssetChart) totalAssetChart?.destroy();
+
+  let data = [];
+  let label = '純資産';
+  let color = '#4f46e5';
+
+  if (analysisState.selectedAccountId) {
+    const acc = store.getAccounts().find(a => a.id === analysisState.selectedAccountId);
+    if (acc) {
+      const accHistory = store.getAccountHistory(acc.name, analysisState.bsPeriod);
+      data = accHistory.map(h => h.balance);
+      label = acc.name;
+      color = Number(acc.balance) < 0 ? '#f43f5e' : '#10b981';
+    }
+  } else {
+    data = history.map(h => h.total);
+  }
+
   totalAssetChart = new Chart(ctx, { 
     type: 'line', 
     data: { 
       labels: history.map(h => h.date.split('-').slice(1).join('/')), 
       datasets: [{ 
-        data: history.map(h => h.total), 
-        borderColor: '#4f46e5', 
+        label: label,
+        data: data, 
+        borderColor: color, 
         borderWidth: 3,
         tension: 0.3, 
         pointRadius: 0, 
         fill: true, 
-        backgroundColor: 'rgba(79, 70, 229, 0.1)' 
+        backgroundColor: color + '15' // Add transparency
       }] 
     }, 
     options: { 
       responsive: true, 
       maintainAspectRatio: false, 
-      plugins: { legend: { display: false } }, 
-      scales: { x: { display: true, ticks: { font: { size: 8 }, maxTicksLimit: 6 } }, y: { ticks: { font: { size: 9 }, maxTicksLimit: 5 } } } 
+      plugins: { 
+        legend: { display: false },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ¥${ctx.raw.toLocaleString()}`
+          }
+        }
+      }, 
+      scales: { 
+        x: { display: true, ticks: { font: { size: 8 }, maxTicksLimit: 6 } }, 
+        y: { ticks: { font: { size: 9 }, maxTicksLimit: 5 } } 
+      } 
     } 
   });
 }
