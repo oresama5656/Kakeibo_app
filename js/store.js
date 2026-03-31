@@ -52,6 +52,40 @@ function normalizeDate(d) {
   return d.trim();
 }
 
+/**
+ * 名称の正規化 (トリム、比較用)
+ */
+function normalizeName(name) {
+  if (!name) return '';
+  return String(name).trim();
+}
+
+/**
+ * 既存の取引データに足りないIDを名称から補完（マイグレーション）
+ */
+function migrateTransactionIds(transactions, accounts, categories) {
+  return transactions.map(tx => {
+    const updated = { ...tx };
+    const normFrom = normalizeName(tx.fromAccount);
+    const normTo = normalizeName(tx.toAccount);
+    const normCat = normalizeName(tx.category);
+
+    if (!tx.fromAccountId && normFrom) {
+      const acc = accounts.find(a => normalizeName(a.name) === normFrom);
+      if (acc) updated.fromAccountId = acc.id;
+    }
+    if (!tx.toAccountId && normTo) {
+      const acc = accounts.find(a => normalizeName(a.name) === normTo);
+      if (acc) updated.toAccountId = acc.id;
+    }
+    if (!tx.categoryId && normCat) {
+      const cat = categories.find(c => normalizeName(c.name) === normCat);
+      if (cat) updated.categoryId = cat.id;
+    }
+    return updated;
+  });
+}
+
 export function initStore() {
   const localData = localStorage.getItem('kakeibo_data');
   if (localData) {
@@ -59,12 +93,13 @@ export function initStore() {
     if (!state.shortcuts) state.shortcuts = [];
     if (!state.deletedIds) state.deletedIds = [];
     
-    // 既存データの正規化
+    // 既存データの正規化とID補完
     if (state.transactions) {
       state.transactions = state.transactions.map(tx => ({
         ...tx,
         date: normalizeDate(tx.date)
       }));
+      state.transactions = migrateTransactionIds(state.transactions, state.accounts, state.categories);
     }
     
     // カテゴリーの初期チェックと補充
@@ -137,20 +172,31 @@ export async function syncToCloud(sheetId, options = { merge: true }) {
     state.accounts = mergeData(state.accounts, cloudAcc);
     state.shortcuts = mergeData(state.shortcuts, cloudSc);
     
-    // 同期データも常に正規化
+    // 同期データも常に正規化とID補完
     state.transactions = state.transactions.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));
+    state.transactions = migrateTransactionIds(state.transactions, state.accounts, state.categories);
     
     updateAccountBalances();
   }
-  const txRows = state.transactions.map(t => [t.id, t.date, t.amount, t.type, t.category, t.fromAccount, t.memo, t.toAccount || '']);
+  
+  // スプレッドシートには 11 列書き出す: [ID, 日付, 金額, 種別, カテゴリ名, 出金名, メモ, 入金名, カテゴリID, 出金ID, 入金ID]
+  const txRows = state.transactions.map(t => [
+    t.id, t.date, t.amount, t.type, 
+    t.category, t.fromAccount, t.memo, t.toAccount || '',
+    t.categoryId || '', t.fromAccountId || '', t.toAccountId || ''
+  ]);
   const catRows = state.categories.map(c => [c.id, c.name, c.icon, c.type, c.order, c.pinned ? 1 : 0]);
   const accRows = state.accounts.map(a => [a.id, a.name, a.icon, a.balance, a.initialBalance, a.order, a.pinned ? 1 : 0]);
-  const scRows = (state.shortcuts || []).map(s => [s.id, s.name, s.type, s.amount, s.category, s.fromAccount, s.toAccount, s.order]);
+  const scRows = (state.shortcuts || []).map(s => [
+    s.id, s.name, s.type, s.amount, 
+    s.category, s.fromAccount, s.toAccount, s.order,
+    s.categoryId || '', s.fromAccountId || '', s.toAccountId || ''
+  ]);
 
-  await auth.clearRows(sheetId, 'transactions!A:H');
+  await auth.clearRows(sheetId, 'transactions!A:K'); // 11列分クリア
   await auth.clearRows(sheetId, 'categories!A:F');
   await auth.clearRows(sheetId, 'accounts!A:G');
-  await auth.clearRows(sheetId, 'shortcuts!A:H');
+  await auth.clearRows(sheetId, 'shortcuts!A:K'); // 11列分クリア
 
   await auth.writeRows(sheetId, 'transactions!A1', txRows.length ? txRows : [['EMPTY']]);
   await auth.writeRows(sheetId, 'categories!A1', catRows.length ? catRows : [['EMPTY']]);
@@ -164,17 +210,25 @@ export async function syncToCloud(sheetId, options = { merge: true }) {
 
 async function readAllFromCloud(sheetId) {
   const [t, c, a, s] = await Promise.all([
-    auth.readRows(sheetId, 'transactions!A:H'),
+    auth.readRows(sheetId, 'transactions!A:K'), // 11列読み込み
     auth.readRows(sheetId, 'categories!A:F'),
     auth.readRows(sheetId, 'accounts!A:G'),
-    auth.readRows(sheetId, 'shortcuts!A:H')
+    auth.readRows(sheetId, 'shortcuts!A:K') // 11列読み込み
   ]);
   const p = (rows, fn) => (rows.length > 0 && rows[0][0] !== 'EMPTY') ? rows.map(fn) : [];
   return [
-    p(t, r => ({ id: r[0], date: normalizeDate(r[1]), amount: Number(r[2]), type: r[3], category: r[4], fromAccount: r[5], memo: r[6] || '', toAccount: r[7] || '' })),
+    p(t, r => ({ 
+      id: r[0], date: normalizeDate(r[1]), amount: Number(r[2]), type: r[3], 
+      category: r[4], fromAccount: r[5], memo: r[6] || '', toAccount: r[7] || '',
+      categoryId: r[8] || '', fromAccountId: r[9] || '', toAccountId: r[10] || '' 
+    })),
     p(c, r => ({ id: r[0], name: r[1], icon: r[2], type: r[3], order: Number(r[4] || 0) })),
     p(a, r => ({ id: r[0], name: r[1], icon: r[2], balance: Number(r[3] || 0), initialBalance: Number(r[4] || 0), order: Number(r[5] || 0) })),
-    p(s, r => ({ id: r[0], name: r[1], type: r[2], amount: Number(r[3] || 0), category: r[4], fromAccount: r[5], toAccount: r[6], order: Number(r[7] || 0) }))
+    p(s, r => ({ 
+      id: r[0], name: r[1], type: r[2], amount: Number(r[3] || 0), 
+      category: r[4], fromAccount: r[5], toAccount: r[6], order: Number(r[7] || 0),
+      categoryId: r[8] || '', fromAccountId: r[9] || '', toAccountId: r[10] || ''
+    }))
   ];
 }
 
@@ -185,8 +239,14 @@ export async function loadFromCloud(sheetId) {
   state.accounts = mergeData(state.accounts, acc);
   state.shortcuts = mergeData(state.shortcuts, sc);
   
-  // 明示的な正規化
+  // 明示的な正規化とID補完
   state.transactions = state.transactions.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));
+  state.transactions = migrateTransactionIds(state.transactions, state.accounts, state.categories);
+  
+  // ショートカットのID補完も行う
+  if (state.shortcuts) {
+    state.shortcuts = migrateTransactionIds(state.shortcuts, state.accounts, state.categories);
+  }
   
   updateAccountBalances();
   isCloudSyncReady = true;
@@ -197,14 +257,27 @@ export function setCloudSyncReady(r) { isCloudSyncReady = r; }
 
 export function updateAccountBalances() {
   state.accounts.forEach(a => a.balance = Number(a.initialBalance || 0));
-  const f = (n) => state.accounts.find(a => a.name === n || a.id === n);
+  
+  // ID または 名称で口座を特定するヘルパー
+  const findAccount = (id, name) => {
+    if (id) return state.accounts.find(a => a.id === id);
+    if (name) return state.accounts.find(a => normalizeName(a.name) === normalizeName(name));
+    return null;
+  };
+
   [...state.transactions].reverse().forEach(tx => {
     const val = Number(tx.amount) || 0;
-    if (tx.type === 'income') { const a = f(tx.toAccount); if (a) a.balance += val; }
-    else if (tx.type === 'expense') { const a = f(tx.fromAccount); if (a) a.balance -= val; }
-    else if (tx.type === 'transfer') { 
-      const from = f(tx.fromAccount), to = f(tx.toAccount);
-      if (from) from.balance -= val; if (to) to.balance += val;
+    if (tx.type === 'income') {
+      const a = findAccount(tx.toAccountId, tx.toAccount);
+      if (a) a.balance += val;
+    } else if (tx.type === 'expense') {
+      const a = findAccount(tx.fromAccountId, tx.fromAccount);
+      if (a) a.balance -= val;
+    } else if (tx.type === 'transfer') { 
+      const from = findAccount(tx.fromAccountId, tx.fromAccount);
+      const to = findAccount(tx.toAccountId, tx.toAccount);
+      if (from) from.balance -= val;
+      if (to) to.balance += val;
     }
   });
 }
@@ -220,12 +293,44 @@ function generateId() {
 
 function sanitizeTransaction(tx) {
   tx.date = normalizeDate(tx.date);
+
+  // マスタデータから最新のIDと名称を取得して補完（名寄せ）
+  if (tx.fromAccount && !tx.fromAccountId) {
+    const acc = state.accounts.find(a => normalizeName(a.name) === normalizeName(tx.fromAccount));
+    if (acc) tx.fromAccountId = acc.id;
+  }
+  if (tx.toAccount && !tx.toAccountId) {
+    const acc = state.accounts.find(a => normalizeName(a.name) === normalizeName(tx.toAccount));
+    if (acc) tx.toAccountId = acc.id;
+  }
+  if (tx.category && !tx.categoryId) {
+    const cat = state.categories.find(c => normalizeName(c.name) === normalizeName(tx.category));
+    if (cat) tx.categoryId = cat.id;
+  }
+
+  // IDがある場合は、スナップショット名称を最新のマスタ名で更新（スプレッドシートの可読性維持のため）
+  if (tx.fromAccountId) {
+    const acc = state.accounts.find(a => a.id === tx.fromAccountId);
+    if (acc) tx.fromAccount = acc.name;
+  }
+  if (tx.toAccountId) {
+    const acc = state.accounts.find(a => a.id === tx.toAccountId);
+    if (acc) tx.toAccount = acc.name;
+  }
+  if (tx.categoryId) {
+    const cat = state.categories.find(c => c.id === tx.categoryId);
+    if (cat) tx.category = cat.name;
+  }
+
   if (tx.type === 'expense') {
     tx.toAccount = '';
+    tx.toAccountId = '';
   } else if (tx.type === 'income') {
     tx.fromAccount = '';
+    tx.fromAccountId = '';
   } else if (tx.type === 'transfer') {
     tx.category = '';
+    tx.categoryId = '';
   }
   return tx;
 }
@@ -252,7 +357,19 @@ export function deleteTransaction(id) {
   save();
 }
 export function addAccount(a) { a.id = 'acc_' + Date.now(); state.accounts.push(a); updateAccountBalances(); save(); }
-export function updateAccount(id, d) { const i = state.accounts.findIndex(a => a.id === id); if (i !== -1) { state.accounts[i] = { ...state.accounts[i], ...d }; updateAccountBalances(); save(); } }
+export function updateAccount(id, d) {
+  const i = state.accounts.findIndex(a => a.id === id);
+  if (i !== -1) {
+    state.accounts[i] = { ...state.accounts[i], ...d };
+    // すべての取引の名称スナップショットを更新（IDベースなので計算には影響しないが、スプレッドシートの可読性のため）
+    state.transactions.forEach(tx => {
+      if (tx.fromAccountId === id) tx.fromAccount = state.accounts[i].name;
+      if (tx.toAccountId === id) tx.toAccount = state.accounts[i].name;
+    });
+    updateAccountBalances();
+    save();
+  }
+}
 export function deleteAccount(id) { state.accounts = state.accounts.filter(a => a.id !== id); save(); }
 export function reorderAccounts(ids) {
   const map = new Map(ids.map((id, idx) => [id, idx + 1]));
@@ -260,7 +377,17 @@ export function reorderAccounts(ids) {
   save();
 }
 export function addCategory(c) { c.id = 'cat_' + Date.now(); state.categories.push(c); save(); }
-export function updateCategory(id, d) { const i = state.categories.findIndex(c => c.id === id); if (i !== -1) { state.categories[i] = { ...state.categories[i], ...d }; save(); } }
+export function updateCategory(id, d) {
+  const i = state.categories.findIndex(c => c.id === id);
+  if (i !== -1) {
+    state.categories[i] = { ...state.categories[i], ...d };
+    // すべての取引の名称スナップショットを更新
+    state.transactions.forEach(tx => {
+      if (tx.categoryId === id) tx.category = state.categories[i].name;
+    });
+    save();
+  }
+}
 export function deleteCategory(id) { state.categories = state.categories.filter(c => c.id !== id); save(); }
 export function reorderCategories(ids) {
   const map = new Map(ids.map((id, idx) => [id, idx + 1]));
@@ -292,22 +419,35 @@ export function getAssetHistory(days = 30) {
   return history;
 }
 
-export function getAccountHistory(accountName, days = 30) {
+export function getAccountHistory(accountId, days = 30) {
   const history = [];
   const now = new Date();
-  const accObj = state.accounts.find(a => a.name === accountName);
+  const accObj = state.accounts.find(a => a.id === accountId || a.name === accountId);
   const currentAccBal = accObj?.balance || 0;
+  const targetId = accObj?.id;
+  const targetName = accObj?.name;
+
   for (let i = 0; i <= days; i++) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
     const dStr = d.toISOString().split('T')[0];
     let bal = currentAccBal;
     state.transactions.forEach(tx => {
       if (tx.date > dStr) {
-        if (tx.type === 'income' && tx.toAccount === accountName) bal -= tx.amount;
-        else if (tx.type === 'expense' && tx.fromAccount === accountName) bal += tx.amount;
-        else if (tx.type === 'transfer') {
-          if (tx.fromAccount === accountName) bal += tx.amount;
-          if (tx.toAccount === accountName) bal -= tx.amount;
+        if (targetId) {
+          if (tx.type === 'income' && tx.toAccountId === targetId) bal -= tx.amount;
+          else if (tx.type === 'expense' && tx.fromAccountId === targetId) bal += tx.amount;
+          else if (tx.type === 'transfer') {
+            if (tx.fromAccountId === targetId) bal += tx.amount;
+            if (tx.toAccountId === targetId) bal -= tx.amount;
+          }
+        } else if (targetName) {
+          // 下位互換用（IDがない場合）
+          if (tx.type === 'income' && tx.toAccount === targetName) bal -= tx.amount;
+          else if (tx.type === 'expense' && tx.fromAccount === targetName) bal += tx.amount;
+          else if (tx.type === 'transfer') {
+            if (tx.fromAccount === targetName) bal += tx.amount;
+            if (tx.toAccount === targetName) bal -= tx.amount;
+          }
         }
       }
     });

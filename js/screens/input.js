@@ -9,9 +9,9 @@ let lastUsedDate = localStorage.getItem('kakeibo_last_date') || '';
 let state = {
   type: 'expense',
   amount: '', 
-  fromAccount: null,
-  toAccount: null,
-  category: null,
+  fromAccountId: null,
+  toAccountId: null,
+  categoryId: null,
   date: new Date().toISOString().split('T')[0],
   memo: '',
   fromAccountsExpanded: false,
@@ -31,25 +31,58 @@ const formatComma = (val) => {
 const parseComma = (str) => Number(str.toString().replace(/,/g, '')) || 0;
 
 export function setQuickInput(data) {
-  state = { ...state, ...data, amount: data.amount ? formatComma(data.amount) : '', fromAccountsExpanded: false, toAccountsExpanded: false, categoriesExpanded: false };
-  if (data.type === 'expense') state.toAccount = null;
-  else if (data.type === 'income') state.fromAccount = null;
+  state = { 
+    ...state, 
+    ...data, 
+    amount: data.amount ? formatComma(data.amount) : '', 
+    fromAccountsExpanded: false, 
+    toAccountsExpanded: false, 
+    categoriesExpanded: false 
+  };
+  
+  // ショートカットが名称で持っている場合の補完
+  const accs = store.getAccounts();
+  const cats = store.getCategories();
+  if (data.fromAccount && !state.fromAccountId) {
+    const a = accs.find(i => i.name === data.fromAccount);
+    if (a) state.fromAccountId = a.id;
+  }
+  if (data.toAccount && !state.toAccountId) {
+    const a = accs.find(i => i.name === data.toAccount);
+    if (a) state.toAccountId = a.id;
+  }
+  if (data.category && !state.categoryId) {
+    const c = cats.find(i => i.name === data.category);
+    if (c) state.categoryId = c.id;
+  }
+
+  if (data.type === 'expense') state.toAccountId = null;
+  else if (data.type === 'income') state.fromAccountId = null;
 }
 
 function resetState() {
-  state = { ...state, amount: '', fromAccount: null, toAccount: null, category: null, memo: '', fromAccountsExpanded: false, toAccountsExpanded: false, categoriesExpanded: false };
+  state = { 
+    ...state, 
+    amount: '', 
+    fromAccountId: null, 
+    toAccountId: null, 
+    categoryId: null, 
+    memo: '', 
+    fromAccountsExpanded: false, 
+    toAccountsExpanded: false, 
+    categoriesExpanded: false 
+  };
 }
 
-function renderIconGrid(items, selectedName, expanded, onSelect, onToggle, sectionTitle) {
+function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, sectionTitle) {
   const all = [...items].sort((a,b) => (a.order || 0) - (b.order || 0));
-  let selectedItem = all.find(i => i.name === selectedName);
-  if (!selectedItem && selectedName) selectedItem = { name: selectedName, icon: '⚖️' };
+  let selectedItem = all.find(i => i.id === selectedId);
   
   const pinned = all.filter(i => i.pinned);
   const isPC = window.innerWidth >= 768;
   let displayItems = expanded ? all : pinned;
   if (!isPC && !expanded) displayItems = [];
-  if (selectedItem && !displayItems.find(i => i.name === selectedItem.name)) displayItems.push(selectedItem);
+  if (selectedItem && !displayItems.find(i => i.id === selectedItem.id)) displayItems.push(selectedItem);
 
   return `
     <div class="selector-section">
@@ -62,7 +95,7 @@ function renderIconGrid(items, selectedName, expanded, onSelect, onToggle, secti
       </div>
       <div class="icon-grid ${expanded ? 'expanded' : ''}">
         ${displayItems.map(item => `
-          <div class="icon-item ${item.name === selectedName ? 'selected' : ''}" data-action="${onSelect}" data-name="${item.name}">
+          <div class="icon-item ${item.id === selectedId ? 'selected' : ''}" data-action="${onSelect}" data-id="${item.id}">
             <span class="icon-emoji">${item.icon}</span>
             <span class="icon-label">${item.name}</span>
           </div>
@@ -113,9 +146,9 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
       </div>
     </div>
 
-    ${showFromAccount ? renderIconGrid(accounts, state.fromAccount, state.fromAccountsExpanded, 'selectFromAccount', 'toggleFromAccounts', state.type === 'transfer' ? '💴 出金元' : '💴 口座') : ''}
-    ${showToAccount ? renderIconGrid(accounts, state.toAccount, state.toAccountsExpanded, 'selectToAccount', 'toggleToAccounts', state.type === 'transfer' ? '💴 入金先' : '💴 入金口座') : ''}
-    ${showCategories ? renderIconGrid(categories, state.category, state.categoriesExpanded, 'selectCategory', 'toggleCategories', '📁 カテゴリー') : ''}
+    ${showFromAccount ? renderIconGrid(accounts, state.fromAccountId, state.fromAccountsExpanded, 'selectFromAccount', 'toggleFromAccounts', state.type === 'transfer' ? '💴 出金元' : '💴 口座') : ''}
+    ${showToAccount ? renderIconGrid(accounts, state.toAccountId, state.toAccountsExpanded, 'selectToAccount', 'toggleToAccounts', state.type === 'transfer' ? '💴 入金先' : '💴 入金口座') : ''}
+    ${showCategories ? renderIconGrid(categories, state.categoryId, state.categoriesExpanded, 'selectCategory', 'toggleCategories', '📁 カテゴリー') : ''}
 
     <div class="selector-section">
       <div class="selector-header"><span class="selector-title">📅 日付・メモ</span></div>
@@ -141,7 +174,7 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
 
 function renderBulkInput(accounts, allCategories) {
   if (bulkRows.length === 0) {
-    bulkRows = [{ date: state.date, type: state.type, amount: '', category: '', fromAccount: '', toAccount: '', memo: '' }];
+    bulkRows = [{ date: state.date, type: state.type, amount: '', categoryId: '', fromAccountId: '', toAccountId: '', memo: '' }];
   }
 
   return `
@@ -183,22 +216,22 @@ function renderBulkInput(accounts, allCategories) {
                   </select>
                 </td>
                 <td style="padding:4px;">
-                  <select data-field="category" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent; ${rowType === 'transfer' ? 'opacity:0.3;' : ''}" ${rowType === 'transfer' ? 'disabled' : ''}>
+                  <select data-field="categoryId" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent; ${rowType === 'transfer' ? 'opacity:0.3;' : ''}" ${rowType === 'transfer' ? 'disabled' : ''}>
                     <option value="">-</option>
-                    ${catOptions.map(c => `<option value="${c.name}" ${c.name === row.category ? 'selected' : ''}>${c.name}</option>`).join('')}
+                    ${catOptions.map(c => `<option value="${c.id}" ${c.id === row.categoryId ? 'selected' : ''}>${c.name}</option>`).join('')}
                   </select>
                 </td>
                 <td style="padding:4px;"><input type="number" value="${row.amount}" data-field="amount" data-row="${i}" class="bulk-input" placeholder="0" style="width:100%; border:none; background:transparent; font-weight:bold;"></td>
                 <td style="padding:4px;">
-                  <select data-field="fromAccount" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent;">
+                  <select data-field="fromAccountId" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent;">
                     <option value="">-</option>
-                    ${accounts.map(a => `<option value="${a.name}" ${a.name === row.fromAccount ? 'selected' : ''}>${a.name}</option>`).join('')}
+                    ${accounts.map(a => `<option value="${a.id}" ${a.id === row.fromAccountId ? 'selected' : ''}>${a.name}</option>`).join('')}
                   </select>
                 </td>
                 <td style="padding:4px;">
-                  <select data-field="toAccount" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent; ${rowType !== 'transfer' ? 'opacity:0.3;' : ''}" ${rowType !== 'transfer' ? 'disabled' : ''}>
+                  <select data-field="toAccountId" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent; ${rowType !== 'transfer' ? 'opacity:0.3;' : ''}" ${rowType !== 'transfer' ? 'disabled' : ''}>
                     <option value="">-</option>
-                    ${accounts.map(a => `<option value="${a.name}" ${a.name === row.toAccount ? 'selected' : ''}>${a.name}</option>`).join('')}
+                    ${accounts.map(a => `<option value="${a.id}" ${a.id === row.toAccountId ? 'selected' : ''}>${a.name}</option>`).join('')}
                   </select>
                 </td>
                 <td style="padding:4px; text-align:center;"><button data-action="deleteBulkRow" data-row="${i}" style="color:var(--color-danger); border:none; background:transparent; font-size:1rem; cursor:pointer;">✕</button></td>
@@ -241,18 +274,18 @@ function handleClick(e) {
   if (!target) return;
   const action = target.dataset.action;
   if (action === 'openCalculator') openCalculator();
-  else if (action === 'setType') { state.type = target.dataset.type; state.category = null; refresh(); }
-  else if (action === 'selectFromAccount') { state.fromAccount = target.dataset.name; refresh(); }
-  else if (action === 'selectToAccount') { state.toAccount = target.dataset.name; refresh(); }
-  else if (action === 'selectCategory') { state.category = target.dataset.name; refresh(); }
+  else if (action === 'setType') { state.type = target.dataset.type; state.categoryId = null; refresh(); }
+  else if (action === 'selectFromAccount') { state.fromAccountId = target.dataset.id; refresh(); }
+  else if (action === 'selectToAccount') { state.toAccountId = target.dataset.id; refresh(); }
+  else if (action === 'selectCategory') { state.categoryId = target.dataset.id; refresh(); }
   else if (action === 'toggleFromAccounts') { state.fromAccountsExpanded = !state.fromAccountsExpanded; refresh(); }
   else if (action === 'toggleToAccounts') { state.toAccountsExpanded = !state.toAccountsExpanded; refresh(); }
   else if (action === 'toggleCategories') { state.categoriesExpanded = !state.categoriesExpanded; refresh(); }
   else if (action === 'dateToday') { state.date = new Date().toISOString().split('T')[0]; refresh(); }
   else if (action === 'submit') submit();
   else if (action === 'toggleBulk') { showBulkInput = !showBulkInput; refresh(); }
-  else if (action === 'addBulkRow') { bulkRows.push({ date: state.date, amount: '', category: '', fromAccount: '', toAccount: '', memo: '' }); refresh(); }
-  else if (action === 'deleteBulkRow') { bulkRows.splice(Number(target.dataset.row), 1); if (bulkRows.length===0) bulkRows=[{date:state.date,amount:'',category:'',fromAccount:'',toAccount:'',memo:''}]; refresh(); }
+  else if (action === 'addBulkRow') { bulkRows.push({ date: state.date, amount: '', categoryId: '', fromAccountId: '', toAccountId: '', memo: '' }); refresh(); }
+  else if (action === 'deleteBulkRow') { bulkRows.splice(Number(target.dataset.row), 1); if (bulkRows.length===0) bulkRows=[{date:state.date,amount:'',categoryId:'',fromAccountId:'',toAccountId:'',memo:''}]; refresh(); }
   else if (action === 'submitBulk') submitBulk();
   else if (action === 'triggerCsvImport') document.getElementById('csv-import-input').click();
   else if (action === 'downloadCsvTemplate') downloadCsvTemplate();
@@ -287,13 +320,21 @@ function handleCsvFile(e) {
     skipEmptyLines: true,
     complete: (res) => {
       const typeMap = { '支出': 'expense', '収入': 'income', '振替': 'transfer' };
-      
+      const accs = store.getAccounts();
+      const cats = store.getCategories();
+
       bulkRows = res.data.map(r => {
         const rawType = r['種類'] || r.type || '';
         const mappedType = typeMap[rawType] || state.type;
         
-        let account = r['口座'] || r.fromAccount || '';
-        let toAccount = r['入金先'] || r.toAccount || r['入金先'] || '';
+        const rawFrom = r['口座'] || r.fromAccount || '';
+        const rawTo = r['入金先'] || r.toAccount || '';
+        const rawCat = r['カテゴリー'] || r.category || '';
+
+        // 名称からIDを検索（名寄せ）
+        const fromAcc = accs.find(a => a.name.trim() === rawFrom.trim());
+        const toAcc = accs.find(a => a.name.trim() === rawTo.trim());
+        const cat = cats.find(c => c.name.trim() === rawCat.trim());
 
         // 日付の正規化 (YYYY/M/D -> YYYY-MM-DD)
         let rawDate = r['日付'] || r.date || state.date;
@@ -312,9 +353,12 @@ function handleCsvFile(e) {
           date: date,
           type: mappedType,
           amount: String(r['金額'] || r.amount || ''),
-          category: r['カテゴリー'] || r.category || '',
-          fromAccount: account, // UI上は「口座」列として扱う
-          toAccount: toAccount, // UI上は「入金先」列として扱う
+          category: rawCat,
+          categoryId: cat ? cat.id : '',
+          fromAccount: rawFrom,
+          fromAccountId: fromAcc ? fromAcc.id : '',
+          toAccount: rawTo,
+          toAccountId: toAcc ? toAcc.id : '',
           memo: r['メモ'] || r.memo || ''
         };
       });
@@ -327,7 +371,24 @@ function handleCsvFile(e) {
 function submit() {
   const amount = parseComma(state.amount);
   if (!amount || amount <= 0) { window.showToast?.('金額を入力してください', 'error'); return; }
-  store.addTransaction({ ...state, amount, category: state.category || 'その他' });
+  
+  // 名称のスナップショットも一緒に保存
+  const accs = store.getAccounts();
+  const cats = store.getCategories();
+  const fromAcc = accs.find(a => a.id === state.fromAccountId);
+  const toAcc = accs.find(a => a.id === state.toAccountId);
+  const cat = cats.find(c => c.id === state.categoryId);
+
+  const tx = { 
+    ...state, 
+    amount, 
+    fromAccount: fromAcc ? fromAcc.name : '',
+    toAccount: toAcc ? toAcc.name : '',
+    category: cat ? cat.name : (state.type === 'transfer' ? '' : 'その他'),
+    categoryId: state.categoryId || (state.type === 'transfer' ? '' : 'cat_other')
+  };
+
+  store.addTransaction(tx);
   window.showToast?.('記録しました ✓'); resetState(); refresh();
 }
 
@@ -335,20 +396,31 @@ function submitBulk() {
   const vs = bulkRows.filter(r => Number(r.amount) > 0);
   if (vs.length === 0) return;
   
+  const accs = store.getAccounts();
+  const cats = store.getCategories();
+
   vs.forEach(r => {
     const finalType = r.type || state.type;
     let tx = { ...r, type: finalType, amount: Number(r.amount) };
 
-    // 種類の性質に合わせて、UI上の「口座」の値を内部フィールドにマッピング
+    // IDから最新の名称をセット（または名称からIDを補完）
+    const fromAcc = accs.find(a => a.id === r.fromAccountId || a.name === r.fromAccount);
+    const toAcc = accs.find(a => a.id === r.toAccountId || a.name === r.toAccount);
+    const cat = cats.find(c => c.id === r.categoryId || c.name === r.category);
+
+    if (fromAcc) { tx.fromAccountId = fromAcc.id; tx.fromAccount = fromAcc.name; }
+    if (toAcc) { tx.toAccountId = toAcc.id; tx.toAccount = toAcc.name; }
+    if (cat) { tx.categoryId = cat.id; tx.category = cat.name; }
+
     if (finalType === 'income') {
-      // 収入の場合、「口座」列の値を「入金先」として扱う
-      tx.toAccount = r.fromAccount || r.toAccount;
+      tx.toAccountId = tx.toAccountId || tx.fromAccountId;
+      tx.toAccount = tx.toAccount || tx.fromAccount;
+      tx.fromAccountId = '';
       tx.fromAccount = '';
     } else if (finalType === 'expense') {
-      // 支出の場合、「口座」列の値がそのまま「出金元」
+      tx.toAccountId = '';
       tx.toAccount = '';
     }
-    // 振替の場合は、fromAccount(口座) と toAccount(入金先) がそのまま使われる
 
     store.addTransaction(tx);
   });

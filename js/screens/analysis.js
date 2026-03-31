@@ -150,7 +150,7 @@ function renderPLContent() {
 
       <div class="category-list">
         ${sorted.map(c => `
-          <div class="category-item-v2" data-action="drillDown" data-category="${c.name}">
+          <div class="category-item-v2" data-action="drillDown" data-category-id="${c.id}">
             <div class="cat-icon-v2">${c.icon}</div>
             <div class="cat-details-v2">
               <div class="cat-top-v2">
@@ -249,11 +249,12 @@ function calculateCategoryTotals(txs) {
   const totals = {};
   const cats = store.getCategories();
   txs.forEach(tx => {
-    if (!totals[tx.category]) {
-      const c = cats.find(a => a.name === tx.category);
-      totals[tx.category] = { name: tx.category, icon: c?.icon || '❓', total: 0 };
+    const cid = tx.categoryId || 'cat_other';
+    if (!totals[cid]) {
+      const c = cats.find(a => a.id === cid);
+      totals[cid] = { id: cid, name: c?.name || tx.category || 'その他', icon: c?.icon || '❓', total: 0 };
     }
-    totals[tx.category].total += Number(tx.amount) || 0;
+    totals[cid].total += Number(tx.amount) || 0;
   });
   return totals;
 }
@@ -285,7 +286,7 @@ function bindEvents(container) {
   container.querySelectorAll('[data-action="setChartMode"]').forEach(b => b.onclick = (e) => { analysisState.chartMode = e.currentTarget.dataset.val; render(container); });
   container.querySelectorAll('[data-action="drillDown"]').forEach(row => { row.onclick = () => {
       const { start, end } = getPeriodDates();
-      setHistoryFilters({ startDate: start, endDate: end, account: '', category: row.dataset.category });
+      setHistoryFilters({ startDate: start, endDate: end, accountId: '', categoryId: row.dataset.categoryId });
       window.navigateTo?.('history');
   }; });
   const bsSel = container.querySelector('#bs-period-selector');
@@ -446,12 +447,11 @@ function renderTotalAssetChart(history) {
   let color = '#6366f1';
 
   if (analysisState.selectedAccountId) {
+    const accHistory = store.getAccountHistory(analysisState.selectedAccountId, analysisState.bsPeriod);
     const acc = store.getAccounts().find(a => a.id === analysisState.selectedAccountId);
-    if (acc) {
-      const accHistory = store.getAccountHistory(acc.name, analysisState.bsPeriod);
-      data = accHistory.map(h => h.balance); label = acc.name;
-      color = Number(acc.balance) < 0 ? '#f43f5e' : '#10b981';
-    }
+    data = accHistory.map(h => h.balance); 
+    label = acc ? acc.name : '不明な口座';
+    color = (acc && Number(acc.balance) < 0) ? '#f43f5e' : '#10b981';
   } else { data = history.map(h => h.total); }
 
   totalAssetChart = new Chart(ctx, { 

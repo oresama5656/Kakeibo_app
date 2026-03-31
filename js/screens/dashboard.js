@@ -106,11 +106,11 @@ function showQuickMenu(accountId) {
       const type = btn.dataset.type;
       close();
       if (type === 'correction') openCorrectionModal(account, currentBalance);
-      else if (type === 'history') { setHistoryFilters({ account: account.name }); window.navigateTo?.('history'); }
+      else if (type === 'history') { setHistoryFilters({ accountId: account.id }); window.navigateTo?.('history'); }
       else {
         const data = { type };
-        if (type === 'expense' || type === 'transfer') data.fromAccount = account.name;
-        if (type === 'income') data.toAccount = account.name;
+        if (type === 'expense' || type === 'transfer') data.fromAccountId = account.id;
+        if (type === 'income') data.toAccountId = account.id;
         setQuickInput(data);
         window.navigateTo?.('input');
       }
@@ -153,15 +153,15 @@ function openCorrectionModal(account, currentBalance) {
     if (diff === 0) { close(); return; }
     const type = diff > 0 ? 'income' : 'expense';
     
-    // ここで「残高修正」カテゴリーを渡す
+    // システム予約済みの「残高修正」カテゴリーIDを使用
     const data = { 
       type: type, 
       amount: String(Math.abs(diff)), 
-      category: '残高修正', 
+      categoryId: type === 'expense' ? 'cat_99' : 'cat_100', 
       memo: '残高修正' 
     };
-    if (type === 'income') data.toAccount = account.name;
-    else data.fromAccount = account.name;
+    if (type === 'income') data.toAccountId = account.id;
+    else data.fromAccountId = account.id;
     setQuickInput(data);
     close();
     window.navigateTo?.('input');

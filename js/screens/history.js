@@ -7,8 +7,8 @@ import * as store from '../store.js';
 let filters = {
   startDate: '',
   endDate: '',
-  account: '',
-  category: '',
+  accountId: '',
+  categoryId: '',
 };
 
 /**
@@ -35,7 +35,7 @@ export function render(container) {
   });
 
   const accountBalances = {};
-  accounts.forEach(a => accountBalances[a.name] = Number(a.initialBalance || 0));
+  accounts.forEach(a => accountBalances[a.id] = Number(a.initialBalance || 0));
   let totalBalance = accounts.reduce((sum, a) => sum + Number(a.initialBalance || 0), 0);
 
   const txRunningBalances = {}; // txId -> { balance: Number }
@@ -43,19 +43,19 @@ export function render(container) {
   for (const tx of sortedForCalc) {
     const amt = Number(tx.amount) || 0;
     if (tx.type === 'income') {
-      if (accountBalances[tx.toAccount] !== undefined) accountBalances[tx.toAccount] += amt;
+      if (accountBalances[tx.toAccountId] !== undefined) accountBalances[tx.toAccountId] += amt;
       totalBalance += amt;
     } else if (tx.type === 'expense') {
-      if (accountBalances[tx.fromAccount] !== undefined) accountBalances[tx.fromAccount] -= amt;
+      if (accountBalances[tx.fromAccountId] !== undefined) accountBalances[tx.fromAccountId] -= amt;
       totalBalance -= amt;
     } else if (tx.type === 'transfer') {
-      if (accountBalances[tx.fromAccount] !== undefined) accountBalances[tx.fromAccount] -= amt;
-      if (accountBalances[tx.toAccount] !== undefined) accountBalances[tx.toAccount] += amt;
+      if (accountBalances[tx.fromAccountId] !== undefined) accountBalances[tx.fromAccountId] -= amt;
+      if (accountBalances[tx.toAccountId] !== undefined) accountBalances[tx.toAccountId] += amt;
     }
     
     // フィルタ中の口座があればその残高、なければ総資産を記録
-    txRunningBalances[tx.id] = filters.account 
-      ? (accountBalances[filters.account] || 0)
+    txRunningBalances[tx.id] = filters.accountId 
+      ? (accountBalances[filters.accountId] || 0)
       : totalBalance;
   }
 
@@ -64,8 +64,8 @@ export function render(container) {
     .filter(tx => {
       if (filters.startDate && tx.date < filters.startDate) return false;
       if (filters.endDate && tx.date > filters.endDate) return false;
-      if (filters.account && tx.fromAccount !== filters.account && tx.toAccount !== filters.account) return false;
-      if (filters.category && tx.category !== filters.category) return false;
+      if (filters.accountId && tx.fromAccountId !== filters.accountId && tx.toAccountId !== filters.accountId) return false;
+      if (filters.categoryId && tx.categoryId !== filters.categoryId) return false;
       return true;
     })
     .sort((a, b) => {
@@ -100,11 +100,11 @@ export function render(container) {
           <input type="date" value="${filters.endDate}" data-action="filterEnd" placeholder="終了日">
           <select data-action="filterAccount">
             <option value="">全口座 (資産推移)</option>
-            ${accounts.map(a => `<option value="${a.name}" ${filters.account === a.name ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
+            ${accounts.map(a => `<option value="${a.id}" ${filters.accountId === a.id ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
           </select>
           <select data-action="filterCategory">
             <option value="">全カテゴリー</option>
-            ${categories.map(c => `<option value="${c.name}" ${filters.category === c.name ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('')}
+            ${categories.map(c => `<option value="${c.id}" ${filters.categoryId === c.id ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -135,11 +135,11 @@ export function render(container) {
     refresh();
   });
   container.querySelector('[data-action="filterAccount"]')?.addEventListener('change', e => {
-    filters.account = e.target.value;
+    filters.accountId = e.target.value;
     refresh();
   });
   container.querySelector('[data-action="filterCategory"]')?.addEventListener('change', e => {
-    filters.category = e.target.value;
+    filters.categoryId = e.target.value;
     refresh();
   });
 
@@ -156,26 +156,34 @@ function handleClick(e) {
 
 function renderHistoryItem(tx, balance) {
   const categories = store.getCategories();
-  const cat = categories.find(c => c.name === tx.category);
+  const accounts = store.getAccounts();
+  
+  // 現在のマスタデータからアイコンと名称を取得。なければスナップショットを使用。
+  const cat = categories.find(c => c.id === tx.categoryId);
   const icon = cat ? cat.icon : (tx.type === 'transfer' ? '🔄' : '❓');
+  const categoryName = tx.type === 'transfer' ? '振替' : (cat ? cat.name : tx.category);
+
+  const fromAcc = accounts.find(a => a.id === tx.fromAccountId);
+  const toAcc = accounts.find(a => a.id === tx.toAccountId);
+  const fromName = fromAcc ? fromAcc.name : tx.fromAccount;
+  const toName = toAcc ? toAcc.name : tx.toAccount;
 
   let accountLabel = '';
   if (tx.type === 'expense') {
-    accountLabel = tx.fromAccount;
+    accountLabel = fromName;
   } else if (tx.type === 'income') {
-    accountLabel = tx.toAccount;
+    accountLabel = toName;
   } else {
-    accountLabel = `${tx.fromAccount} → ${tx.toAccount}`;
+    accountLabel = `${fromName} → ${toName}`;
   }
 
   const typeLabel = tx.type === 'expense' ? '-' : tx.type === 'income' ? '+' : '';
-  const category = tx.type === 'transfer' ? '振替' : tx.category;
 
   return `
     <div class="history-item" data-action="editTx" data-id="${tx.id}">
       <div class="history-item-icon ${tx.type}">${icon}</div>
       <div class="history-item-info">
-        <div class="history-item-category">${category}${tx.memo ? ` - ${tx.memo}` : ''}</div>
+        <div class="history-item-category">${categoryName}${tx.memo ? ` - ${tx.memo}` : ''}</div>
         <div class="history-item-account">${accountLabel}</div>
       </div>
       <div class="history-item-amount-group" style="text-align: right;">
@@ -237,7 +245,7 @@ function showEditModal(txId) {
         <div class="form-group">
           <label class="form-label">カテゴリー</label>
           <select class="form-input" id="edit-category">
-            ${categories.map(c => `<option value="${c.name}" ${c.name === tx.category ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('')}
+            ${categories.map(c => `<option value="${c.id}" ${c.id === tx.categoryId ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('')}
           </select>
         </div>
       ` : ''}
@@ -246,7 +254,7 @@ function showEditModal(txId) {
         <div class="form-group">
           <label class="form-label">出金元</label>
           <select class="form-input" id="edit-from">
-            ${accounts.map(a => `<option value="${a.name}" ${a.name === tx.fromAccount ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
+            ${accounts.map(a => `<option value="${a.id}" ${a.id === tx.fromAccountId ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
           </select>
         </div>
       ` : ''}
@@ -255,7 +263,7 @@ function showEditModal(txId) {
         <div class="form-group">
           <label class="form-label">入金先</label>
           <select class="form-input" id="edit-to">
-            ${accounts.map(a => `<option value="${a.name}" ${a.name === tx.toAccount ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
+            ${accounts.map(a => `<option value="${a.id}" ${a.id === tx.toAccountId ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
           </select>
         </div>
       ` : ''}
@@ -295,11 +303,17 @@ function showEditModal(txId) {
       const updates = {
         date: date,
         amount: Number(document.getElementById('edit-amount').value),
-        category: document.getElementById('edit-category')?.value || tx.category,
-        fromAccount: document.getElementById('edit-from')?.value || tx.fromAccount,
-        toAccount: document.getElementById('edit-to')?.value || tx.toAccount,
+        categoryId: document.getElementById('edit-category')?.value || tx.categoryId,
+        fromAccountId: document.getElementById('edit-from')?.value || tx.fromAccountId,
+        toAccountId: document.getElementById('edit-to')?.value || tx.toAccountId,
         memo: document.getElementById('edit-memo').value,
       };
+      
+      // 名称スナップショットの補完
+      if (updates.categoryId) updates.category = categories.find(c => c.id === updates.categoryId)?.name || '';
+      if (updates.fromAccountId) updates.fromAccount = accounts.find(a => a.id === updates.fromAccountId)?.name || '';
+      if (updates.toAccountId) updates.toAccount = accounts.find(a => a.id === updates.toAccountId)?.name || '';
+
       store.updateTransaction(tx.id, updates);
       overlay.remove();
       window.showToast?.('取引を更新しました ✓');
