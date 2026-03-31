@@ -1,5 +1,5 @@
 // ============================================
-// 入力画面 (v2.3 - レイアウト・電卓位置調整版)
+// 入力画面 (v2.4 - 3桁カンマ自動フォーマット版)
 // ============================================
 
 import * as store from '../store.js';
@@ -8,7 +8,7 @@ let lastUsedDate = localStorage.getItem('kakeibo_last_date') || '';
 
 let state = {
   type: 'expense',
-  amount: '',
+  amount: '', // 内部的には文字列で管理
   fromAccount: null,
   toAccount: null,
   category: null,
@@ -21,8 +21,20 @@ let state = {
 
 let calcState = { display: '0', currentValue: null, operator: null, waitingForNextValue: false };
 
+// 数値をカンマ区切り文字列に変換
+const formatComma = (val) => {
+  const num = val.toString().replace(/[^0-9]/g, '');
+  if (!num) return '';
+  return Number(num).toLocaleString('ja-JP');
+};
+
+// カンマ区切り文字列を数値に戻す
+const parseComma = (str) => {
+  return Number(str.toString().replace(/,/g, '')) || 0;
+};
+
 export function setQuickInput(data) {
-  state = { ...state, ...data, fromAccountsExpanded: false, toAccountsExpanded: false, categoriesExpanded: false };
+  state = { ...state, ...data, amount: data.amount ? formatComma(data.amount) : '', fromAccountsExpanded: false, toAccountsExpanded: false, categoriesExpanded: false };
   if (data.type === 'expense') state.toAccount = null;
   else if (data.type === 'income') state.fromAccount = null;
 }
@@ -32,14 +44,13 @@ function resetState() {
 }
 
 function renderIconGrid(items, selectedName, expanded, onSelect, onToggle, sectionTitle) {
-  const pinned = items.filter(i => i.pinned).sort((a, b) => (a.order || 0) - (b.order || 0));
-  const rest = items.filter(i => !i.pinned).sort((a,b) => (a.order || 0) - (b.order || 0));
-  const all = [...pinned, ...rest];
+  const all = [...items].sort((a,b) => (a.order || 0) - (b.order || 0));
   let selectedItem = all.find(i => i.name === selectedName);
   if (!selectedItem && selectedName) selectedItem = { name: selectedName, icon: '⚖️' };
   
+  const pinned = all.filter(i => i.pinned);
   const isPC = window.innerWidth >= 768;
-  let displayItems = expanded ? all : [...pinned];
+  let displayItems = expanded ? all : pinned;
   if (!isPC && !expanded) displayItems = [];
   if (selectedItem && !displayItems.find(i => i.name === selectedItem.name)) displayItems.push(selectedItem);
 
@@ -50,7 +61,7 @@ function renderIconGrid(items, selectedName, expanded, onSelect, onToggle, secti
           ${sectionTitle}
           ${selectedItem ? `<span class="selected-summary-chip">${selectedItem.icon} ${selectedItem.name}</span>` : ''}
         </span>
-        ${rest.length > 0 ? `<button class="selector-expand" data-action="${onToggle}">${expanded ? '▲' : `▼ (${rest.length})`}</button>` : ''}
+        ${all.length > pinned.length ? `<button class="selector-expand" data-action="${onToggle}">${expanded ? '▲' : '▼ 全表示'}</button>` : ''}
       </div>
       <div class="icon-grid ${expanded ? 'expanded' : ''}">
         ${displayItems.map(item => `
@@ -74,20 +85,19 @@ export function render(container) {
   const showCategories = state.type !== 'transfer';
 
   container.innerHTML = `
-    <div class="input-screen" style="max-width: 100%; box-sizing: border-box; overflow-x: hidden; padding-bottom: 50px;">
-      <div class="type-toggle" style="width: 100%; max-width: 100%; margin-bottom: 20px;">
-        <button class="type-btn ${state.type === 'expense' ? 'active' : ''}" data-action="setType" data-type="expense" style="flex:1;">支出</button>
-        <button class="type-btn ${state.type === 'income' ? 'active' : ''}" data-action="setType" data-type="income" style="flex:1;">収入</button>
-        <button class="type-btn ${state.type === 'transfer' ? 'active' : ''}" data-action="setType" data-type="transfer" style="flex:1;">振替</button>
+    <div class="input-screen" style="max-width: 100%; box-sizing: border-box; overflow-x: hidden; padding-bottom: 40px;">
+      <div class="type-toggle" style="margin-bottom: 20px;">
+        <button class="type-btn ${state.type === 'expense' ? 'active' : ''}" data-action="setType" data-type="expense">支出</button>
+        <button class="type-btn ${state.type === 'income' ? 'active' : ''}" data-action="setType" data-type="income">収入</button>
+        <button class="type-btn ${state.type === 'transfer' ? 'active' : ''}" data-action="setType" data-type="transfer">振替</button>
       </div>
 
-      <div class="input-fields" style="width: 100%; padding: 0 4px; box-sizing: border-box;">
-        <!-- 金額入力セクション (見切れ防止・レスポンシブ対応) -->
-        <div class="amount-input-section" style="width: 100%; margin-bottom: 24px;">
+      <div class="input-fields" style="padding: 0 4px; box-sizing: border-box;">
+        <div class="amount-input-section" style="margin-bottom: 24px;">
           <div class="amount-input-wrapper" style="display: flex; align-items: center; border-radius: 20px; background: var(--bg-card); padding: 8px 16px; box-shadow: var(--shadow-sm); border: 2px solid var(--border-color); width: 100%; box-sizing: border-box;">
-            <span class="amount-yen" style="font-size: 1.4rem; color: var(--text-muted); font-weight: 800; margin-right: 10px;">¥</span>
-            <input type="number" class="amount-field" id="amount-input" value="${state.amount}" placeholder="0" inputmode="numeric" data-action="setAmount" style="flex: 1; width: 0; min-width: 0; border: none; background: transparent; font-size: 2rem; font-weight: 800; color: var(--text-primary); text-align: left; padding: 12px 0;">
-            <button data-action="openCalculator" title="電卓" style="background: var(--bg-hover); border: none; width: 44px; height: 44px; min-width: 44px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 8px; transition: background 0.2s;">🧮</button>
+            <span class="amount-yen" style="font-size: 1.4rem; color: var(--text-muted); font-weight: 800; margin-right: 12px;">¥</span>
+            <input type="text" class="amount-field" id="amount-input-formatted" value="${state.amount}" placeholder="0" inputmode="numeric" style="flex: 1; width: 0; border: none; background: transparent; font-size: 2rem; font-weight: 800; color: var(--text-primary); text-align: left; padding: 12px 0;">
+            <button data-action="openCalculator" title="電卓" style="background: var(--bg-hover); border: none; width: 44px; height: 44px; min-width: 44px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 8px;">🧮</button>
           </div>
         </div>
 
@@ -113,7 +123,18 @@ export function render(container) {
 
 function bindEvents(container) {
   container.addEventListener('click', handleClick);
-  container.querySelector('#amount-input')?.addEventListener('input', (e) => { state.amount = e.target.value; });
+  
+  // カンマフォーマットイベント
+  const amountInput = container.querySelector('#amount-input-formatted');
+  if (amountInput) {
+    amountInput.addEventListener('input', (e) => {
+      const val = e.target.value.replace(/[^0-9]/g, '');
+      const formatted = formatComma(val);
+      state.amount = formatted;
+      e.target.value = formatted; 
+    });
+  }
+
   container.querySelector('#memo-input')?.addEventListener('input', (e) => { state.memo = e.target.value; });
   container.querySelector('[data-action="setDate"]')?.addEventListener('change', (e) => { state.date = e.target.value; });
 }
@@ -146,37 +167,35 @@ function openCalculator() {
         <div id="calc-formula" style="font-size:0.9rem; color:var(--text-muted); min-height:1.2em; font-weight:500;"></div>
         <div id="calc-main-num">0</div>
       </div>
-      <div class="calc-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px;">
+      <div class="calc-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;">
         <button class="calc-btn" data-val="AC" style="background:#ef4444; color:white; border:none; border-radius:12px; height:50px; font-weight:800;">AC</button>
-        <button class="calc-btn" data-val="C" style="background:var(--bg-hover); border:none; border-radius:12px; height:50px; font-weight:800; color:var(--text-primary);">C</button>
-        <button class="calc-btn" data-val="/" style="background:var(--bg-hover); border:none; border-radius:12px; height:50px; font-weight:800; color:var(--text-primary);">÷</button>
-        <button class="calc-btn" data-val="*" style="background:var(--bg-hover); border:none; border-radius:12px; height:50px; font-weight:800; color:var(--text-primary);">×</button>
-        <button class="calc-btn" data-val="7" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">7</button>
-        <button class="calc-btn" data-val="8" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">8</button>
-        <button class="calc-btn" data-val="9" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">9</button>
-        <button class="calc-btn" data-val="-" style="background:var(--bg-hover); border:none; border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">-</button>
-        <button class="calc-btn" data-val="4" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">4</button>
-        <button class="calc-btn" data-val="5" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">5</button>
-        <button class="calc-btn" data-val="6" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">6</button>
-        <button class="calc-btn" data-val="+" style="background:var(--bg-hover); border:none; border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">+</button>
-        <button class="calc-btn" data-val="1" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">1</button>
-        <button class="calc-btn" data-val="2" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">2</button>
-        <button class="calc-btn" data-val="3" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">3</button>
+        <button class="calc-btn" data-val="C" style="background:var(--bg-hover); border:none; border-radius:12px; height:50px; font-weight:800;">C</button>
+        <button class="calc-btn" data-val="/" style="background:var(--bg-hover); border:none; border-radius:12px; height:50px; font-weight:800;">÷</button>
+        <button class="calc-btn" data-val="*" style="background:var(--bg-hover); border:none; border-radius:12px; height:50px; font-weight:800;">×</button>
+        <button class="calc-btn digit" data-val="7">7</button><button class="calc-btn digit" data-val="8">8</button><button class="calc-btn digit" data-val="9">9</button>
+        <button class="calc-btn" data-val="-" style="background:var(--bg-hover); border:none; border-radius:12px; height:50px; font-weight:800;">-</button>
+        <button class="calc-btn digit" data-val="4">4</button><button class="calc-btn digit" data-val="5">5</button><button class="calc-btn digit" data-val="6">6</button>
+        <button class="calc-btn" data-val="+" style="background:var(--bg-hover); border:none; border-radius:12px; height:50px; font-weight:800;">+</button>
+        <button class="calc-btn digit" data-val="1">1</button><button class="calc-btn digit" data-val="2">2</button><button class="calc-btn digit" data-val="3">3</button>
         <button class="calc-btn" data-val="=" style="grid-row: span 2; background:var(--color-accent); color:white; border:none; border-radius:12px; font-weight:800; font-size: 1.6rem;">=</button>
-        <button class="calc-btn" data-val="0" style="grid-column: span 2; background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">0</button>
-        <button class="calc-btn" data-val="." style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:55px; font-weight:800; color:var(--text-primary);">.</button>
+        <button class="calc-btn digit" data-val="0" style="grid-column: span 2;">0</button>
+        <button class="calc-btn digit" data-val=".">.</button>
       </div>
-      <div style="display:flex; gap:12px; margin-top:24px;">
-        <button id="calc-cancel-btn" style="flex:1; height:56px; border:1px solid var(--border-color); background:var(--bg-card); border-radius:16px; font-weight:bold; color:var(--text-secondary);">キャンセル</button>
-        <button id="calc-apply-btn" style="flex:2; height:56px; border:none; background:var(--color-accent); color:white; border-radius:16px; font-weight:800; font-size:1rem; box-shadow: var(--shadow-sm);">計算結果を適用 ✓</button>
+      <div style="display:flex; gap:12px; margin-top:20px;">
+        <button id="calc-cancel-btn" style="flex:1; height:56px; border:1px solid var(--border-color); background:var(--bg-card); border-radius:16px; font-weight:800; color:var(--text-secondary);">キャンセル</button>
+        <button id="calc-apply-btn" style="flex:2; height:56px; border:none; background:var(--color-accent); color:white; border-radius:16px; font-weight:800; box-shadow: var(--shadow-sm);">計算結果を適用 ✓</button>
       </div>
     </div>
+    <style>
+      .calc-btn.digit { background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:50px; font-weight:800; color:var(--text-primary); }
+    </style>
   `;
 
   document.body.appendChild(overlay);
   const displayMain = overlay.querySelector('#calc-main-num');
   const displayFormula = overlay.querySelector('#calc-formula');
-  calcState = { display: state.amount || '0', currentValue: null, operator: null, waitingForNextValue: false };
+  const currentNum = parseComma(state.amount);
+  calcState = { display: String(currentNum), currentValue: null, operator: null, waitingForNextValue: false };
   updateCalcDisplay(displayMain, displayFormula);
 
   overlay.addEventListener('click', (e) => {
@@ -184,7 +203,7 @@ function openCalculator() {
     if (btn) handleCalcInput(btn.dataset.val, displayMain, displayFormula);
     if (e.target === overlay || e.target.id === 'calc-cancel-btn') overlay.remove();
     if (e.target.id === 'calc-apply-btn') {
-      state.amount = calcState.display;
+      state.amount = formatComma(calcState.display);
       overlay.remove();
       refresh();
     }
@@ -198,10 +217,10 @@ function handleCalcInput(val, displayMain, displayFormula) {
   } else if (val === 'AC') { calcState = { display: '0', currentValue: null, operator: null, waitingForNextValue: false }; }
   else if (val === 'C') { calcState.display = calcState.display.length > 1 ? calcState.display.slice(0, -1) : '0'; }
   else {
-    const input = parseFloat(calcState.display);
-    if (calcState.currentValue === null) { calcState.currentValue = input; }
+    const inputNum = parseFloat(calcState.display);
+    if (calcState.currentValue === null) { calcState.currentValue = inputNum; }
     else if (calcState.operator) {
-      const res = calculateResult(calcState.currentValue, input, calcState.operator);
+      const res = calculateResult(calcState.currentValue, inputNum, calcState.operator);
       calcState.display = String(res); calcState.currentValue = res;
     }
     calcState.waitingForNextValue = true; calcState.operator = val === '=' ? null : val;
@@ -210,10 +229,10 @@ function handleCalcInput(val, displayMain, displayFormula) {
 }
 
 function updateCalcDisplay(main, formula) {
-  main.innerText = calcState.display;
+  main.innerText = Number(calcState.display).toLocaleString('ja-JP');
   let op = calcState.operator;
   if (op === '*') op = '×'; if (op === '/') op = '÷';
-  formula.innerText = calcState.currentValue !== null ? `${calcState.currentValue} ${op || ''}` : '';
+  formula.innerText = calcState.currentValue !== null ? `${calcState.currentValue.toLocaleString()} ${op || ''}` : '';
 }
 
 function calculateResult(a, b, op) {
@@ -224,7 +243,7 @@ function calculateResult(a, b, op) {
 }
 
 function submit() {
-  const amount = Number(state.amount);
+  const amount = parseComma(state.amount);
   if (!amount || amount <= 0) { window.showToast?.('金額を入力してください', 'error'); return; }
   store.addTransaction({ ...state, amount, category: state.category || 'その他' });
   window.showToast?.('記録しました ✓');
