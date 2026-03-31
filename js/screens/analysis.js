@@ -70,10 +70,20 @@ export function render(container) {
   // Simple Tab Header
   container.innerHTML = `
     <div class="analysis-screen simple-mode">
-      <!-- 1. PL/BS Toggle (Simple Horizontal) -->
-      <div class="tab-toggle" style="margin-bottom: var(--space-md);">
-        <button class="type-btn ${analysisState.tab === 'pl' ? 'active' : ''}" data-tab="pl" data-action="setTab" style="flex:1;">収支 (PL)</button>
-        <button class="type-btn ${analysisState.tab === 'bs' ? 'active' : ''}" data-tab="bs" data-action="setTab" style="flex:1;">資産 (BS)</button>
+      <!-- 1. PL/BS Toggle (Segmented Controller Style) -->
+      <div class="analysis-nav-header" style="margin-bottom: var(--space-lg); padding: 4px; background: var(--bg-hover); border-radius: var(--radius-lg); display: flex; gap: 4px; border: 1px solid var(--border-color);">
+        <button class="nav-tab-item ${analysisState.tab === 'pl' ? 'active' : ''}" 
+                data-tab="pl" 
+                data-action="setTab" 
+                style="flex:1; border:none; background:transparent; padding: 10px; border-radius: var(--radius-md); transition: all 0.2s; font-weight: bold; font-size: var(--font-size-sm); display: flex; align-items: center; justify-content: center; gap: 8px; color: ${analysisState.tab === 'pl' ? 'var(--color-accent)' : 'var(--text-muted)'}; ${analysisState.tab === 'pl' ? 'background: var(--bg-card); box-shadow: var(--shadow-sm);' : ''}">
+          <span>📊</span> 収支 (PL)
+        </button>
+        <button class="nav-tab-item ${analysisState.tab === 'bs' ? 'active' : ''}" 
+                data-tab="bs" 
+                data-action="setTab" 
+                style="flex:1; border:none; background:transparent; padding: 10px; border-radius: var(--radius-md); transition: all 0.2s; font-weight: bold; font-size: var(--font-size-sm); display: flex; align-items: center; justify-content: center; gap: 8px; color: ${analysisState.tab === 'bs' ? 'var(--color-accent)' : 'var(--text-muted)'}; ${analysisState.tab === 'bs' ? 'background: var(--bg-card); box-shadow: var(--shadow-sm);' : ''}">
+          <span>💎</span> 資産 (BS)
+        </button>
       </div>
 
       <div class="analysis-body">
