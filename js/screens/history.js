@@ -30,9 +30,12 @@ export function render(container) {
       return true;
     })
     .sort((a, b) => {
-      const dateComp = b.date.localeCompare(a.date);
+      const dateA = a.date || '0000-00-00';
+      const dateB = b.date || '0000-00-00';
+      const dateComp = dateB.localeCompare(dateA);
       if (dateComp !== 0) return dateComp;
-      return (b.createdAt || '').localeCompare(a.createdAt || '');
+      // 同日の場合はID（作成日時が含まれる）で降順
+      return (b.id || '').localeCompare(a.id || '');
     });
 
   const accounts = store.getAccounts();

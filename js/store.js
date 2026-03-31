@@ -81,6 +81,9 @@ export async function save() {
 export async function syncToCloud(sheetId) {
   if (!auth.isLoggedIn()) throw new Error('Not logged in');
   
+  // 保存前に日付順（新しい順）でソート
+  state.transactions.sort((a, b) => b.date.localeCompare(a.date));
+
   const txRows = state.transactions.map(t => [t.id, t.date, t.amount, t.type, t.category, t.fromAccount, t.memo, t.toAccount || '']);
   const catRows = state.categories.map(c => [c.id, c.name, c.icon, c.type, c.order, c.pinned ? 1 : 0]);
   const accRows = state.accounts.map(a => [a.id, a.name, a.icon, a.balance, a.initialBalance, a.order, a.pinned ? 1 : 0]);
