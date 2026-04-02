@@ -1,6 +1,8 @@
 const CLIENT_ID = '847697512612-g7cs60es07i6vghtq8q2j30e5b7t4h80.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
 
+import * as store from './store.js';
+
 let tokenClient;
 let accessToken = null;
 let isInitialized = false;
@@ -153,6 +155,7 @@ async function fetchAndCheckUserEmail(token) {
     if (currentEmail !== newEmail) {
       console.warn('Account mismatch detected:', currentEmail, '->', newEmail);
       alert('別のアカウントが選択されました。データの混同を防ぐため、現在のデータを削除してログアウトします。');
+      store.blockSync(); // 同期を即座に停止
       signOut(); // ここでリロードされる
     }
   } catch (e) {
@@ -170,6 +173,7 @@ function startAutoRefresh() {
 }
 
 export function signOut() {
+  store.blockSync(); // ログアウト処理開始時に同期を遮断
   accessToken = null;
   if (refreshTimer) clearTimeout(refreshTimer);
   localStorage.removeItem('g_access_token');
