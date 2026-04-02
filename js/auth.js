@@ -1,5 +1,5 @@
 const CLIENT_ID = '847697512612-g7cs60es07i6vghtq8q2j30e5b7t4h80.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
 
 let tokenClient;
 let accessToken = null;
@@ -47,6 +47,14 @@ export async function initGoogleAuth() {
             });
 
             isInitialized = true;
+            
+            // 初期化時にメールアドレスが保存されているか確認（セッション維持用）
+            const storedEmail = localStorage.getItem('g_user_email');
+            if (accessToken && !storedEmail) {
+              // トークンはあるがメールがない場合（移行期間など）、取得を試みる
+              await fetchAndCheckUserEmail(accessToken);
+            }
+
             resolve();
           } catch (e) {
             console.error('GAPI initialization failure:', e);
@@ -107,12 +115,49 @@ async function silentRefresh() {
   });
 }
 
-function handleTokenResponse(resp) {
-  accessToken = resp.access_token;
+async function handleTokenResponse(resp) {
+  const newTask = resp.access_token;
+  
+  // 以前のメールアドレスと比較して、アカウント変更を検知する
+  await fetchAndCheckUserEmail(newTask);
+  
+  accessToken = newTask;
   gapi.client.setToken({ access_token: accessToken });
   localStorage.setItem('g_access_token', accessToken);
   localStorage.setItem('g_token_timestamp', Date.now().toString());
   startAutoRefresh();
+}
+
+/**
+ * ユーザーのメールアドレスを取得し、アカウントの不一致をチェックする
+ */
+async function fetchAndCheckUserEmail(token) {
+  try {
+    const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const userInfo = await response.json();
+    const newEmail = userInfo.email;
+
+    if (!newEmail) return;
+
+    const currentEmail = localStorage.getItem('g_user_email');
+
+    // 初回ログイン時はメールを保存するだけ
+    if (!currentEmail) {
+      localStorage.setItem('g_user_email', newEmail);
+      return;
+    }
+
+    // アカウントが切り替わった場合
+    if (currentEmail !== newEmail) {
+      console.warn('Account mismatch detected:', currentEmail, '->', newEmail);
+      alert('別のアカウントが選択されました。データの混同を防ぐため、現在のデータを削除してログアウトします。');
+      signOut(); // ここでリロードされる
+    }
+  } catch (e) {
+    console.error('Failed to fetch user email:', e);
+  }
 }
 
 let refreshTimer = null;
@@ -129,7 +174,10 @@ export function signOut() {
   if (refreshTimer) clearTimeout(refreshTimer);
   localStorage.removeItem('g_access_token');
   localStorage.removeItem('g_token_timestamp');
+  localStorage.removeItem('g_user_email');
   localStorage.removeItem('kakeibo_sheet_id');
+  localStorage.removeItem('kakeibo_data');
+  localStorage.removeItem('kakeibo_current_screen'); // 念のため画面状態もリセット
   window.location.reload();
 }
 
