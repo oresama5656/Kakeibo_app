@@ -20,7 +20,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
 
-  <link rel="stylesheet" href="css/style.css?v=5.0">
+  <link rel="stylesheet" href="css/style.css?v=5.2">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -65,12 +65,12 @@
 
   <div id="toast" class="toast"></div>
 
-  <script type="module" src="js/app.js?v=5.0"></script>
+  <script type="module" src="js/app.js?v=5.2"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         // v5.0にアップグレードして確実に再インストールさせる
-        navigator.serviceWorker.register('./sw.js?v=5.0').then(reg => {
+        navigator.serviceWorker.register('./sw.js?v=5.2').then(reg => {
           reg.onupdatefound = () => {
              const installingWorker = reg.installing;
              installingWorker.onstatechange = () => {

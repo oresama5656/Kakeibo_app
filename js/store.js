@@ -33,6 +33,12 @@ let state = {
 };
 
 let isCloudSyncReady = false;
+let isSyncBlocked = false;
+
+export function blockSync() {
+  console.log('--- Sync Blocked ---');
+  isSyncBlocked = true;
+}
 
 // --- Core API ---
 
@@ -129,6 +135,7 @@ export function initStore() {
 
 export async function save() {
   localStorage.setItem('kakeibo_data', JSON.stringify(state));
+  if (isSyncBlocked) return; // ログアウト処理中などは同期を遮断
   if (auth.isLoggedIn()) {
     const sheetId = localStorage.getItem('kakeibo_sheet_id');
     if (sheetId && isCloudSyncReady) {
@@ -243,11 +250,24 @@ async function readAllFromCloud(sheetId) {
 
 export async function loadFromCloud(sheetId) {
   const [tx, cat, acc, sc] = await readAllFromCloud(sheetId);
-  // 初回読込（環境移行）時は、クラウド側のデータを絶対優先する
-  state.transactions = mergeData(state.transactions, tx, state.deletedIds, 'cloud');
-  state.categories = mergeData(state.categories, cat, [], 'cloud');
-  state.accounts = mergeData(state.accounts, acc, [], 'cloud');
-  state.shortcuts = mergeData(state.shortcuts, sc, [], 'cloud');
+  
+  // 初回読込（新規ログイン）時の判定: ローカルの取引が空ならマージせず「完全置換」する
+  // これにより、デフォルトのカテゴリ（食費など）がクラウド側に混ざるのを防ぐ
+  const isInitialPull = (state.transactions.length === 0);
+
+  if (isInitialPull) {
+    console.log('Initial pull detected. Replacing local state with cloud data.');
+    state.transactions = tx;
+    state.categories = cat;
+    state.accounts = acc;
+    state.shortcuts = sc;
+  } else {
+    // 既存データがある場合は、安全のためマージする
+    state.transactions = mergeData(state.transactions, tx, state.deletedIds, 'cloud');
+    state.categories = mergeData(state.categories, cat, [], 'cloud');
+    state.accounts = mergeData(state.accounts, acc, [], 'cloud');
+    state.shortcuts = mergeData(state.shortcuts, sc, [], 'cloud');
+  }
   
   // 明示的な正規化とID補完
   state.transactions = state.transactions.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));
