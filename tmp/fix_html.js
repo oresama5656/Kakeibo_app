@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+const fs = require('fs');
+const html = `<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -11,7 +12,6 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://apis.google.com/js/api.js" async defer></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
@@ -44,4 +44,6 @@
   <div id="toast" class="toast"></div>
   <script type="module" src="js/app.js?v=7.0"></script>
 </body>
-</html>
+</html>`;
+fs.writeFileSync('index.html', html, 'utf8');
+console.log('index.html written successfully, length:', html.length);

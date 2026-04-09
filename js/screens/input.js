@@ -448,3 +448,52 @@ function refresh() {
   const container = document.getElementById('screen-input');
   if (container) { container.removeEventListener('click', handleClick); render(container); }
 }
+
+function handleCalcInput(val, mainEl, formulaEl) {
+  if (val === 'AC') {
+    calcState = { display: '0', currentValue: null, operator: null, waitingForNextValue: false };
+  } else if (val === 'C') {
+    calcState.display = '0';
+  } else if (val === '=') {
+    if (calcState.operator && !calcState.waitingForNextValue) {
+      const result = performCalculation(calcState.currentValue, parseFloat(calcState.display), calcState.operator);
+      calcState.display = String(result);
+      calcState.currentValue = null;
+      calcState.operator = null;
+      calcState.waitingForNextValue = false;
+    }
+  } else if (['+', '-', '*', '/'].includes(val)) {
+    const inputNum = parseFloat(calcState.display);
+    if (calcState.currentValue == null) {
+      calcState.currentValue = inputNum;
+    } else if (calcState.operator && !calcState.waitingForNextValue) {
+      const result = performCalculation(calcState.currentValue, inputNum, calcState.operator);
+      calcState.display = String(result);
+      calcState.currentValue = result;
+    }
+    calcState.waitingForNextValue = true;
+    calcState.operator = val;
+  } else {
+    if (calcState.waitingForNextValue) {
+      calcState.display = val;
+      calcState.waitingForNextValue = false;
+    } else {
+      calcState.display = calcState.display === '0' ? val : calcState.display + val;
+    }
+  }
+  updateCalcDisplay(mainEl, formulaEl);
+}
+
+function performCalculation(v1, v2, op) {
+  if (op === '+') return v1 + v2;
+  if (op === '-') return v1 - v2;
+  if (op === '*') return v1 * v2;
+  if (op === '/') return v1 / v2;
+  return v2;
+}
+
+function updateCalcDisplay(mainEl, formulaEl) {
+  mainEl.textContent = formatComma(calcState.display);
+  let opSymbol = { '+': '+', '-': '-', '*': '×', '/': '÷' }[calcState.operator] || '';
+  formulaEl.textContent = calcState.currentValue != null ? `${formatComma(calcState.currentValue)} ${opSymbol}` : '';
+}
