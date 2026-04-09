@@ -42,20 +42,34 @@ export function render(container) {
 
   for (const tx of sortedForCalc) {
     const amt = Number(tx.amount) || 0;
+    const fromExists = accountBalances[tx.fromAccountId] !== undefined;
+    const toExists = accountBalances[tx.toAccountId] !== undefined;
+
     if (tx.type === 'income') {
-      if (accountBalances[tx.toAccountId] !== undefined) accountBalances[tx.toAccountId] += amt;
-      totalBalance += amt;
+      if (toExists) {
+        accountBalances[tx.toAccountId] += amt;
+        totalBalance += amt;
+      }
     } else if (tx.type === 'expense') {
-      if (accountBalances[tx.fromAccountId] !== undefined) accountBalances[tx.fromAccountId] -= amt;
-      totalBalance -= amt;
+      if (fromExists) {
+        accountBalances[tx.fromAccountId] -= amt;
+        totalBalance -= amt;
+      }
     } else if (tx.type === 'transfer') {
-      if (accountBalances[tx.fromAccountId] !== undefined) accountBalances[tx.fromAccountId] -= amt;
-      if (accountBalances[tx.toAccountId] !== undefined) accountBalances[tx.toAccountId] += amt;
+      if (fromExists) accountBalances[tx.fromAccountId] -= amt;
+      if (toExists) accountBalances[tx.toAccountId] += amt;
+      
+      // 総資産の調整: 片方の口座が削除されている場合は「資産の流出・流入」として扱う
+      if (fromExists && !toExists) {
+        totalBalance -= amt; // 存在する口座から消えた口座へ = 総資産減
+      } else if (!fromExists && toExists) {
+        totalBalance += amt; // 消えた口座から存在する口座へ = 総資産増
+      }
     }
     
     // フィルタ中の口座があればその残高、なければ総資産を記録
-    txRunningBalances[tx.id] = filters.accountId 
-      ? (accountBalances[filters.accountId] || 0)
+    txRunningBalances[tx.id] = (filters.accountId && accountBalances[filters.accountId] !== undefined)
+      ? accountBalances[filters.accountId]
       : totalBalance;
   }
 

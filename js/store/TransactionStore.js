@@ -15,7 +15,11 @@ function generateId() {
 function sanitizeTransaction(tx) {
   tx.date = normalizeDate(tx.date);
   
-  // マスタとの紐付け補完
+  // 金額のバリデーション: NaN を防ぎ、有限な数値であることを保証する
+  tx.amount = Number(tx.amount);
+  if (isNaN(tx.amount) || !isFinite(tx.amount)) {
+    tx.amount = 0;
+  }
   if (tx.fromAccount && !tx.fromAccountId) {
     const acc = state.accounts.find(a => normalizeName(a.name) === normalizeName(tx.fromAccount));
     if (acc) tx.fromAccountId = acc.id;

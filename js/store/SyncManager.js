@@ -53,9 +53,11 @@ export async function readAllFromCloud(sheetId) {
 }
 
 export async function syncToCloudInternal(sheetId, saveFn) {
-  if (!auth.isLoggedIn()) return;
+  if (!auth.isLoggedIn() || isSyncing) return;
   
-  const [cloudTx, cloudCat, cloudAcc, cloudSc] = await readAllFromCloud(sheetId);
+  isSyncing = true;
+  try {
+    const [cloudTx, cloudCat, cloudAcc, cloudSc] = await readAllFromCloud(sheetId);
   state.transactions = mergeData(state.transactions, cloudTx, state.deletedIds, 'local');
   state.categories = mergeData(state.categories, cloudCat, [], 'local');
   state.accounts = mergeData(state.accounts, cloudAcc, [], 'local');
@@ -93,5 +95,8 @@ export async function syncToCloudInternal(sheetId, saveFn) {
   ]);
 
   if (state.deletedIds.length > 50) state.deletedIds = state.deletedIds.slice(-20);
-  saveFn();
+    saveFn();
+  } finally {
+    isSyncing = false;
+  }
 }
