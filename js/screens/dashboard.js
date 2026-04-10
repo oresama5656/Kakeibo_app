@@ -24,13 +24,13 @@ export function render(container) {
       <div class="chart-card">
         <div class="chart-card-title">💰 口座別残高</div>
         <div class="account-cards">
-          ${accounts.map(acc => {
+          ${[...accounts].sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(acc => {
             const balance = store.getAccountBalance(acc.id);
             return `
               <div class="account-card" data-action="selectAccount" data-id="${acc.id}" style="cursor:pointer;">
                 <span class="account-card-icon">${acc.icon}</span>
                 <div class="account-card-info">
-                  <div class="account-card-name">${acc.name}</div>
+                  <div class="account-card-name">${store.escapeHTML(acc.name)}</div>
                   <div class="account-card-balance" style="color: ${balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}">
                     ¥${Math.abs(balance).toLocaleString('ja-JP')}
                   </div>

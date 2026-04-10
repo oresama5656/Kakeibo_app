@@ -60,6 +60,14 @@ export function renderPLContent(state, start, end) {
         <canvas id="analysis-chart" style="height: 280px;"></canvas>
       </div>
 
+      <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 10px 10px 10px;">
+        <div style="font-size: 0.85rem; font-weight: 800; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">📂 カテゴリー内訳</div>
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; background: var(--bg-hover); padding: 4px 10px; border-radius: 10px;">
+          <input type="checkbox" id="cat-all-check" ${state.excludedCategoryIds.length === 0 ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
+          <label for="cat-all-check" style="cursor: pointer; color: var(--text-primary);">すべて表示</label>
+        </div>
+      </div>
+
       <div class="category-list">
         ${sorted.map(c => {
           const isExcluded = state.excludedCategoryIds.includes(c.id);

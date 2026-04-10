@@ -5,7 +5,7 @@
 import * as auth from './auth.js';
 import { 
   state, DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS, 
-  normalizeDate, migrateTransactionIds, setState 
+  normalizeDate, migrateTransactionIds, setState, escapeHTML 
 } from './store/BaseStore.js';
 
 import * as AccountStore from './store/AccountStore.js';
@@ -34,10 +34,10 @@ export function initStore() {
     if (!state.categories || state.categories.length === 0) {
       state.categories = [...DEFAULT_CATEGORIES];
     } else {
-      const hasExpenseCorrection = state.categories.find(c => c.name === '残高修正' && c.type === 'expense');
-      const hasIncomeCorrection = state.categories.find(c => c.name === '残高修正' && c.type === 'income');
-      if (!hasExpenseCorrection) state.categories.push({ id: 'cat_fix_e', name: '残高修正', icon: '⚖️', type: 'expense', order: 99 });
-      if (!hasIncomeCorrection) state.categories.push({ id: 'cat_fix_i', name: '残高修正', icon: '⚖️', type: 'income', order: 100 });
+      const hasExpenseCorrection = state.categories.find(c => (c.id === 'cat_99' || c.name === '残高修正') && c.type === 'expense');
+      const hasIncomeCorrection = state.categories.find(c => (c.id === 'cat_100' || c.name === '残高修正') && c.type === 'income');
+      if (!hasExpenseCorrection) state.categories.push({ id: 'cat_99', name: '残高修正', icon: '⚖️', type: 'expense', order: 99 });
+      if (!hasIncomeCorrection) state.categories.push({ id: 'cat_100', name: '残高修正', icon: '⚖️', type: 'income', order: 100 });
     }
     
     if (!state.accounts || state.accounts.length === 0) {
@@ -71,22 +71,10 @@ export async function save() {
 
 export async function loadFromCloud(sheetId) {
   const [tx, cat, acc, sc] = await SyncManager.readAllFromCloud(sheetId);
-  const isInitialPull = (state.transactions.length === 0);
-
-  if (isInitialPull) {
-    state.transactions = tx;
-    state.categories = cat;
-    state.accounts = acc;
-    state.shortcuts = sc;
-  } else {
-    // 既存マージロジックはSyncManager側に移譲することも検討できるが
-    // ここではシンプルにStateを直接更新（実際はSyncManager.mergeDataを模した処理）
-    // （今回は簡単のため、SyncManagerの読み込み結果をそのままセット）
-    state.transactions = tx;
-    state.categories = cat;
-    state.accounts = acc;
-    state.shortcuts = sc;
-  }
+  state.transactions = tx;
+  state.categories = cat;
+  state.accounts = acc;
+  state.shortcuts = sc;
   
   state.transactions = state.transactions.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));
   state.transactions = migrateTransactionIds(state.transactions, state.accounts, state.categories);
@@ -135,6 +123,7 @@ export async function syncToCloud(sheetId, options) {
 }
 
 // Misc
+export { escapeHTML } from './store/BaseStore.js';
 export function updateSettings(s) { state.settings = { ...state.settings, ...s }; save(); }
 export function clearAllData() { state.transactions = []; state.deletedIds = []; AccountStore.updateAccountBalances(); save(); }
 export function importAllData(d) { setState(d); save(); }

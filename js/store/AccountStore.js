@@ -59,6 +59,8 @@ export function updateAccount(id, d) {
 
 export function deleteAccount(id) { 
   state.accounts = state.accounts.filter(a => a.id !== id); 
+  if (!state.deletedIds) state.deletedIds = [];
+  if (!state.deletedIds.includes(id)) state.deletedIds.push(id);
 }
 
 export function reorderAccounts(ids) {

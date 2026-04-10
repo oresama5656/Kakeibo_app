@@ -8,7 +8,7 @@
 
 ## 【保護対象 #1】ピン留め機能
 
-**場所:** `js/store.js` (データ) + 各画面ファイル (表示)
+**場所:** `js/store/SyncManager.js` (同期), `js/screens/settings.js` (設定UI), `js/screens/dashboard.js`, `js/screens/input.js` (表示)
 
 **役割:** 口座・カテゴリに `pinned: true` を設定すると、一覧の最上部に固定表示される。
 
@@ -31,6 +31,14 @@ const accRows = state.accounts.map(a => [a.id, a.name, a.icon, a.balance, a.init
 p(a, r => ({ id: r[0], name: r[1], icon: r[2], balance: Number(r[3] || 0), initialBalance: Number(r[4] || 0), order: Number(r[5] || 0) }))
 // ↑ 注意: 現在 pinned は読み込まれていない。今後追加する場合は pinned: r[6] === '1' を追加すること。
 ```
+**ソートロジックの保護（変更禁止）:**
+あらゆるリスト表示において、以下のソート順を維持すること。
+```js
+.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0))
+```
+
+**UIの保護（変更禁止）:**
+`settings.js` の編集モーダル内の「ピン留め」チェックボックスを削除しないこと。また、ピン留めされた項目には一覧で 📌 アイコンを表示すること。
 
 ---
 

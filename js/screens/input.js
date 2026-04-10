@@ -75,13 +75,14 @@ function resetState() {
 }
 
 function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, sectionTitle) {
-  const all = [...items].sort((a,b) => (a.order || 0) - (b.order || 0));
+  const all = [...items].sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0));
   let selectedItem = all.find(i => i.id === selectedId);
   
   const pinned = all.filter(i => i.pinned);
   const isPC = window.innerWidth >= 768;
-  let displayItems = expanded ? all : pinned;
-  if (!isPC && !expanded) displayItems = [];
+  // ピン留めがあればそれを表示、なければ最初から12件を表示（非展開時）
+  let displayItems = expanded ? all : (pinned.length > 0 ? pinned : all.slice(0, 12));
+  // スマホ版でも完全に隠さないように調整
   if (selectedItem && !displayItems.find(i => i.id === selectedItem.id)) displayItems.push(selectedItem);
 
   return `
@@ -97,7 +98,7 @@ function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, section
         ${displayItems.map(item => `
           <div class="icon-item ${item.id === selectedId ? 'selected' : ''}" data-action="${onSelect}" data-id="${item.id}">
             <span class="icon-emoji">${item.icon}</span>
-            <span class="icon-label">${item.name}</span>
+            <span class="icon-label">${store.escapeHTML(item.name)}</span>
           </div>
         `).join('')}
       </div>

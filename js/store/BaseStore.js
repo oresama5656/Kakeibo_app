@@ -3,15 +3,15 @@
  */
 
 export const DEFAULT_CATEGORIES = [
-  { id: 'cat_01', name: '食費', icon: '🍎', type: 'expense', order: 1 },
-  { id: 'cat_02', name: '日用品', icon: '🧻', type: 'expense', order: 2 },
-  { id: 'cat_03', name: '交通費', icon: '🚃', type: 'expense', order: 3 },
-  { id: 'cat_04', name: '交際費', icon: '🍻', type: 'expense', order: 4 },
-  { id: 'cat_05', name: '居住費', icon: '🏠', type: 'expense', order: 5 },
-  { id: 'cat_06', name: '娯楽', icon: '🎮', type: 'expense', order: 6 },
+  { id: 'cat_01', name: '食費', icon: '🍎', type: 'expense', order: 1, pinned: true },
+  { id: 'cat_02', name: '日用品', icon: '🧻', type: 'expense', order: 2, pinned: true },
+  { id: 'cat_03', name: '交通費', icon: '🚃', type: 'expense', order: 3, pinned: true },
+  { id: 'cat_04', name: '交際費', icon: '🍻', type: 'expense', order: 4, pinned: true },
+  { id: 'cat_05', name: '居住費', icon: '🏠', type: 'expense', order: 5, pinned: true },
+  { id: 'cat_06', name: '娯楽', icon: '🎮', type: 'expense', order: 6, pinned: true },
   { id: 'cat_99', name: '残高修正', icon: '⚖️', type: 'expense', order: 99 },
-  { id: 'cat_07', name: '給与', icon: '💰', type: 'income', order: 7 },
-  { id: 'cat_08', name: '他収入', icon: '🧧', type: 'income', order: 8 },
+  { id: 'cat_07', name: '給与', icon: '💰', type: 'income', order: 7, pinned: true },
+  { id: 'cat_08', name: '他収入', icon: '🧧', type: 'income', order: 8, pinned: true },
   { id: 'cat_100', name: '残高修正', icon: '⚖️', type: 'income', order: 100 }
 ];
 
@@ -48,6 +48,16 @@ export function normalizeDate(d) {
     return `${y}-${m}-${dVal}`;
   }
   return d.trim();
+}
+
+export function escapeHTML(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 export function normalizeName(name) {

@@ -22,6 +22,8 @@ export function updateCategory(id, d) {
 
 export function deleteCategory(id) { 
   state.categories = state.categories.filter(c => c.id !== id); 
+  if (!state.deletedIds) state.deletedIds = [];
+  if (!state.deletedIds.includes(id)) state.deletedIds.push(id);
 }
 
 export function reorderCategories(ids) {

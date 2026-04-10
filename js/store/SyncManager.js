@@ -29,27 +29,32 @@ function mergeData(local, cloud, deletedIds = [], priority = 'local') {
 }
 
 export async function readAllFromCloud(sheetId) {
-  const [t, c, a, s] = await Promise.all([
-    auth.readRows(sheetId, 'transactions!A:K'),
-    auth.readRows(sheetId, 'categories!A:F'),
-    auth.readRows(sheetId, 'accounts!A:G'),
-    auth.readRows(sheetId, 'shortcuts!A:K')
-  ]);
-  const p = (rows, fn) => (rows.length > 0 && rows[0][0] !== 'EMPTY') ? rows.map(fn) : [];
-  return [
-    p(t, r => ({ 
-      id: r[0], date: normalizeDate(r[1]), amount: Number(r[2]), type: r[3], 
-      category: r[4], fromAccount: r[5], memo: r[6] || '', toAccount: r[7] || '',
-      categoryId: r[8] || '', fromAccountId: r[9] || '', toAccountId: r[10] || '' 
-    })),
-    p(c, r => ({ id: r[0], name: r[1], icon: r[2], type: r[3], order: Number(r[4] || 0), pinned: r[5] === '1' || r[5] === 1 })),
-    p(a, r => ({ id: r[0], name: r[1], icon: r[2], balance: Number(r[3] || 0), initialBalance: Number(r[4] || 0), order: Number(r[5] || 0), pinned: r[6] === '1' || r[6] === 1 })),
-    p(s, r => ({ 
-      id: r[0], name: r[1], type: r[2], amount: Number(r[3] || 0), 
-      category: r[4], fromAccount: r[5], toAccount: r[6], order: Number(r[7] || 0),
-      categoryId: r[8] || '', fromAccountId: r[9] || '', toAccountId: r[10] || ''
-    }))
-  ];
+  try {
+    const [t, c, a, s] = await Promise.all([
+      auth.readRows(sheetId, 'transactions!A:K'),
+      auth.readRows(sheetId, 'categories!A:G'),
+      auth.readRows(sheetId, 'accounts!A:G'),
+      auth.readRows(sheetId, 'shortcuts!A:K')
+    ]);
+    const p = (rows, fn) => (rows.length > 0 && rows[0][0] !== 'EMPTY') ? rows.map(fn) : [];
+    return [
+      p(t, r => ({ 
+        id: r[0], date: normalizeDate(r[1]), amount: Number(r[2]), type: r[3], 
+        category: r[4], fromAccount: r[5], memo: r[6] || '', toAccount: r[7] || '',
+        categoryId: r[8] || '', fromAccountId: r[9] || '', toAccountId: r[10] || '' 
+      })),
+      p(c, r => ({ id: r[0], name: r[1], icon: r[2], type: r[3], order: Number(r[4] || 0), pinned: r[5] === '1' || r[5] === 1 })),
+      p(a, r => ({ id: r[0], name: r[1], icon: r[2], balance: Number(r[3] || 0), initialBalance: Number(r[4] || 0), order: Number(r[5] || 0), pinned: r[6] === '1' || r[6] === 1 })),
+      p(s, r => ({ 
+        id: r[0], name: r[1], type: r[2], amount: Number(r[3] || 0), 
+        category: r[4], fromAccount: r[5], toAccount: r[6], order: Number(r[7] || 0),
+        categoryId: r[8] || '', fromAccountId: r[9] || '', toAccountId: r[10] || ''
+      }))
+    ];
+  } catch (e) {
+    console.error('Failed to read from cloud:', e);
+    throw e; // 上位でキャッチして同期を中断させる
+  }
 }
 
 export async function syncToCloudInternal(sheetId, saveFn) {
@@ -59,8 +64,18 @@ export async function syncToCloudInternal(sheetId, saveFn) {
   try {
     const [cloudTx, cloudCat, cloudAcc, cloudSc] = await readAllFromCloud(sheetId);
   state.transactions = mergeData(state.transactions, cloudTx, state.deletedIds, 'local');
-  state.categories = mergeData(state.categories, cloudCat, [], 'local');
-  state.accounts = mergeData(state.accounts, cloudAcc, [], 'local');
+  // 安全ガード: 万が一クラウドが空、またはパースに失敗した場合はマージをスキップする
+  if (cloudCat.length === 0 && state.categories.length > 5) {
+    console.warn('Cloud categories are empty. Skipping merge to prevent data loss.');
+  } else {
+    state.categories = mergeData(state.categories, cloudCat, state.deletedIds || [], 'local');
+  }
+
+  if (cloudAcc.length === 0 && state.accounts.length > 0) {
+    console.warn('Cloud accounts are empty. Skipping merge to prevent data loss.');
+  } else {
+    state.accounts = mergeData(state.accounts, cloudAcc, state.deletedIds || [], 'local');
+  }
   state.shortcuts = mergeData(state.shortcuts, cloudSc, [], 'local');
   
   state.transactions = state.transactions.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));

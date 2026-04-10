@@ -88,6 +88,21 @@ function bindEvents(container) {
     refresh();
   });
 
+  const allCheck = container.querySelector('#cat-all-check');
+  if (allCheck) {
+    allCheck.onchange = (e) => {
+      if (e.target.checked) {
+        analysisState.excludedCategoryIds = [];
+      } else {
+        const { start, end } = PeriodManager.getPeriodDates(analysisState);
+        const txs = store.getTransactions().filter(tx => tx.type === analysisState.viewType && tx.date >= start && tx.date <= end);
+        const totals = UIHelper.calculateCategoryTotals(txs);
+        analysisState.excludedCategoryIds = Object.keys(totals);
+      }
+      refresh();
+    };
+  }
+
   const bsSel = container.querySelector('#bs-period-selector');
   if (bsSel) bsSel.onchange = e => { analysisState.bsPeriod = Number(e.target.value); refresh(); };
   const accSel = container.querySelector('#analysis-account-selector');

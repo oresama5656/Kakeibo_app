@@ -52,11 +52,11 @@ export function render(container) {
           <span style="font-size: 10px; background: var(--bg-hover); padding: 2px 8px; border-radius: 10px; color: var(--text-muted);">${accounts.length}件</span>
         </div>
         <div id="settings-accounts-list">
-          ${accounts.sort((a,b) => (a.order || 0) - (b.order || 0)).map(acc => `
+          ${accounts.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(acc => `
             <div class="settings-list-item draggable" data-id="${acc.id}" style="display: flex; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border-light); cursor: pointer;" data-action="editAccount">
               <span class="settings-drag-handle" style="color: var(--border-color); cursor: grab; padding-right: 16px; font-size: 1.1rem;">⠿</span>
               <span style="font-size: 1.3rem; margin-right: 16px;">${acc.icon}</span>
-              <span style="flex: 1; font-weight: 600; font-size: 1rem; color: var(--text-primary);">${acc.name}</span>
+              <span style="flex: 1; font-weight: 600; font-size: 1rem; color: var(--text-primary);">${store.escapeHTML(acc.name)} ${acc.pinned ? '<span style="font-size: 12px; margin-left: 4px; vertical-align: middle;">📌</span>' : ''}</span>
               <span style="color: var(--text-muted); opacity: 0.4;">›</span>
             </div>
           `).join('')}
@@ -70,11 +70,11 @@ export function render(container) {
         <div style="background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color); padding: 18px; box-shadow: var(--shadow-sm);">
           <div style="font-size: 0.75rem; font-weight: 800; color: var(--color-expense); margin-bottom: 16px; text-align:center; letter-spacing: 0.05em;">▼ 支出カテゴリ一覧</div>
           <div id="settings-expense-list">
-            ${expenseCategories.map(cat => `
+            ${expenseCategories.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(cat => `
               <div class="settings-list-item draggable" data-id="${cat.id}" data-action="editCategory" style="display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border-light); cursor: pointer;">
                 <span class="settings-drag-handle" style="color: var(--border-color); cursor: grab; font-size: 13px;">⠿</span>
                 <span style="font-size: 1.1rem;">${cat.icon}</span>
-                <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); flex:1;">${cat.name}</span>
+                <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); flex:1;">${store.escapeHTML(cat.name)} ${cat.pinned ? '📌' : ''}</span>
                 <span style="color: var(--text-muted); opacity:0.3;">›</span>
               </div>
             `).join('')}
@@ -86,11 +86,11 @@ export function render(container) {
         <div style="background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color); padding: 18px; box-shadow: var(--shadow-sm);">
           <div style="font-size: 0.75rem; font-weight: 800; color: var(--color-income); margin-bottom: 16px; text-align:center; letter-spacing: 0.05em;">▲ 収入カテゴリ一覧</div>
           <div id="settings-income-list">
-            ${incomeCategories.map(cat => `
+            ${incomeCategories.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(cat => `
               <div class="settings-list-item draggable" data-id="${cat.id}" data-action="editCategory" style="display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border-light); cursor: pointer;">
                 <span class="settings-drag-handle" style="color: var(--border-color); cursor: grab; font-size: 13px;">⠿</span>
                 <span style="font-size: 1.1rem;">${cat.icon}</span>
-                <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); flex:1;">${cat.name}</span>
+                <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); flex:1;">${store.escapeHTML(cat.name)} ${cat.pinned ? '📌' : ''}</span>
                 <span style="color: var(--text-muted); opacity:0.3;">›</span>
               </div>
             `).join('')}
@@ -189,6 +189,10 @@ function showAccountModal(id) {
         </div>
       </div>
       <div class="form-group"><label class="form-label">初期残高</label><input class="form-input" type="number" id="acc-balance" value="${acc?.initialBalance || 0}"></div>
+      <div class="form-group" style="display: flex; align-items: center; gap: 10px; padding: 10px 0;">
+        <input type="checkbox" id="acc-pinned" ${acc?.pinned ? 'checked' : ''} style="width: 20px; height: 20px;">
+        <label for="acc-pinned" style="font-size: 0.9rem; font-weight: 600; cursor: pointer;">📌 重要な項目として上位に固定する</label>
+      </div>
       <div class="form-actions" style="margin-top: 20px;">
         ${!isNew ? '<button class="btn btn-danger" data-action="deleteItem" style="flex:1;">削除</button>' : ''}
         <button class="btn btn-primary" data-action="saveItem" style="flex:2; background: var(--color-accent); color:white;">${isNew ? '追加する' : '保存する'}</button>
@@ -203,7 +207,12 @@ function showAccountModal(id) {
     if (act === 'closeModal' || e.target === overlay) { overlay.remove(); return; }
     if (act === 'deleteItem' && confirm('削除しますか？')) { store.deleteAccount(id); overlay.remove(); refresh(); return; }
     if (act === 'saveItem') {
-      const data = { name: document.getElementById('acc-name').value.trim(), icon: document.getElementById('acc-icon').value.trim() || '💰', initialBalance: Number(document.getElementById('acc-balance').value) || 0 };
+      const data = { 
+        name: document.getElementById('acc-name').value.trim(), 
+        icon: document.getElementById('acc-icon').value.trim() || '💰', 
+        initialBalance: Number(document.getElementById('acc-balance').value) || 0,
+        pinned: document.getElementById('acc-pinned').checked
+      };
       if (data.name) { if (isNew) store.addAccount(data); else store.updateAccount(id, data); overlay.remove(); refresh(); }
     }
   });
@@ -225,22 +234,43 @@ function showCategoryModal(id, type) {
           ${RECOMMENDED_EMOJIS.map(e => `<span class="emoji-option" style="cursor:pointer; font-size: 1.2rem; text-align:center; padding: 4px;" data-emoji="${e}">${e}</span>`).join('')}
         </div>
       </div>
-      <div class="form-actions" style="margin-top: 20px;">
-        ${!isNew ? '<button class="btn btn-danger" data-action="deleteItem" style="flex:1;">削除</button>' : ''}
-        <button class="btn btn-primary" data-action="saveItem" style="flex:2; background: var(--color-accent); color:white;">保存する</button>
+      <div class="form-group" style="display: flex; align-items: center; gap: 10px; padding: 10px 0;">
+        <input type="checkbox" id="cat-pinned" ${cat?.pinned ? 'checked' : ''} style="width: 20px; height: 20px;">
+        <label for="cat-pinned" style="font-size: 0.9rem; font-weight: 600; cursor: pointer;">📌 重要な項目として上位に固定する</label>
+      </div>
+      <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+        ${!isNew ? '<button class="btn btn-danger" data-action="deleteItem" style="flex:1; padding: 12px; border-radius:12px; font-weight:800; border:none; background:#ef4444; color:white; cursor:pointer;">削除</button>' : ''}
+        <button class="btn btn-primary" data-action="saveItem" style="flex:2; padding: 12px; border-radius:12px; font-weight:800; border:none; background:var(--color-accent); color:white; cursor:pointer;">${isNew ? '追加する' : '保存する'}</button>
       </div>
     </div>
   `;
   document.body.appendChild(overlay);
+
   overlay.addEventListener('click', (e) => {
+    const act = e.target.dataset.action || e.target.closest('[data-action]')?.dataset.action;
     const em = e.target.closest('.emoji-option');
     if (em) { document.getElementById('cat-icon').value = em.dataset.emoji; return; }
-    const act = e.target.closest('[data-action]')?.dataset.action;
+
     if (act === 'closeModal' || e.target === overlay) { overlay.remove(); return; }
-    if (act === 'deleteItem' && confirm('削除しますか？')) { store.deleteCategory(id); overlay.remove(); refresh(); return; }
+    if (act === 'deleteItem' && confirm('削除しますか？')) {
+      store.deleteCategory(id);
+      overlay.remove();
+      refresh();
+      return;
+    }
     if (act === 'saveItem') {
-      const data = { name: document.getElementById('cat-name').value.trim(), icon: document.getElementById('cat-icon').value.trim() || '📁', type: cat?.type || type || 'expense' };
-      if (data.name) { if (isNew) store.addCategory(data); else store.updateCategory(id, data); overlay.remove(); refresh(); }
+      const data = { 
+        name: document.getElementById('cat-name').value.trim(), 
+        icon: document.getElementById('cat-icon').value.trim() || '📁', 
+        type: cat?.type || type || 'expense',
+        pinned: document.getElementById('cat-pinned').checked
+      };
+      if (data.name) {
+        if (isNew) store.addCategory(data);
+        else store.updateCategory(id, data);
+        overlay.remove();
+        refresh();
+      }
     }
   });
 }
