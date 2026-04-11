@@ -1705,29 +1705,31 @@ textarea:focus {
   transition: width 0.6s ease;
 }
 
-/* Adjustments */
-.analysis-nav-header.premium-tab-nav {
-  background: white;
-  padding-top: var(--space-sm);
-  border-bottom: 1px solid #eee;
+/* Main Navigation Tabs (Segmented) */
+.analysis-main-nav-container {
+  background: var(--bg-secondary);
+  padding: var(--space-md) 0 var(--space-sm);
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-.nav-tab-item {
-  position: relative;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+.analysis-segmented-control.main-nav {
+  margin: 0 auto;
+  max-width: 280px;
+  background: rgba(0,0,0,0.04);
 }
 
-.nav-tab-item.active::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 20%;
-  right: 20%;
-  height: 3px;
-  background: #2a4073;
-  border-radius: 3px 3px 0 0;
+[data-theme="dark"] .analysis-segmented-control.main-nav {
+  background: rgba(255,255,255,0.08);
 }
+
+.analysis-segmented-control.main-nav .segmented-item {
+  padding: 8px;
+  font-size: var(--font-size-sm);
+}
+
 @media (min-width: 768px) {
   .sidebar {
     display: flex;
