@@ -130,30 +130,68 @@ function updateRefDate(dir) {
 function showCustomPeriodModal(container) {
   const existing = document.getElementById('custom-period-modal');
   if (existing) existing.remove();
+  
   const modal = document.createElement('div');
   modal.id = 'custom-period-modal';
   modal.className = 'premium-modal-overlay fadeIn';
+  
   const now = new Date();
   const ds = analysisState.customStart || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
   const de = analysisState.customEnd || now.toISOString().split('T')[0];
+  
   modal.innerHTML = `
-    <div class="premium-modal-content slideUp">
-      <div class="modal-header"><h3>📅 期間を指定</h3><button class="modal-close-btn">&times;</button></div>
-      <div class="modal-body">
-        <div class="date-input-group"><label>開始日</label><input type="date" id="modal-start-date" value="${ds}"></div>
-        <div class="date-input-group"><label>終了日</label><input type="date" id="modal-end-date" value="${de}"></div>
+    <div class="premium-modal-sheet slideUp">
+      <div class="modal-drag-handle"></div>
+      <div class="modal-header-v3">
+        <h3 class="modal-title-v3">📅 期間を指定</h3>
+        <button class="modal-close-v3" data-action="closeModal">&times;</button>
       </div>
-      <div class="modal-footer"><button class="modal-apply-btn">この期間で表示</button></div>
+      <div class="modal-body-v3">
+        <div class="date-row-v3">
+          <div class="date-field-v3">
+            <label>開始日</label>
+            <input type="date" id="modal-start-date" value="${ds}">
+          </div>
+          <div class="date-arrow-v3">→</div>
+          <div class="date-field-v3">
+            <label>終了日</label>
+            <input type="date" id="modal-end-date" value="${de}">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer-v3">
+        <button class="modal-apply-btn-v3">この期間で表示</button>
+      </div>
     </div>
   `;
   document.body.appendChild(modal);
-  modal.querySelector('.modal-close-btn').onclick = () => modal.remove();
-  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
-  modal.querySelector('.modal-apply-btn').onclick = () => {
-    analysisState.customStart = document.getElementById('modal-start-date').value;
-    analysisState.customEnd = document.getElementById('modal-end-date').value;
-    analysisState.periodType = 'custom';
-    modal.remove();
-    render(container);
+
+  // イベントハンドリング
+  const close = () => {
+    const sheet = modal.querySelector('.premium-modal-sheet');
+    sheet.style.transform = 'translateY(100%)';
+    modal.style.opacity = '0';
+    setTimeout(() => modal.remove(), 300);
+  };
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal || e.target.closest('[data-action="closeModal"]')) {
+      close();
+    }
+  });
+
+  modal.querySelector('.modal-apply-btn-v3').onclick = () => {
+    const startVal = document.getElementById('modal-start-date').value;
+    const endVal = document.getElementById('modal-end-date').value;
+    
+    if (startVal && endVal) {
+      analysisState.customStart = startVal;
+      analysisState.customEnd = endVal;
+      analysisState.periodType = 'custom';
+      close();
+      render(container);
+    } else {
+      window.showToast?.('日付を入力してください', 'error');
+    }
   };
 }
