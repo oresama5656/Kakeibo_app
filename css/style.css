@@ -1032,27 +1032,94 @@ textarea:focus {
   position: sticky;
   top: 0;
   background: var(--bg-primary);
-  z-index: 10;
+  z-index: 100;
   border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.history-header-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
+
+.history-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.history-current-date {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+}
+
+.history-asset-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.history-asset-amount {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: #1a365d; /* Dark Blue */
 }
 
 .history-filters {
   display: flex;
   gap: var(--space-sm);
-  align-items: center;
   flex-wrap: wrap;
 }
 
-.history-filters input,
-.history-filters select {
-  height: 38px;
-  font-size: var(--font-size-sm);
+.filter-card {
   flex: 1;
-  min-width: 120px;
+  min-width: 140px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.history-filters input[type="date"] {
-  min-width: 135px;
+.filter-card:focus-within {
+  border-color: #4a5568;
+  box-shadow: 0 0 0 2px rgba(74, 85, 104, 0.1);
+}
+
+.filter-label {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.filter-card input,
+.filter-card select {
+  border: none;
+  background: transparent;
+  padding: 0;
+  height: 24px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  width: 100%;
+}
+
+.filter-card input[type="date"] {
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .filter-card {
+    min-width: calc(50% - var(--space-sm) / 2);
+  }
 }
 
 .history-list {

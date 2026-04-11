@@ -105,21 +105,45 @@ export function render(container) {
     }
   }
 
+  // 現在の資産（フィルタ中ならその残高）を取得
+  const filteredBalance = transactions.length > 0 ? txRunningBalances[transactions[0].id] : totalBalance;
+  const today = new Date();
+  const dateStr = `${today.getMonth() + 1}月${today.getDate()}日（${['日','月','火','水','木','金','土'][today.getDay()]}）`;
+
   container.innerHTML = `
     <div class="history-screen">
       <div class="history-header">
+        <div class="history-header-summary">
+          <div class="history-title-group">
+            <span class="history-current-date">${dateStr}</span>
+            <span class="history-asset-label">${filters.accountId ? '口座残高' : '総資産'}</span>
+          </div>
+          <div class="history-asset-amount">¥${filteredBalance.toLocaleString('ja-JP')}</div>
+        </div>
+
         <div class="history-filters">
-          <input type="date" value="${filters.startDate}" data-action="filterStart" placeholder="開始日">
-          <span style="color:var(--text-muted)">〜</span>
-          <input type="date" value="${filters.endDate}" data-action="filterEnd" placeholder="終了日">
-          <select data-action="filterAccount">
-            <option value="">全口座 (資産推移)</option>
-            ${accounts.map(a => `<option value="${a.id}" ${filters.accountId === a.id ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
-          </select>
-          <select data-action="filterCategory">
-            <option value="">全カテゴリー</option>
-            ${categories.map(c => `<option value="${c.id}" ${filters.categoryId === c.id ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('')}
-          </select>
+          <div class="filter-card">
+            <span class="filter-label">期間（開始）</span>
+            <input type="date" value="${filters.startDate}" data-action="filterStart">
+          </div>
+          <div class="filter-card">
+            <span class="filter-label">期間（終了）</span>
+            <input type="date" value="${filters.endDate}" data-action="filterEnd">
+          </div>
+          <div class="filter-card">
+            <span class="filter-label">口座</span>
+            <select data-action="filterAccount">
+              <option value="">全口座 (資産推移)</option>
+              ${accounts.map(a => `<option value="${a.id}" ${filters.accountId === a.id ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="filter-card">
+            <span class="filter-label">カテゴリ</span>
+            <select data-action="filterCategory">
+              <option value="">全カテゴリー</option>
+              ${categories.map(c => `<option value="${c.id}" ${filters.categoryId === c.id ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('')}
+            </select>
+          </div>
         </div>
       </div>
 

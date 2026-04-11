@@ -76,50 +76,41 @@ function resetState() {
 
 function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, sectionTitle) {
   const all = [...items].sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0));
-  let selectedItem = all.find(i => i.id === selectedId);
-  
+  const selectedItem = all.find(i => i.id === selectedId);
   const pinned = all.filter(i => i.pinned);
   
-  // 表示アイテムの決定ロジック
+  // 表示アイテムの決定 (ロジックを整理)
   let displayItems;
   if (expanded) {
     displayItems = all;
-  } else {
-    if (pinned.length > 0) {
-      // ピン留めがある場合はピン留めを表示
-      displayItems = pinned;
-    } else {
-      // ピン留めがない場合は、選択中のアイテムがあればそれだけ、なければ空
-      displayItems = selectedItem ? [selectedItem] : [];
+  } else if (pinned.length > 0) {
+    displayItems = [...pinned];
+    // 選択中のアイテムがピン留めになければ追加
+    if (selectedItem && !pinned.some(i => i.id === selectedId)) {
+      displayItems.push(selectedItem);
     }
+  } else {
+    displayItems = selectedItem ? [selectedItem] : [];
   }
 
-  // スマホ/PC問わず、選択中のアイテムが表示リストにない場合は追加する
-  if (selectedItem && !displayItems.find(i => i.id === selectedItem.id)) {
-    displayItems.push(selectedItem);
-  }
-
-  // 「全表示/閉じる」ボタンを出す条件
-  // ピン留めがある場合は全件数 > ピン留め数
-  // ピン留めがない場合は全件数 > 1 (または選択中のみなので全件数 > 0)
-  const showToggleButton = pinned.length > 0 ? (all.length > pinned.length) : (all.length > 0);
+  const showToggleButton = all.length > pinned.length;
 
   return `
     <div class="selector-section">
       <div class="selector-header">
         <span class="selector-title">
-          ${sectionTitle}
-          ${selectedItem ? `<span class="selected-summary-chip">${selectedItem.icon} ${selectedItem.name}</span>` : ''}
+          ${store.escapeHTML(sectionTitle)}
+          ${selectedItem ? `<span class="selected-summary-chip">${store.escapeHTML(selectedItem.icon)} ${store.escapeHTML(selectedItem.name)}</span>` : ''}
         </span>
-        ${showToggleButton ? `<button class="selector-expand" data-action="${onToggle}">${expanded ? '▲ 閉じる' : '▼ 全表示'}</button>` : ''}
+        ${showToggleButton ? `<button class="selector-expand" data-action="${store.escapeHTML(onToggle)}">${expanded ? '▲ 閉じる' : '▼ 全表示'}</button>` : ''}
       </div>
       <div class="icon-grid ${expanded ? 'expanded' : ''}">
         ${displayItems.length > 0 ? displayItems.map(item => `
-          <div class="icon-item ${item.id === selectedId ? 'selected' : ''}" data-action="${onSelect}" data-id="${item.id}">
-            <span class="icon-emoji">${item.icon}</span>
+          <div class="icon-item ${item.id === selectedId ? 'selected' : ''}" data-action="${store.escapeHTML(onSelect)}" data-id="${store.escapeHTML(item.id)}">
+            <span class="icon-emoji">${store.escapeHTML(item.icon)}</span>
             <span class="icon-label">${store.escapeHTML(item.name)}</span>
           </div>
-        `).join('') : '<div style="padding: 10px; color: var(--text-muted); font-size: 0.8rem; text-align: center; width: 100%;">選択してください</div>'}
+        `).join('') : `<div style="padding: 10px; color: var(--text-muted); font-size: 0.8rem; text-align: center; width: 100%;">選択してください</div>`}
       </div>
     </div>
   `;
