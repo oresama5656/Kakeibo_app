@@ -1513,9 +1513,202 @@ textarea:focus {
 }
 
 
+
 /* ============================================
-   Responsive
+   Analysis Screen (Premium Redesign)
    ============================================ */
+
+.analysis-screen {
+  background-color: #f8f9fa;
+  min-height: 100%;
+}
+
+/* Summary Master Card */
+.total-summary-card {
+  background: linear-gradient(135deg, #2a4073 0%, #1a2a4d 100%); /* 深縹 (Fukahanada) */
+  padding: 32px var(--space-lg);
+  color: white;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(26, 42, 77, 0.2);
+  margin-bottom: var(--space-md);
+}
+
+.total-summary-card::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.total-amount {
+  font-size: 2.8rem;
+  font-weight: 900;
+  letter-spacing: -1px;
+  margin: 4px 0;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.total-amount.expense { color: #ffffff; }
+.total-amount.income { color: #ffffff; }
+
+/* Segmented Control (iOS style) */
+.analysis-segmented-control {
+  display: flex;
+  background: rgba(0,0,0,0.05);
+  padding: 2px;
+  border-radius: 9px;
+  margin: 0 var(--space-md) var(--space-md);
+}
+
+.segmented-item {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  border-radius: 7px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.segmented-item.active {
+  background: white;
+  color: #1a2a4d;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Period Navigation */
+.period-nav-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--space-md) var(--space-md);
+}
+
+.period-display {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-secondary);
+}
+
+.nav-round-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: white;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #1a2a4d;
+  font-weight: bold;
+}
+
+/* Premium Card (Charts, Lists) */
+.premium-card-v3 {
+  background: white;
+  border-radius: var(--radius-xl);
+  margin: 0 var(--space-md) var(--space-md);
+  padding: var(--space-md);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.02);
+}
+
+/* Category List */
+.category-item-v3 {
+  display: flex;
+  align-items: center;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.category-item-v3:last-child {
+  border-bottom: none;
+}
+
+.cat-icon-frame {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #f0f2f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  margin-right: var(--space-sm);
+}
+
+.cat-info-v3 {
+  flex: 1;
+}
+
+.cat-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.cat-name-v3 {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+}
+
+.cat-amount-v3 {
+  font-weight: 800;
+  font-size: var(--font-size-sm);
+  font-variant-numeric: tabular-nums;
+  color: #1a2a4d;
+}
+
+.cat-progress-v3 {
+  height: 6px;
+  background: #f0f2f5;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cat-progress-bar {
+  height: 100%;
+  background: #2a4073;
+  transition: width 0.6s ease;
+}
+
+/* Adjustments */
+.analysis-nav-header.premium-tab-nav {
+  background: white;
+  padding-top: var(--space-sm);
+  border-bottom: 1px solid #eee;
+}
+
+.nav-tab-item {
+  position: relative;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.nav-tab-item.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  background: #2a4073;
+  border-radius: 3px 3px 0 0;
+}
 @media (min-width: 768px) {
   .sidebar {
     display: flex;
