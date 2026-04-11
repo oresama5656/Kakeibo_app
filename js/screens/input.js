@@ -79,11 +79,30 @@ function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, section
   let selectedItem = all.find(i => i.id === selectedId);
   
   const pinned = all.filter(i => i.pinned);
-  const isPC = window.innerWidth >= 768;
-  // ピン留めがあればそれを表示、なければ最初から12件を表示（非展開時）
-  let displayItems = expanded ? all : (pinned.length > 0 ? pinned : all.slice(0, 12));
-  // スマホ版でも完全に隠さないように調整
-  if (selectedItem && !displayItems.find(i => i.id === selectedItem.id)) displayItems.push(selectedItem);
+  
+  // 表示アイテムの決定ロジック
+  let displayItems;
+  if (expanded) {
+    displayItems = all;
+  } else {
+    if (pinned.length > 0) {
+      // ピン留めがある場合はピン留めを表示
+      displayItems = pinned;
+    } else {
+      // ピン留めがない場合は、選択中のアイテムがあればそれだけ、なければ空
+      displayItems = selectedItem ? [selectedItem] : [];
+    }
+  }
+
+  // スマホ/PC問わず、選択中のアイテムが表示リストにない場合は追加する
+  if (selectedItem && !displayItems.find(i => i.id === selectedItem.id)) {
+    displayItems.push(selectedItem);
+  }
+
+  // 「全表示/閉じる」ボタンを出す条件
+  // ピン留めがある場合は全件数 > ピン留め数
+  // ピン留めがない場合は全件数 > 1 (または選択中のみなので全件数 > 0)
+  const showToggleButton = pinned.length > 0 ? (all.length > pinned.length) : (all.length > 0);
 
   return `
     <div class="selector-section">
@@ -92,15 +111,15 @@ function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, section
           ${sectionTitle}
           ${selectedItem ? `<span class="selected-summary-chip">${selectedItem.icon} ${selectedItem.name}</span>` : ''}
         </span>
-        ${all.length > pinned.length ? `<button class="selector-expand" data-action="${onToggle}">${expanded ? '▲' : '▼ 全表示'}</button>` : ''}
+        ${showToggleButton ? `<button class="selector-expand" data-action="${onToggle}">${expanded ? '▲ 閉じる' : '▼ 全表示'}</button>` : ''}
       </div>
       <div class="icon-grid ${expanded ? 'expanded' : ''}">
-        ${displayItems.map(item => `
+        ${displayItems.length > 0 ? displayItems.map(item => `
           <div class="icon-item ${item.id === selectedId ? 'selected' : ''}" data-action="${onSelect}" data-id="${item.id}">
             <span class="icon-emoji">${item.icon}</span>
             <span class="icon-label">${store.escapeHTML(item.name)}</span>
           </div>
-        `).join('')}
+        `).join('') : '<div style="padding: 10px; color: var(--text-muted); font-size: 0.8rem; text-align: center; width: 100%;">選択してください</div>'}
       </div>
     </div>
   `;
