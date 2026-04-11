@@ -31,9 +31,17 @@ export function render(container) {
   container.innerHTML = `
     <div class="analysis-screen premium-mode fadeIn">
       <div class="analysis-main-nav-container">
-        <div class="analysis-segmented-control main-nav">
-          <button class="segmented-item ${analysisState.tab === 'pl' ? 'active' : ''}" data-tab="pl" data-action="setTab" aria-label="収支分析を表示">📊 収支</button>
-          <button class="segmented-item ${analysisState.tab === 'bs' ? 'active' : ''}" data-tab="bs" data-action="setTab" aria-label="資産分析を表示">💎 資産</button>
+        <div class="analysis-segmented-control main-nav" role="tablist">
+          <button class="segmented-item ${analysisState.tab === 'pl' ? 'active' : ''}" 
+                  data-tab="pl" data-action="setTab" 
+                  aria-label="収支分析を表示" 
+                  aria-selected="${analysisState.tab === 'pl' ? 'true' : 'false'}" 
+                  role="tab">📊 収支</button>
+          <button class="segmented-item ${analysisState.tab === 'bs' ? 'active' : ''}" 
+                  data-tab="bs" data-action="setTab" 
+                  aria-label="資産分析を表示" 
+                  aria-selected="${analysisState.tab === 'bs' ? 'true' : 'false'}" 
+                  role="tab">💎 資産</button>
         </div>
       </div>
       <div class="analysis-body">${contentHtml}</div>

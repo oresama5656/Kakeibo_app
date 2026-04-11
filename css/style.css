@@ -1717,7 +1717,7 @@ textarea:focus {
 
 .analysis-segmented-control.main-nav {
   margin: 0 auto;
-  max-width: 280px;
+  max-width: var(--nav-max-width, 280px);
   background: rgba(0,0,0,0.04);
 }
 
@@ -1728,6 +1728,20 @@ textarea:focus {
 .analysis-segmented-control.main-nav .segmented-item {
   padding: 8px;
   font-size: var(--font-size-sm);
+}
+
+/* Accessibility: focus states */
+.segmented-item:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+/* Responsive Analysis Nav */
+@media (max-width: 480px) {
+  .analysis-segmented-control.main-nav {
+    max-width: calc(100% - 32px);
+    margin: 0 var(--space-md);
+  }
 }
 
 @media (min-width: 768px) {
