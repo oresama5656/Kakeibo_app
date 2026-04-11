@@ -79,6 +79,16 @@
   --sidebar-width: 220px;
   --bottom-tab-height: 64px;
   --header-height: 56px;
+
+  /* Premium Colors - Light */
+  --premium-deep: #1a2a4d;
+  --premium-mid: #2a4073;
+  --premium-light: #3a538a;
+  --premium-bg: #ffffff;
+  --premium-text-on-dark: #ffffff;
+  --premium-text-muted: rgba(255,255,255,0.7);
+  --premium-card-bg: #ffffff;
+  --premium-shadow: rgba(26, 42, 77, 0.2);
 }
 
 /* --- Dark Mode --- */
@@ -122,6 +132,16 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.6);
+
+  /* Premium Colors - Dark */
+  --premium-deep: #0a0e1a;
+  --premium-mid: #1a2a4d;
+  --premium-light: #2a4073;
+  --premium-bg: #1e1e35;
+  --premium-text-on-dark: #e8e8f0;
+  --premium-text-muted: rgba(232, 232, 240, 0.7);
+  --premium-card-bg: #1e1e35;
+  --premium-shadow: rgba(0, 0, 0, 0.4);
 }
 
 /* --- Reset & Base --- */
@@ -1066,7 +1086,7 @@ textarea:focus {
 .history-asset-amount {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  color: #1a365d; /* Dark Blue */
+  color: var(--premium-deep);
 }
 
 .history-filters {
@@ -1525,13 +1545,12 @@ textarea:focus {
 
 /* Summary Master Card */
 .total-summary-card {
-  background: linear-gradient(135deg, #2a4073 0%, #1a2a4d 100%); /* 深縹 (Fukahanada) */
+  background: linear-gradient(135deg, var(--premium-mid) 0%, var(--premium-deep) 100%);
   padding: 32px var(--space-lg);
-  color: white;
-  text-align: center;
+  color: var(--premium-text-on-dark);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 10px 25px rgba(26, 42, 77, 0.2);
+  box-shadow: 0 10px 25px var(--premium-shadow);
   margin-bottom: var(--space-md);
 }
 
@@ -1582,7 +1601,7 @@ textarea:focus {
 
 .segmented-item.active {
   background: white;
-  color: #1a2a4d;
+  color: var(--premium-deep);
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
