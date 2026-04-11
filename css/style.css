@@ -1040,12 +1040,19 @@ textarea:focus {
   display: flex;
   gap: var(--space-sm);
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .history-filters input,
 .history-filters select {
   height: 38px;
   font-size: var(--font-size-sm);
+  flex: 1;
+  min-width: 120px;
+}
+
+.history-filters input[type="date"] {
+  min-width: 135px;
 }
 
 .history-list {
