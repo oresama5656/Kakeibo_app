@@ -14,6 +14,15 @@ let historyState = {
   categoryId: '',
 };
 
+const escape = (str) => store.escapeHTML(str);
+const attrEsc = (str) =>
+  String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
 /**
  * 外部からフィルターをセットするための関数
  */
@@ -31,11 +40,14 @@ export function render(container) {
   const allTransactions = store.getTransactions();
   const accounts = store.getAccounts();
   const categories = store.getCategories();
-  const escape = (str) => store.escapeHTML(str);
 
   // 期間の計算
   const { start, end } = PeriodManager.getPeriodDates(historyState);
   
+  // ガード: 開始日または終了日が取得できない場合のフォールバック
+  const safeStart = start || store.formatLocalDate(new Date());
+  const safeEnd = end || store.formatLocalDate(new Date());
+
   // --- 1. すべての取引を使って残高推移を事前計算 (通帳形式のため) ---
   const sortedForCalc = [...allTransactions].sort((a, b) => {
     const d = (a.date || '').localeCompare(b.date || '');
@@ -54,7 +66,7 @@ export function render(container) {
     const toExists = accountBalances[tx.toAccountId] !== undefined;
 
     const txDate = tx.date || '';
-    if (txDate < start) {
+    if (txDate < safeStart) {
       // フィルタ前の累計を計算
       if (tx.type === 'income') {
         if (toExists) accountBalances[tx.toAccountId] += amt;
@@ -89,7 +101,7 @@ export function render(container) {
   const transactions = allTransactions
     .filter(tx => {
       const txDate = tx.date || '';
-      if (txDate < start || txDate > end) return false;
+      if (txDate < safeStart || txDate > safeEnd) return false;
       if (historyState.accountId && tx.fromAccountId !== historyState.accountId && tx.toAccountId !== historyState.accountId) return false;
       if (historyState.categoryId && tx.categoryId !== historyState.categoryId) return false;
       return true;
@@ -110,14 +122,13 @@ export function render(container) {
     }
   }
 
-  const attrEsc = (str) => String(str).replace(/"/g, '&quot;');
 
   container.innerHTML = `
     <div class="history-screen premium-mode fadeIn">
       <!-- Summary Master Card -->
       <div class="total-summary-card">
         <div style="font-size: 0.75rem; opacity: 0.8; font-weight: 600; letter-spacing: 1px; margin-bottom: 4px;">
-           ${escape(start.replace(/-/g, '.'))} — ${escape(end.replace(/-/g, '.'))}
+           ${escape(safeStart.replace(/-/g, '.'))} — ${escape(safeEnd.replace(/-/g, '.'))}
         </div>
         <div class="total-amount">¥${currentAssetSum.toLocaleString('ja-JP')}</div>
         <div style="font-size: 0.7rem; opacity: 0.7; font-weight: 600;">
@@ -147,7 +158,7 @@ export function render(container) {
         </div>
         <div class="period-nav-strip" style="margin-top: 12px; border-top: 1px solid var(--border-light); padding-top: 12px;">
           <button class="nav-round-btn" data-action="prevPeriod" type="button">‹</button>
-          <div class="period-display" style="font-size: 0.8rem; font-weight: 800; color: var(--premium-deep);">${escape(store.formatDateLabel(start))} — ${escape(store.formatDateLabel(end))}</div>
+          <div class="period-display" style="font-size: 0.8rem; font-weight: 800; color: var(--premium-deep);">${escape(store.formatDateLabel(safeStart))} — ${escape(store.formatDateLabel(safeEnd))}</div>
           <button class="nav-round-btn" data-action="nextPeriod" type="button">›</button>
         </div>
       </div>
@@ -176,8 +187,6 @@ export function render(container) {
 }
 
 function bindEvents(container) {
-  const refresh = () => render(container);
-
   // 既存のイベントをクリアして重複登録を防止
   container.querySelectorAll('[data-action="setPeriod"]').forEach(b => b.onclick = (e) => {
     const val = e.currentTarget.dataset.val;
@@ -221,7 +230,6 @@ function handleClick(e) {
 function renderHistoryItem(tx, balance, isLast) {
   const categories = store.getCategories();
   const accounts = store.getAccounts();
-  const escape = (str) => store.escapeHTML(str);
   
   const cat = categories.find(c => c.id === tx.categoryId);
   const icon = cat ? cat.icon : (tx.type === 'transfer' ? '🔄' : '❓');
@@ -275,11 +283,11 @@ function showCustomPeriodModal(container) {
   const de = historyState.customEnd || store.formatLocalDate(now);
   
   modal.innerHTML = `
-    <div class="premium-modal-sheet slideUp" role="dialog" aria-labelledby="modal-title-v3">
+    <div class="premium-modal-sheet slideUp" role="dialog" aria-modal="true" aria-labelledby="modal-title-v3">
       <div class="modal-drag-handle"></div>
       <div class="modal-header-v3">
         <h3 class="modal-title-v3" id="modal-title-v3">📅 期間を指定</h3>
-        <button class="modal-close-v3" data-action="closeModal">&times;</button>
+        <button class="modal-close-v3" data-action="closeModal" type="button">&times;</button>
       </div>
       <div class="modal-body-v3">
         <div class="date-row-v3">
@@ -295,7 +303,7 @@ function showCustomPeriodModal(container) {
         </div>
       </div>
       <div class="modal-footer-v3">
-        <button class="modal-apply-btn-v3">この期間で表示</button>
+        <button class="modal-apply-btn-v3" type="button">この期間で表示</button>
       </div>
     </div>
   `;
@@ -324,7 +332,7 @@ function showCustomPeriodModal(container) {
       historyState.customEnd = endVal;
       historyState.periodType = 'custom';
       close();
-      render(container);
+      refresh();
     } else {
       window.showToast?.('日付を入力してください', 'error');
     }
@@ -341,10 +349,10 @@ function showEditModal(txId) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-content" role="dialog" aria-labelledby="edit-modal-title">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
       <div class="modal-header">
         <h3 class="modal-title" id="edit-modal-title">取引を編集</h3>
-        <button class="modal-close" data-action="closeModal">✕</button>
+        <button class="modal-close" data-action="closeModal" type="button">✕</button>
       </div>
 
       <div class="form-group">
@@ -390,8 +398,8 @@ function showEditModal(txId) {
       </div>
 
       <div class="form-actions">
-        <button class="btn btn-danger" data-action="deleteTx" data-id="${tx.id}">削除</button>
-        <button class="btn btn-primary" data-action="saveTx" data-id="${tx.id}">保存</button>
+        <button class="btn btn-danger" data-action="deleteTx" data-id="${tx.id}" type="button">削除</button>
+        <button class="btn btn-primary" data-action="saveTx" data-id="${tx.id}" type="button">保存</button>
       </div>
     </div>
   `;
@@ -437,7 +445,10 @@ function showEditModal(txId) {
   });
 }
 
-function refresh() {
+/**
+ * 画面更新用の共通関数
+ */
+export function refresh() {
   const container = document.getElementById('screen-history');
   if (container) render(container);
 }
