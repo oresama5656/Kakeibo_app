@@ -305,12 +305,16 @@ function handleClick(e) {
 
 function downloadCsvTemplate() {
   const header = "日付,種類,カテゴリー,金額,口座,入金先,メモ\n";
-  const row1 = `2026/3/1,収入,利息,2,SBI新生(固定費・ボーナス),,税引前利息\n`;
-  const row2 = `2026/2/7,振替,,30000,SBI新生(固定費・ボーナス),現金,ATM 現金出金（提携取引）\n`;
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
+  
+  const row1 = `${dateStr},支出,食料品,1000,現金,,スーパーで買い物\n`;
+  const row2 = `${dateStr},収入,給料,200000,,常陽銀行,4月分給料\n`;
+  const row3 = `${dateStr},振替,,10000,常陽銀行,現金,ATM引き出し\n`;
   
   // 文字化け防止対策（BOM付きUTF-8）
   const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-  const blob = new Blob([bom, header + row1 + row2], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([bom, header + row1 + row2 + row3], { type: 'text/csv;charset=utf-8;' });
   
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
