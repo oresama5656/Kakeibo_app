@@ -1999,3 +1999,28 @@ textarea:focus {
   stroke: white;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E");
 }
+
+/* Date Header Badge */
+.date-header-v3 {
+  margin: 32px var(--space-md) 12px;
+  display: flex;
+  align-items: center;
+}
+
+.date-badge-v3 {
+  background: white;
+  color: var(--premium-deep);
+  font-size: 0.75rem;
+  font-weight: 900;
+  padding: 4px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--premium-mid);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  letter-spacing: 0.5px;
+}
+
+[data-theme="dark"] .date-badge-v3 {
+  background: var(--bg-card);
+  color: white;
+  border-color: rgba(255,255,255,0.2);
+}
