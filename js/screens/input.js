@@ -12,7 +12,7 @@ let state = {
   fromAccountId: null,
   toAccountId: null,
   categoryId: null,
-  date: new Date().toISOString().split('T')[0],
+  date: store.formatLocalDate(),
   memo: '',
   fromAccountsExpanded: false,
   toAccountsExpanded: false,
@@ -76,35 +76,45 @@ function resetState() {
 
 function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, sectionTitle) {
   const all = [...items].sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0));
-  let selectedItem = all.find(i => i.id === selectedId);
-  
+  const selectedItem = all.find(i => i.id === selectedId);
   const pinned = all.filter(i => i.pinned);
-  const isPC = window.innerWidth >= 768;
-  // ピン留めがあればそれを表示、なければ最初から12件を表示（非展開時）
-  let displayItems = expanded ? all : (pinned.length > 0 ? pinned : all.slice(0, 12));
-  // スマホ版でも完全に隠さないように調整
-  if (selectedItem && !displayItems.find(i => i.id === selectedItem.id)) displayItems.push(selectedItem);
+  
+  // 表示アイテムの決定 (ロジックを整理)
+  let displayItems;
+  if (expanded) {
+    displayItems = all;
+  } else if (pinned.length > 0) {
+    displayItems = [...pinned];
+    // 選択中のアイテムがピン留めになければ追加
+    if (selectedItem && !pinned.some(i => i.id === selectedId)) {
+      displayItems.push(selectedItem);
+    }
+  } else {
+    displayItems = selectedItem ? [selectedItem] : [];
+  }
+
+  const showToggleButton = all.length > pinned.length;
 
   return `
     <div class="selector-section">
       <div class="selector-header">
         <span class="selector-title">
-          ${sectionTitle}
+          ${store.escapeHTML(sectionTitle)}
           ${selectedItem ? `
             <span class="selected-summary-chip">
-              ${selectedItem.icon} ${selectedItem.name}
+              ${store.escapeHTML(selectedItem.icon)} ${store.escapeHTML(selectedItem.name)}
               ${selectedItem.initialBalance !== undefined ? `<span style="font-size:0.75rem; opacity:0.7; margin-left:6px; font-weight: 500;">(残高: ¥${store.getAccountBalance(selectedId).toLocaleString()})</span>` : ''}
             </span>` : ''}
         </span>
-        ${all.length > pinned.length ? `<button class="selector-expand" data-action="${onToggle}">${expanded ? '▲' : '▼ 全表示'}</button>` : ''}
+        ${showToggleButton ? `<button class="selector-expand" data-action="${store.escapeHTML(onToggle)}">${expanded ? '▲ 閉じる' : '▼ 全表示'}</button>` : ''}
       </div>
       <div class="icon-grid ${expanded ? 'expanded' : ''}">
-        ${displayItems.map(item => `
-          <div class="icon-item ${item.id === selectedId ? 'selected' : ''}" data-action="${onSelect}" data-id="${item.id}">
-            <span class="icon-emoji">${item.icon}</span>
+        ${displayItems.length > 0 ? displayItems.map(item => `
+          <div class="icon-item ${item.id === selectedId ? 'selected' : ''}" data-action="${store.escapeHTML(onSelect)}" data-id="${store.escapeHTML(item.id)}">
+            <span class="icon-emoji">${store.escapeHTML(item.icon)}</span>
             <span class="icon-label">${store.escapeHTML(item.name)}</span>
           </div>
-        `).join('')}
+        `).join('') : `<div style="padding: 10px; color: var(--text-muted); font-size: 0.8rem; text-align: center; width: 100%;">選択してください</div>`}
       </div>
     </div>
   `;
@@ -254,14 +264,16 @@ function bindEvents(container) {
   container.addEventListener('click', handleClick);
   const amountInput = container.querySelector('#amount-input-formatted');
   if (amountInput) {
-    amountInput.addEventListener('input', (e) => {
+    amountInput.oninput = (e) => {
       const val = e.target.value.replace(/[^0-9]/g, '');
       const formatted = formatComma(val);
       state.amount = formatted; e.target.value = formatted; 
-    });
+    };
   }
-  container.querySelector('#memo-input')?.addEventListener('input', (e) => { state.memo = e.target.value; });
-  container.querySelector('[data-action="setDate"]')?.addEventListener('change', (e) => { state.date = e.target.value; });
+  const memoInput = container.querySelector('#memo-input');
+  if (memoInput) memoInput.oninput = (e) => { state.memo = e.target.value; };
+  const dateInput = container.querySelector('[data-action="setDate"]');
+  if (dateInput) dateInput.onchange = (e) => { state.date = e.target.value; };
   container.querySelectorAll('.bulk-input').forEach(inp => {
     inp.addEventListener('change', e => { 
       const { field, row } = e.target.dataset; 
@@ -280,13 +292,13 @@ function handleClick(e) {
   const action = target.dataset.action;
   if (action === 'openCalculator') openCalculator();
   else if (action === 'setType') { state.type = target.dataset.type; state.categoryId = null; refresh(); }
-  else if (action === 'selectFromAccount') { state.fromAccountId = target.dataset.id; refresh(); }
-  else if (action === 'selectToAccount') { state.toAccountId = target.dataset.id; refresh(); }
-  else if (action === 'selectCategory') { state.categoryId = target.dataset.id; refresh(); }
+  else if (action === 'selectFromAccount') { state.fromAccountId = target.dataset.id; state.fromAccountsExpanded = false; refresh(); }
+  else if (action === 'selectToAccount') { state.toAccountId = target.dataset.id; state.toAccountsExpanded = false; refresh(); }
+  else if (action === 'selectCategory') { state.categoryId = target.dataset.id; state.categoriesExpanded = false; refresh(); }
   else if (action === 'toggleFromAccounts') { state.fromAccountsExpanded = !state.fromAccountsExpanded; refresh(); }
   else if (action === 'toggleToAccounts') { state.toAccountsExpanded = !state.toAccountsExpanded; refresh(); }
   else if (action === 'toggleCategories') { state.categoriesExpanded = !state.categoriesExpanded; refresh(); }
-  else if (action === 'dateToday') { state.date = new Date().toISOString().split('T')[0]; refresh(); }
+  else if (action === 'dateToday') { state.date = store.formatLocalDate(); refresh(); }
   else if (action === 'submit') submit();
   else if (action === 'toggleBulk') { showBulkInput = !showBulkInput; refresh(); }
   else if (action === 'addBulkRow') { bulkRows.push({ date: state.date, amount: '', categoryId: '', fromAccountId: '', toAccountId: '', memo: '' }); refresh(); }
@@ -299,12 +311,16 @@ function handleClick(e) {
 
 function downloadCsvTemplate() {
   const header = "日付,種類,カテゴリー,金額,口座,入金先,メモ\n";
-  const row1 = `2026/3/1,収入,利息,2,SBI新生(固定費・ボーナス),,税引前利息\n`;
-  const row2 = `2026/2/7,振替,,30000,SBI新生(固定費・ボーナス),現金,ATM 現金出金（提携取引）\n`;
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
+  
+  const row1 = `${dateStr},支出,食料品,1000,現金,,スーパーで買い物\n`;
+  const row2 = `${dateStr},収入,給料,200000,,常陽銀行,4月分給料\n`;
+  const row3 = `${dateStr},振替,,10000,常陽銀行,現金,ATM引き出し\n`;
   
   // 文字化け防止対策（BOM付きUTF-8）
   const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
-  const blob = new Blob([bom, header + row1 + row2], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([bom, header + row1 + row2 + row3], { type: 'text/csv;charset=utf-8;' });
   
   const link = document.createElement("a");
   const url = URL.createObjectURL(blob);
@@ -375,7 +391,10 @@ function handleCsvFile(e) {
 
 function submit() {
   const amount = parseComma(state.amount);
-  if (!amount || amount <= 0) { window.showToast?.('金額を入力してください', 'error'); return; }
+  if (amount <= 0) { 
+    window.showToast?.('金額を正の数値で入力してください', 'error'); 
+    return; 
+  }
   
   // 名称のスナップショットも一緒に保存
   const accs = store.getAccounts();

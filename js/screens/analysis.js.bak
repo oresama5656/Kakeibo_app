@@ -19,12 +19,13 @@ let analysisState = {
   selectedAccountId: null,
   referenceDate: new Date(),
   excludedCategoryIds: [],
-  excludedAccountIds: [],
 };
 
 function saveState() {
   try {
-    localStorage.setItem('kakeibo_analysis_state', JSON.stringify(analysisState));
+    const toSave = { ...analysisState };
+    delete toSave.referenceDate; // 日付オブジェクトは保存から除外（JSON化できないため）
+    localStorage.setItem('kakeibo_analysis_state', JSON.stringify(toSave));
   } catch(e) {}
 }
 
@@ -33,7 +34,6 @@ function loadState() {
     const saved = localStorage.getItem('kakeibo_analysis_state');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed.referenceDate) parsed.referenceDate = new Date(parsed.referenceDate);
       Object.assign(analysisState, parsed);
     }
   } catch(e) {}
@@ -46,7 +46,7 @@ export function render(container) {
   const { start, end } = PeriodManager.getPeriodDates(analysisState);
   const contentHtml = analysisState.tab === 'pl' 
     ? UIHelper.renderPLContent(analysisState, start, end) 
-    : UIHelper.renderBSContent(analysisState, start, end);
+    : UIHelper.renderBSContent(analysisState);
   
   container.innerHTML = `
     <div class="analysis-screen premium-mode fadeIn">
@@ -82,8 +82,9 @@ export function render(container) {
       else ChartManager.renderPLLineChart(txs, start, end, analysisState.viewType, analysisState.excludedCategoryIds);
     } else {
       const accounts = store.getAccounts();
-      ChartManager.renderBSBalanceChart(accounts, analysisState.excludedAccountIds);
-      ChartManager.renderTotalAssetChart(start, end, analysisState.selectedAccountId, analysisState.excludedAccountIds);
+      ChartManager.renderBSBalanceChart(accounts);
+      const historyTotal = store.getAssetHistory(analysisState.bsPeriod);
+      ChartManager.renderTotalAssetChart(historyTotal, analysisState.selectedAccountId, analysisState.bsPeriod);
     }
   }, 100);
 }
@@ -135,17 +136,6 @@ function bindEvents(container) {
       refresh();
     };
   }
-
-  // BS用 口座チェックボックス
-  container.querySelectorAll('.acc-checkbox').forEach(cb => {
-    cb.onchange = (e) => {
-      const id = e.target.dataset.id;
-      if (e.target.checked) analysisState.excludedAccountIds = analysisState.excludedAccountIds.filter(aid => aid !== id);
-      else if (!analysisState.excludedAccountIds.includes(id)) analysisState.excludedAccountIds.push(id);
-      saveState();
-      refresh();
-    };
-  });
 
   const bsSel = container.querySelector('#bs-period-selector');
   if (bsSel) bsSel.onchange = e => { analysisState.bsPeriod = Number(e.target.value); saveState(); refresh(); };

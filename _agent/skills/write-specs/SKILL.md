@@ -1,3 +1,7 @@
+---
+name: write-specs
+description: ユーザーの要望をヒアリングし、具体的な仕様書(spec.md)と実装計画(plan.md)を策定するスキル。
+---
 # 📜 スキル：仕様策定 (write_specs)
 
 `@pm` が最初に使用するスキルです。

@@ -1,7 +1,7 @@
 /**
  * 取引・履歴管理モジュール
  */
-import { state, normalizeDate, normalizeName } from './BaseStore.js';
+import { state, normalizeDate, normalizeName, formatLocalDate } from './BaseStore.js';
 import { getTotalBalance } from './AccountStore.js';
 
 export function getTransactions() { return state.transactions; }
@@ -73,48 +73,68 @@ export function deleteTransaction(id) {
 }
 
 export function getAssetHistory(days = 30) {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - days);
+  return getAssetHistoryRange(formatLocalDate(start), formatLocalDate(end));
+}
+
+export function getAssetHistoryRange(startStr, endStr) {
   const history = [];
-  const now = new Date();
   const totalRaw = getTotalBalance();
-  for (let i = 0; i <= days; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const dStr = d.toISOString().split('T')[0];
+  
+  let cur = new Date(startStr);
+  const fin = new Date(endStr);
+  
+  while (cur <= fin) {
+    const dStr = formatLocalDate(cur);
     let bal = totalRaw;
     state.transactions.forEach(tx => {
+      // 現在の合計残高から、指定日より後の取引をすべて逆演算して、その日時点の残高を算出する（バックワード計算）
       if (tx.date > dStr) {
         if (tx.type === 'income') bal -= tx.amount;
         else if (tx.type === 'expense') bal += tx.amount;
       }
     });
-    history.unshift({ date: dStr, total: bal });
+    history.push({ date: dStr, total: bal });
+    cur.setDate(cur.getDate() + 1);
   }
   return history;
 }
 
 export function getAccountHistory(accountId, days = 30) {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - days);
+  return getAccountHistoryRange(accountId, formatLocalDate(start), formatLocalDate(end));
+}
+
+export function getAccountHistoryRange(accountId, startStr, endStr) {
   const history = [];
-  const now = new Date();
   const accObj = state.accounts.find(a => a.id === accountId || a.name === accountId);
-  const currentAccBal = accObj?.balance || 0;
-  const targetId = accObj?.id;
+  if (!accObj) return [];
   
-  for (let i = 0; i <= days; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const dStr = d.toISOString().split('T')[0];
+  const currentAccBal = accObj.balance || 0;
+  const targetId = accObj.id;
+  
+  let cur = new Date(startStr);
+  const fin = new Date(endStr);
+  
+  while (cur <= fin) {
+    const dStr = formatLocalDate(cur);
     let bal = currentAccBal;
     state.transactions.forEach(tx => {
       if (tx.date > dStr) {
-        if (targetId) {
-          if (tx.type === 'income' && tx.toAccountId === targetId) bal -= tx.amount;
-          else if (tx.type === 'expense' && tx.fromAccountId === targetId) bal += tx.amount;
-          else if (tx.type === 'transfer') {
-            if (tx.fromAccountId === targetId) bal += tx.amount;
-            if (tx.toAccountId === targetId) bal -= tx.amount;
-          }
+        if (tx.type === 'income' && tx.toAccountId === targetId) bal -= tx.amount;
+        else if (tx.type === 'expense' && tx.fromAccountId === targetId) bal += tx.amount;
+        else if (tx.type === 'transfer') {
+          if (tx.fromAccountId === targetId) bal += tx.amount;
+          if (tx.toAccountId === targetId) bal -= tx.amount;
         }
       }
     });
-    history.unshift({ date: dStr, balance: bal });
+    history.push({ date: dStr, balance: bal });
+    cur.setDate(cur.getDate() + 1);
   }
   return history;
 }

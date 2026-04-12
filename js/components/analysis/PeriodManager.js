@@ -2,6 +2,8 @@
  * 分析画面の期間計算ロジック
  */
 
+import { formatLocalDate } from '../../store/BaseStore.js';
+
 export function getPeriodDates(state) {
   const ref = new Date(state.referenceDate);
   let start, end;
@@ -25,12 +27,14 @@ export function getPeriodDates(state) {
       end.setHours(23,59,59,999);
       break;
     case 'custom': 
-      start = state.customStart ? new Date(state.customStart + 'T00:00:00') : new Date(ref.getFullYear(), ref.getMonth(), 1); 
-      end = state.customEnd ? new Date(state.customEnd + 'T23:59:59') : new Date(); 
+      const isValidDate = (s) => s && /^\d{4}-\d{2}-\d{2}$/.test(s);
+      start = isValidDate(state.customStart) ? new Date(state.customStart + 'T00:00:00') : new Date(ref.getFullYear(), ref.getMonth(), 1); 
+      end = isValidDate(state.customEnd) ? new Date(state.customEnd + 'T23:59:59') : new Date(); 
+      if (start > end) [start, end] = [end, start];
       break;
     default: 
       start = new Date(ref.getFullYear(), ref.getMonth(), 1); 
       end = new Date();
   }
-  return { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] };
+  return { start: formatLocalDate(start), end: formatLocalDate(end) };
 }

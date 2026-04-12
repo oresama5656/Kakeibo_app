@@ -1,3 +1,7 @@
+---
+name: generate-code
+description: 承認済みの仕様と計画書に基づき、プロフェッショナルな品質でコードを生成・実装するスキル。
+---
 # 🛠️ スキル：コード生成 (generate_code)
 
 `@engineer` が使用する核心的なスキルです。
