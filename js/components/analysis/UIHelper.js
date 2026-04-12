@@ -9,7 +9,7 @@ export function calculateCategoryTotals(txs) {
   txs.forEach(tx => {
     const cid = tx.categoryId || 'cat_other';
     if (!totals[cid]) {
-      const c = cats.find(a => a.id === cid) || cats.find(a => a.id === 'cat_98');
+      const c = cats.find(cat => cat.id === cid) || cats.find(cat => cat.id === 'cat_98');
       totals[cid] = { id: cid, name: c?.name || tx.category || 'その他', icon: c?.icon || '📂', total: 0 };
     }
     totals[cid].total += Number(tx.amount) || 0;
@@ -111,7 +111,7 @@ export function renderPLContent(state, start, end) {
   `;
 }
 
-export function renderBSContent(state) {
+export function renderBSContent(state, start, end) {
   const accounts = store.getAccounts();
   const netWorth = store.getTotalBalance();
   
@@ -121,10 +121,27 @@ export function renderBSContent(state) {
     .reduce((sum, a) => sum + Number(a.balance), 0);
 
   const escape = (str) => store.escapeHTML(str);
+  const formatDateRange = (s, e) => `${s.split('-').join('/')} - ${e.split('-').join('/')}`;
 
   return `
     <div class="bs-content fadeIn">
-      <!-- Total Net Worth Master Card (深縹) -->
+      <!-- Period Selector (PLと統一) -->
+      <div class="analysis-controls-container">
+        <div class="analysis-period-nav">
+          <button class="nav-btn-v3" data-action="prevPeriod" aria-label="前の期間">‹</button>
+          <div class="current-period-v3">${formatDateRange(start, end)}</div>
+          <button class="nav-btn-v3" data-action="nextPeriod" aria-label="次の期間">›</button>
+        </div>
+        
+        <div class="analysis-segmented-control sub-nav">
+          <button class="segmented-item mini ${state.periodType === 'week' ? 'active' : ''}" data-val="week" data-action="setPeriod">週</button>
+          <button class="segmented-item mini ${state.periodType === 'month' ? 'active' : ''}" data-val="month" data-action="setPeriod">月</button>
+          <button class="segmented-item mini ${state.periodType === 'year' ? 'active' : ''}" data-val="year" data-action="setPeriod">年</button>
+          <button class="segmented-item mini ${state.periodType === 'custom' ? 'active' : ''}" data-val="custom" data-action="setPeriod">指定</button>
+        </div>
+      </div>
+
+      <!-- Total Net Worth Master Card -->
       <div class="total-summary-card">
         <div class="total-amount income">¥${netWorth.toLocaleString()}</div>
         <div style="font-size: 0.7rem; opacity: 0.8; font-weight: 600; letter-spacing: 1px;">TOTAL NET WORTH</div>
@@ -143,22 +160,10 @@ export function renderBSContent(state) {
 
       <!-- Asset Trend Chart -->
       <div class="premium-card-v3">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <h4 style="font-size: 0.9rem; font-weight: 800; color: #1a2a4d; margin: 0;">📈 資産推移</h4>
-          <div class="select-v3-container">
-            <select id="analysis-account-selector" class="select-v3">
-              <option value="total">全体</option>
-              ${accounts.map(a => `<option value="${escape(a.id)}" ${a.id === state.selectedAccountId ? 'selected' : ''}>${escape(a.name)}</option>`).join('')}
-            </select>
-            <select id="bs-period-selector" class="select-v3">
-              <option value="30" ${state.bsPeriod === 30 ? 'selected' : ''}>30日</option>
-              <option value="90" ${state.bsPeriod === 90 ? 'selected' : ''}>90日</option>
-              <option value="365" ${state.bsPeriod === 365 ? 'selected' : ''}>1年</option>
-            </select>
-          </div>
-        </div>
+        <h4 style="font-size: 0.9rem; font-weight: 800; color: #1a2a4d; margin-bottom: 20px;">📈 資産推移</h4>
         <div style="height: 240px;"><canvas id="total-asset-chart"></canvas></div>
       </div>
+      ...
 
       <!-- Account List Title -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px var(--space-md) 10px;">

@@ -24,9 +24,7 @@ let analysisState = {
 
 function saveState() {
   try {
-    const toSave = { ...analysisState };
-    delete toSave.referenceDate; // 日付オブジェクトは保存から除外（JSON化できないため）
-    localStorage.setItem('kakeibo_analysis_state', JSON.stringify(toSave));
+    localStorage.setItem('kakeibo_analysis_state', JSON.stringify(analysisState));
   } catch(e) {}
 }
 
@@ -35,6 +33,7 @@ function loadState() {
     const saved = localStorage.getItem('kakeibo_analysis_state');
     if (saved) {
       const parsed = JSON.parse(saved);
+      if (parsed.referenceDate) parsed.referenceDate = new Date(parsed.referenceDate);
       Object.assign(analysisState, parsed);
     }
   } catch(e) {}
@@ -47,7 +46,7 @@ export function render(container) {
   const { start, end } = PeriodManager.getPeriodDates(analysisState);
   const contentHtml = analysisState.tab === 'pl' 
     ? UIHelper.renderPLContent(analysisState, start, end) 
-    : UIHelper.renderBSContent(analysisState);
+    : UIHelper.renderBSContent(analysisState, start, end);
   
   container.innerHTML = `
     <div class="analysis-screen premium-mode fadeIn">
@@ -84,8 +83,7 @@ export function render(container) {
     } else {
       const accounts = store.getAccounts();
       ChartManager.renderBSBalanceChart(accounts, analysisState.excludedAccountIds);
-      const historyTotal = store.getAssetHistory(analysisState.bsPeriod);
-      ChartManager.renderTotalAssetChart(historyTotal, analysisState.selectedAccountId, analysisState.bsPeriod, analysisState.excludedAccountIds);
+      ChartManager.renderTotalAssetChart(start, end, analysisState.selectedAccountId, analysisState.excludedAccountIds);
     }
   }, 100);
 }

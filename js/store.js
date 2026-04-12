@@ -114,6 +114,8 @@ export const updateTransaction = (...args) => { TransactionStore.updateTransacti
 export const deleteTransaction = (...args) => { TransactionStore.deleteTransaction(...args); AccountStore.updateAccountBalances(); save(); };
 export const getAssetHistory = TransactionStore.getAssetHistory;
 export const getAccountHistory = TransactionStore.getAccountHistory;
+export const getAssetHistoryRange = TransactionStore.getAssetHistoryRange;
+export const getAccountHistoryRange = TransactionStore.getAccountHistoryRange;
 
 // Sync API
 export const blockSync = SyncManager.blockSync;

@@ -108,32 +108,33 @@ export function renderBSBalanceChart(accounts, excludedIds = []) {
   });
 }
 
-export function renderTotalAssetChart(history, selectedAccountId, bsPeriod, excludedIds = []) {
+export function renderTotalAssetChart(start, end, selectedAccountId, excludedIds = []) {
   const ctx = document.getElementById('total-asset-chart')?.getContext('2d');
   if (!ctx) return;
   if (totalAssetChart) totalAssetChart.destroy();
 
   let data = [];
+  let labels = [];
   let label = '純資産';
   let color = '#6366f1';
 
   if (selectedAccountId) {
-    const accHistory = store.getAccountHistory(selectedAccountId, bsPeriod);
+    const history = store.getAccountHistoryRange(selectedAccountId, start, end);
     const acc = store.getAccounts().find(a => a.id === selectedAccountId);
-    data = accHistory.map(h => h.balance); 
+    data = history.map(h => h.balance); 
+    labels = history.map(h => h.date.split('-').slice(1).join('/'));
     label = acc ? acc.name : '不明な口座';
     color = (acc && Number(acc.balance) < 0) ? '#f43f5e' : '#10b981';
   } else { 
     // 全体表示の場合：除外口座を除いた推移を再計算
+    const history = store.getAssetHistoryRange(start, end);
+    labels = history.map(h => h.date.split('-').slice(1).join('/'));
+    
     if (excludedIds.length > 0) {
       data = history.map(h => {
-        let filteredTotal = 0;
-        // 各日の状態から除外口座の残高を差し引く（または対象口座のみ合計する）
-        // store.js の getAssetHistory は全口座の合計をすでに返しているので、
-        // 除外対象の履歴を取得して差し引く
         let deduction = 0;
         excludedIds.forEach(id => {
-          const accH = store.getAccountHistory(id, bsPeriod);
+          const accH = store.getAccountHistoryRange(id, start, end);
           const dayMatch = accH.find(ah => ah.date === h.date);
           if (dayMatch) deduction += dayMatch.balance;
         });
@@ -148,9 +149,15 @@ export function renderTotalAssetChart(history, selectedAccountId, bsPeriod, excl
   totalAssetChart = new Chart(ctx, { 
     type: 'line', 
     data: { 
-      labels: history.map(h => h.date.split('-').slice(1).join('/')), 
+      labels: labels, 
       datasets: [{ label: label, data: data, borderColor: color, borderWidth: 4, tension: 0.4, fill: true, backgroundColor: color + '22' }] 
     }, 
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } 
+    options: { 
+      responsive: true, maintainAspectRatio: false, 
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } }
+      }
+    } 
   });
 }
