@@ -162,7 +162,7 @@ export function render(container) {
           <div class="history-date-group">
             <div style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); margin: 24px 0 8px 8px; display: flex; align-items: center; gap: 8px; letter-spacing: 0.5px;">
               <span style="color: var(--premium-deep); font-weight: 900;">${group.date.slice(5).replace('-', '/')}</span>
-              <span>${formatDateLabel(group.date)}</span>
+              <span>${store.formatDateLabel(group.date)}</span>
             </div>
             <div class="premium-card-v3" style="padding: 2px 0;">
               ${group.items.map((tx, idx) => renderHistoryItem(tx, txRunningBalances[tx.id], idx === group.items.length - 1)).join('')}
