@@ -90,7 +90,11 @@ function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, section
       <div class="selector-header">
         <span class="selector-title">
           ${sectionTitle}
-          ${selectedItem ? `<span class="selected-summary-chip">${selectedItem.icon} ${selectedItem.name}</span>` : ''}
+          ${selectedItem ? `
+            <span class="selected-summary-chip">
+              ${selectedItem.icon} ${selectedItem.name}
+              ${selectedItem.initialBalance !== undefined ? `<span style="font-size:0.75rem; opacity:0.7; margin-left:6px; font-weight: 500;">(残高: ¥${store.getAccountBalance(selectedId).toLocaleString()})</span>` : ''}
+            </span>` : ''}
         </span>
         ${all.length > pinned.length ? `<button class="selector-expand" data-action="${onToggle}">${expanded ? '▲' : '▼ 全表示'}</button>` : ''}
       </div>
@@ -390,7 +394,27 @@ function submit() {
   };
 
   store.addTransaction(tx);
-  window.showToast?.('記録しました ✓'); resetState(); refresh();
+  
+  // 入力後残高の反映
+  let balanceMsg = '';
+  if (state.type === 'transfer') {
+    const f = accs.find(a => a.id === state.fromAccountId);
+    const t = accs.find(a => a.id === state.toAccountId);
+    const fb = store.getAccountBalance(state.fromAccountId).toLocaleString();
+    const tb = store.getAccountBalance(state.toAccountId).toLocaleString();
+    balanceMsg = `\n残高: ${f?.name} ¥${fb} / ${t?.name} ¥${tb}`;
+  } else {
+    const targetId = state.type === 'expense' ? state.fromAccountId : state.toAccountId;
+    const acc = accs.find(a => a.id === targetId);
+    if (acc) {
+      const b = store.getAccountBalance(targetId).toLocaleString();
+      balanceMsg = `\n[${acc.name}] 残高: ¥${b}`;
+    }
+  }
+
+  window.showToast?.('記録しました ✓' + balanceMsg); 
+  resetState(); 
+  refresh();
 }
 
 function submitBulk() {
