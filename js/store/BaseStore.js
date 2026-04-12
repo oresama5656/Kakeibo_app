@@ -60,6 +60,16 @@ export function escapeHTML(str) {
     .replace(/'/g, '&#039;');
 }
 
+export function formatDateLabel(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  // 月は0始まりなので -1 する
+  const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+  const days = ['日', '月', '火', '水', '木', '金', '土'];
+  return `${dateObj.getMonth() + 1}月${dateObj.getDate()}日（${days[dateObj.getDay()]}）`;
+}
+
 export function formatLocalDate(date) {
   const d = date || new Date();
   const y = d.getFullYear();

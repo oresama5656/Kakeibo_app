@@ -45,7 +45,6 @@ export function render(container) {
 
   const accountBalances = {};
   accounts.forEach(a => accountBalances[a.id] = Number(a.initialBalance || 0));
-  let totalBalance = accounts.reduce((sum, a) => sum + Number(a.initialBalance || 0), 0);
 
   const txRunningBalances = {}; 
 
@@ -54,43 +53,52 @@ export function render(container) {
     const fromExists = accountBalances[tx.fromAccountId] !== undefined;
     const toExists = accountBalances[tx.toAccountId] !== undefined;
 
-    if (tx.type === 'income') {
-      if (toExists) {
-        accountBalances[tx.toAccountId] += amt;
-        totalBalance += amt;
+    const txDate = tx.date || '';
+    if (txDate < start) {
+      // フィルタ前の累計を計算
+      if (tx.type === 'income') {
+        if (toExists) accountBalances[tx.toAccountId] += amt;
+      } else if (tx.type === 'expense') {
+        if (fromExists) accountBalances[tx.fromAccountId] -= amt;
+      } else if (tx.type === 'transfer') {
+        if (fromExists) accountBalances[tx.fromAccountId] -= amt;
+        if (toExists) accountBalances[tx.toAccountId] += amt;
       }
-    } else if (tx.type === 'expense') {
-      if (fromExists) {
-        accountBalances[tx.fromAccountId] -= amt;
-        totalBalance -= amt;
+    } else {
+      // フィルタ期間内の計算
+      if (tx.type === 'income') {
+        if (toExists) accountBalances[tx.toAccountId] += amt;
+      } else if (tx.type === 'expense') {
+        if (fromExists) accountBalances[tx.fromAccountId] -= amt;
+      } else if (tx.type === 'transfer') {
+        if (fromExists) accountBalances[tx.fromAccountId] -= amt;
+        if (toExists) accountBalances[tx.toAccountId] += amt;
       }
-    } else if (tx.type === 'transfer') {
-      if (fromExists) accountBalances[tx.fromAccountId] -= amt;
-      if (toExists) accountBalances[tx.toAccountId] += amt;
-      if (fromExists && !toExists) totalBalance -= amt;
-      else if (!fromExists && toExists) totalBalance += amt;
+      txRunningBalances[tx.id] = (historyState.accountId && accountBalances[historyState.accountId] !== undefined)
+        ? accountBalances[historyState.accountId]
+        : Object.values(accountBalances).reduce((a, b) => a + b, 0);
     }
-    txRunningBalances[tx.id] = (historyState.accountId && accountBalances[historyState.accountId] !== undefined)
-      ? accountBalances[historyState.accountId]
-      : totalBalance;
   }
+
+  // 統合された資産額 (フィルタ口座があればその額、なければ全口座合計)
+  const currentAssetSum = historyState.accountId 
+    ? (accountBalances[historyState.accountId] || 0)
+    : Object.values(accountBalances).reduce((a, b) => a + b, 0);
 
   // --- 2. フィルタと表示用のソートを適用 ---
   const transactions = allTransactions
     .filter(tx => {
-      if (tx.date < start || tx.date > end) return false;
+      const txDate = tx.date || '';
+      if (txDate < start || txDate > end) return false;
       if (historyState.accountId && tx.fromAccountId !== historyState.accountId && tx.toAccountId !== historyState.accountId) return false;
       if (historyState.categoryId && tx.categoryId !== historyState.categoryId) return false;
       return true;
     })
     .sort((a, b) => {
       const dateA = a.date || '0000-00-00';
-      const dateB = b.date || '0000-00-00';
-      const dateComp = dateB.localeCompare(dateA);
+      const dateComp = (b.date || '0000-00-00').localeCompare(dateA);
       if (dateComp !== 0) return dateComp;
-      const idA = a.id || '';
-      const idB = b.id || '';
-      return idB.localeCompare(idA);
+      return (b.id || '').localeCompare(a.id || '');
     });
 
   const groupedTransactions = [];
@@ -102,7 +110,7 @@ export function render(container) {
     }
   }
 
-  const filteredBalance = transactions.length > 0 ? txRunningBalances[transactions[0].id] : totalBalance;
+  const attrEsc = (str) => String(str).replace(/"/g, '&quot;');
 
   container.innerHTML = `
     <div class="history-screen premium-mode fadeIn">
@@ -111,18 +119,18 @@ export function render(container) {
         <div style="font-size: 0.75rem; opacity: 0.8; font-weight: 600; letter-spacing: 1px; margin-bottom: 4px;">
            ${escape(start.replace(/-/g, '.'))} — ${escape(end.replace(/-/g, '.'))}
         </div>
-        <div class="total-amount">¥${filteredBalance.toLocaleString('ja-JP')}</div>
+        <div class="total-amount">¥${currentAssetSum.toLocaleString('ja-JP')}</div>
         <div style="font-size: 0.7rem; opacity: 0.7; font-weight: 600;">
           ${historyState.accountId ? escape(accounts.find(a => a.id === historyState.accountId)?.name || '選択中口座') + ' の残高' : '総資産額'}
         </div>
       </div>
 
       <!-- Advanced Filters (Segmented Control) -->
-      <div class="analysis-segmented-control" style="margin-bottom: 12px;">
-        <button class="segmented-item ${historyState.periodType === 'week' ? 'active' : ''}" data-action="setPeriod" data-val="week">週</button>
-        <button class="segmented-item ${historyState.periodType === 'month' ? 'active' : ''}" data-action="setPeriod" data-val="month">月</button>
-        <button class="segmented-item ${historyState.periodType === 'year' ? 'active' : ''}" data-action="setPeriod" data-val="year">年</button>
-        <button class="segmented-item ${historyState.periodType === 'custom' ? 'active' : ''}" data-action="setPeriod" data-val="custom">指定</button>
+      <div class="analysis-segmented-control" style="margin-bottom: 12px;" role="tablist">
+        <button class="segmented-item ${historyState.periodType === 'week' ? 'active' : ''}" data-action="setPeriod" data-val="week" role="tab" ${historyState.periodType === 'week' ? 'aria-selected="true"' : ''} type="button">週</button>
+        <button class="segmented-item ${historyState.periodType === 'month' ? 'active' : ''}" data-action="setPeriod" data-val="month" role="tab" ${historyState.periodType === 'month' ? 'aria-selected="true"' : ''} type="button">月</button>
+        <button class="segmented-item ${historyState.periodType === 'year' ? 'active' : ''}" data-action="setPeriod" data-val="year" role="tab" ${historyState.periodType === 'year' ? 'aria-selected="true"' : ''} type="button">年</button>
+        <button class="segmented-item ${historyState.periodType === 'custom' ? 'active' : ''}" data-action="setPeriod" data-val="custom" role="tab" ${historyState.periodType === 'custom' ? 'aria-selected="true"' : ''} type="button">指定</button>
       </div>
 
       <!-- Object Selectors (Stylish UI) -->
@@ -130,17 +138,17 @@ export function render(container) {
         <div class="select-v3-container" style="display: flex; gap: 8px; width: 100%; min-width: 0;">
           <select data-action="filterAccount" class="select-v3" style="flex: 1; min-width: 0;">
             <option value="">🏦 全口座</option>
-            ${accounts.map(a => `<option value="${a.id}" ${historyState.accountId === a.id ? 'selected' : ''}>${a.icon} ${escape(a.name)}</option>`).join('')}
+            ${accounts.map(a => `<option value="${attrEsc(a.id)}" ${historyState.accountId === a.id ? 'selected' : ''}>${a.icon} ${escape(a.name)}</option>`).join('')}
           </select>
           <select data-action="filterCategory" class="select-v3" style="flex: 1; min-width: 0;">
             <option value="">🏷️ 全カテゴリ</option>
-            ${categories.map(c => `<option value="${c.id}" ${historyState.categoryId === c.id ? 'selected' : ''}>${c.icon} ${escape(c.name)}</option>`).join('')}
+            ${categories.map(c => `<option value="${attrEsc(c.id)}" ${historyState.categoryId === c.id ? 'selected' : ''}>${c.icon} ${escape(c.name)}</option>`).join('')}
           </select>
         </div>
         <div class="period-nav-strip" style="margin-top: 12px; border-top: 1px solid var(--border-light); padding-top: 12px;">
-          <button class="nav-round-btn" data-action="prevPeriod">‹</button>
-          <div class="period-display" style="font-size: 0.8rem; font-weight: 800; color: var(--premium-deep);">${escape(formatDateLabel(start))} — ${escape(formatDateLabel(end))}</div>
-          <button class="nav-round-btn" data-action="nextPeriod">›</button>
+          <button class="nav-round-btn" data-action="prevPeriod" type="button">‹</button>
+          <div class="period-display" style="font-size: 0.8rem; font-weight: 800; color: var(--premium-deep);">${escape(store.formatDateLabel(start))} — ${escape(store.formatDateLabel(end))}</div>
+          <button class="nav-round-btn" data-action="nextPeriod" type="button">›</button>
         </div>
       </div>
 
@@ -171,6 +179,7 @@ export function render(container) {
 function bindEvents(container) {
   const refresh = () => render(container);
 
+  // 既存のイベントをクリアして重複登録を防止
   container.querySelectorAll('[data-action="setPeriod"]').forEach(b => b.onclick = (e) => {
     const val = e.currentTarget.dataset.val;
     if (val === 'custom') showCustomPeriodModal(container);
@@ -253,14 +262,6 @@ function renderHistoryItem(tx, balance, isLast) {
   `;
 }
 
-function formatDateLabel(dateStr) {
-  if (!dateStr) return '';
-  const parts = dateStr.split('-');
-  if (parts.length !== 3) return dateStr;
-  const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
-  const days = ['日', '月', '火', '水', '木', '金', '土'];
-  return `${dateObj.getMonth() + 1}月${dateObj.getDate()}日（${days[dateObj.getDay()]}）`;
-}
 
 function showCustomPeriodModal(container) {
   const existing = document.getElementById('custom-period-modal');
@@ -316,6 +317,10 @@ function showCustomPeriodModal(container) {
     const startVal = document.getElementById('modal-start-date').value;
     const endVal = document.getElementById('modal-end-date').value;
     if (startVal && endVal) {
+      if (startVal > endVal) {
+        window.showToast?.('開始日は終了日以前にしてください', 'error');
+        return;
+      }
       historyState.customStart = startVal;
       historyState.customEnd = endVal;
       historyState.periodType = 'custom';

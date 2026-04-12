@@ -21,6 +21,26 @@ let analysisState = {
   excludedCategoryIds: [],
 };
 
+function saveState() {
+  try {
+    const toSave = { ...analysisState };
+    delete toSave.referenceDate; // 日付オブジェクトは保存から除外（JSON化できないため）
+    localStorage.setItem('kakeibo_analysis_state', JSON.stringify(toSave));
+  } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('kakeibo_analysis_state');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      Object.assign(analysisState, parsed);
+    }
+  } catch(e) {}
+}
+
+loadState();
+
 export function render(container) {
   if (!container) return;
   const { start, end } = PeriodManager.getPeriodDates(analysisState);
@@ -72,17 +92,17 @@ export function render(container) {
 function bindEvents(container) {
   const refresh = () => render(container);
 
-  container.querySelectorAll('[data-action="setTab"]').forEach(b => b.onclick = (e) => { analysisState.tab = e.currentTarget.dataset.tab; refresh(); });
-  container.querySelectorAll('[data-action="setViewType"]').forEach(b => b.onclick = (e) => { analysisState.viewType = e.currentTarget.dataset.type; refresh(); });
+  container.querySelectorAll('[data-action="setTab"]').forEach(b => b.onclick = (e) => { analysisState.tab = e.currentTarget.dataset.tab; saveState(); refresh(); });
+  container.querySelectorAll('[data-action="setViewType"]').forEach(b => b.onclick = (e) => { analysisState.viewType = e.currentTarget.dataset.type; saveState(); refresh(); });
   container.querySelectorAll('[data-action="setPeriod"]').forEach(b => b.onclick = (e) => { 
     const val = e.currentTarget.dataset.val;
     if (val === 'custom') showCustomPeriodModal(container);
-    else { analysisState.periodType = val; analysisState.referenceDate = new Date(); refresh(); }
+    else { analysisState.periodType = val; analysisState.referenceDate = new Date(); saveState(); refresh(); }
   });
   
   container.querySelectorAll('[data-action="prevPeriod"]').forEach(b => b.onclick = () => { updateRefDate(-1); refresh(); });
   container.querySelectorAll('[data-action="nextPeriod"]').forEach(b => b.onclick = () => { updateRefDate(1); refresh(); });
-  container.querySelectorAll('[data-action="setChartMode"]').forEach(b => b.onclick = (e) => { analysisState.chartMode = e.currentTarget.dataset.val; refresh(); });
+  container.querySelectorAll('[data-action="setChartMode"]').forEach(b => b.onclick = (e) => { analysisState.chartMode = e.currentTarget.dataset.val; saveState(); refresh(); });
   
   container.querySelectorAll('[data-action="drillDown"]').forEach(row => { row.onclick = (e) => {
     if (e.target.closest('.cat-check-v2')) return;
@@ -91,11 +111,14 @@ function bindEvents(container) {
     window.navigateTo?.('history');
   }; });
   
-  container.querySelectorAll('.cat-checkbox').forEach(cb => cb.onchange = (e) => {
-    const id = e.target.dataset.id;
-    if (e.target.checked) analysisState.excludedCategoryIds = analysisState.excludedCategoryIds.filter(cid => cid !== id);
-    else if (!analysisState.excludedCategoryIds.includes(id)) analysisState.excludedCategoryIds.push(id);
-    refresh();
+  container.querySelectorAll('.cat-checkbox').forEach(cb => {
+    cb.onchange = (e) => {
+      const id = e.target.dataset.id;
+      if (e.target.checked) analysisState.excludedCategoryIds = analysisState.excludedCategoryIds.filter(cid => cid !== id);
+      else if (!analysisState.excludedCategoryIds.includes(id)) analysisState.excludedCategoryIds.push(id);
+      saveState();
+      refresh();
+    };
   });
 
   const allCheck = container.querySelector('#cat-all-check');
@@ -109,14 +132,15 @@ function bindEvents(container) {
         const totals = UIHelper.calculateCategoryTotals(txs);
         analysisState.excludedCategoryIds = Object.keys(totals);
       }
+      saveState();
       refresh();
     };
   }
 
   const bsSel = container.querySelector('#bs-period-selector');
-  if (bsSel) bsSel.onchange = e => { analysisState.bsPeriod = Number(e.target.value); refresh(); };
+  if (bsSel) bsSel.onchange = e => { analysisState.bsPeriod = Number(e.target.value); saveState(); refresh(); };
   const accSel = container.querySelector('#analysis-account-selector');
-  if (accSel) accSel.onchange = e => { analysisState.selectedAccountId = e.target.value === 'total' ? null : e.target.value; refresh(); };
+  if (accSel) accSel.onchange = e => { analysisState.selectedAccountId = e.target.value === 'total' ? null : e.target.value; saveState(); refresh(); };
 }
 
 function updateRefDate(dir) {
@@ -184,9 +208,14 @@ function showCustomPeriodModal(container) {
     const endVal = document.getElementById('modal-end-date').value;
     
     if (startVal && endVal) {
+      if (startVal > endVal) {
+        window.showToast?.('開始日は終了日以前にしてください', 'error');
+        return;
+      }
       analysisState.customStart = startVal;
       analysisState.customEnd = endVal;
       analysisState.periodType = 'custom';
+      saveState();
       close();
       render(container);
     } else {

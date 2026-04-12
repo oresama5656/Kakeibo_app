@@ -42,27 +42,27 @@ export function renderPLContent(state, start, end) {
       </div>
 
       <!-- Segmented Control (iOS Style) - Period -->
-      <div class="analysis-segmented-control">
-        <button class="segmented-item ${state.periodType === 'week' ? 'active' : ''}" data-action="setPeriod" data-val="week">週</button>
-        <button class="segmented-item ${state.periodType === 'month' ? 'active' : ''}" data-action="setPeriod" data-val="month">月</button>
-        <button class="segmented-item ${state.periodType === 'year' ? 'active' : ''}" data-action="setPeriod" data-val="year">年</button>
-        <button class="segmented-item ${state.periodType === 'custom' ? 'active' : ''}" data-action="setPeriod" data-val="custom">指定</button>
+      <div class="analysis-segmented-control" role="tablist">
+        <button class="segmented-item ${state.periodType === 'week' ? 'active' : ''}" data-action="setPeriod" data-val="week" role="tab" ${state.periodType === 'week' ? 'aria-selected="true"' : ''} type="button">週</button>
+        <button class="segmented-item ${state.periodType === 'month' ? 'active' : ''}" data-action="setPeriod" data-val="month" role="tab" ${state.periodType === 'month' ? 'aria-selected="true"' : ''} type="button">月</button>
+        <button class="segmented-item ${state.periodType === 'year' ? 'active' : ''}" data-action="setPeriod" data-val="year" role="tab" ${state.periodType === 'year' ? 'aria-selected="true"' : ''} type="button">年</button>
+        <button class="segmented-item ${state.periodType === 'custom' ? 'active' : ''}" data-action="setPeriod" data-val="custom" role="tab" ${state.periodType === 'custom' ? 'aria-selected="true"' : ''} type="button">指定</button>
       </div>
 
       <!-- Segmented Control (iOS Style) - Type -->
-      <div class="analysis-segmented-control">
-        <button class="segmented-item ${state.viewType === 'expense' ? 'active' : ''}" data-type="expense" data-action="setViewType">支出</button>
-        <button class="segmented-item ${state.viewType === 'income' ? 'active' : ''}" data-type="income" data-action="setViewType">収入</button>
+      <div class="analysis-segmented-control" role="tablist">
+        <button class="segmented-item ${state.viewType === 'expense' ? 'active' : ''}" data-type="expense" data-action="setViewType" role="tab" ${state.viewType === 'expense' ? 'aria-selected="true"' : ''} type="button">支出</button>
+        <button class="segmented-item ${state.viewType === 'income' ? 'active' : ''}" data-type="income" data-action="setViewType" role="tab" ${state.viewType === 'income' ? 'aria-selected="true"' : ''} type="button">収入</button>
         <div style="width: 20px;"></div>
-        <button class="segmented-item ${state.chartMode === 'pie' ? 'active' : ''}" data-action="setChartMode" data-val="pie">ドーナツ</button>
-        <button class="segmented-item ${state.chartMode === 'line' ? 'active' : ''}" data-action="setChartMode" data-val="line">推移</button>
+        <button class="segmented-item ${state.chartMode === 'pie' ? 'active' : ''}" data-action="setChartMode" data-val="pie" role="tab" ${state.chartMode === 'pie' ? 'aria-selected="true"' : ''} type="button">ドーナツ</button>
+        <button class="segmented-item ${state.chartMode === 'line' ? 'active' : ''}" data-action="setChartMode" data-val="line" role="tab" ${state.chartMode === 'line' ? 'aria-selected="true"' : ''} type="button">推移</button>
       </div>
 
       <!-- Period Navigation -->
       <div class="period-nav-strip">
-        <button class="nav-round-btn" data-action="prevPeriod">‹</button>
-        <div class="period-display">${escape(store.formatDateLabel?.(start) || start)} — ${escape(store.formatDateLabel?.(end) || end)}</div>
-        <button class="nav-round-btn" data-action="nextPeriod">›</button>
+        <button class="nav-round-btn" data-action="prevPeriod" type="button">‹</button>
+        <div class="period-display">${escape(store.formatDateLabel(start))} — ${escape(store.formatDateLabel(end))}</div>
+        <button class="nav-round-btn" data-action="nextPeriod" type="button">›</button>
       </div>
 
       <!-- Chart Card -->
