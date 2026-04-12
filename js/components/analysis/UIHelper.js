@@ -87,6 +87,9 @@ export function renderPLContent(state, start, end) {
             const pct = grandTotal > 0 && !isExcluded ? (c.total/grandTotal)*100 : 0;
             return `
               <div class="category-item-v3 ${isExcluded ? 'excluded' : ''}" data-id="${escape(c.id)}">
+                <div class="cat-check-v2" style="padding-right: 12px; display: flex; align-items: center;">
+                  <input type="checkbox" class="cat-checkbox" data-id="${escape(c.id)}" ${isExcluded ? '' : 'checked'} style="width: 16px; height: 16px; cursor: pointer;">
+                </div>
                 <div class="cat-icon-frame">${escape(c.icon)}</div>
                 <div class="cat-info-v3" data-action="drillDown" data-category-id="${escape(c.id)}" style="cursor: pointer;">
                   <div class="cat-title-row">
