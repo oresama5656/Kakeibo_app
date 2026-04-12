@@ -19,7 +19,6 @@ let analysisState = {
   selectedAccountId: null,
   referenceDate: new Date(),
   excludedCategoryIds: [],
-  excludedAccountIds: [],
 };
 
 function saveState() {
@@ -83,9 +82,9 @@ export function render(container) {
       else ChartManager.renderPLLineChart(txs, start, end, analysisState.viewType, analysisState.excludedCategoryIds);
     } else {
       const accounts = store.getAccounts();
-      ChartManager.renderBSBalanceChart(accounts, analysisState.excludedAccountIds);
+      ChartManager.renderBSBalanceChart(accounts);
       const historyTotal = store.getAssetHistory(analysisState.bsPeriod);
-      ChartManager.renderTotalAssetChart(historyTotal, analysisState.selectedAccountId, analysisState.bsPeriod, analysisState.excludedAccountIds);
+      ChartManager.renderTotalAssetChart(historyTotal, analysisState.selectedAccountId, analysisState.bsPeriod);
     }
   }, 100);
 }
@@ -137,17 +136,6 @@ function bindEvents(container) {
       refresh();
     };
   }
-
-  // BS用 口座チェックボックス
-  container.querySelectorAll('.acc-checkbox').forEach(cb => {
-    cb.onchange = (e) => {
-      const id = e.target.dataset.id;
-      if (e.target.checked) analysisState.excludedAccountIds = analysisState.excludedAccountIds.filter(aid => aid !== id);
-      else if (!analysisState.excludedAccountIds.includes(id)) analysisState.excludedAccountIds.push(id);
-      saveState();
-      refresh();
-    };
-  });
 
   const bsSel = container.querySelector('#bs-period-selector');
   if (bsSel) bsSel.onchange = e => { analysisState.bsPeriod = Number(e.target.value); saveState(); refresh(); };

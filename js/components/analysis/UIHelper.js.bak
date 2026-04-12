@@ -115,24 +115,14 @@ export function renderBSContent(state) {
   const accounts = store.getAccounts();
   const netWorth = store.getTotalBalance();
   
-  // 表示中の資産合計を計算（チェックされている口座のみ）
-  const visibleBalance = accounts
-    .filter(a => !state.excludedAccountIds.includes(a.id))
-    .reduce((sum, a) => sum + Number(a.balance), 0);
-
   const escape = (str) => store.escapeHTML(str);
 
   return `
     <div class="bs-content fadeIn">
-      <!-- Total Net Worth Master Card (深縹) -->
-      <div class="total-summary-card">
-        <div class="total-amount income">¥${netWorth.toLocaleString()}</div>
-        <div style="font-size: 0.7rem; opacity: 0.8; font-weight: 600; letter-spacing: 1px;">TOTAL NET WORTH</div>
-        ${state.excludedAccountIds.length > 0 ? `
-          <div style="font-size: 0.65rem; opacity: 0.6; margin-top: 8px; font-weight: 700;">
-            表示中の合計: ¥${visibleBalance.toLocaleString()}
-          </div>
-        ` : ''}
+      <!-- Total Net Worth Master Card -->
+      <div class="bs-total-card">
+        <div class="bs-total-label">TOTAL ASSETS</div>
+        <div class="bs-total-amount">¥${netWorth.toLocaleString()}</div>
       </div>
 
       <!-- Asset Balance Chart -->
@@ -141,7 +131,7 @@ export function renderBSContent(state) {
         <div style="height: 320px;"><canvas id="bs-balance-chart"></canvas></div>
       </div>
 
-      <!-- Asset Trend Chart -->
+      <!-- Asset Trend Chart with Premium Controls -->
       <div class="premium-card-v3">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
           <h4 style="font-size: 0.9rem; font-weight: 800; color: #1a2a4d; margin: 0;">📈 資産推移</h4>
@@ -158,39 +148,6 @@ export function renderBSContent(state) {
           </div>
         </div>
         <div style="height: 240px;"><canvas id="total-asset-chart"></canvas></div>
-      </div>
-
-      <!-- Account List Title -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px var(--space-md) 10px;">
-        <h4 style="font-size: 0.9rem; font-weight: 800; color: #1a2a4d; margin: 0;">口座別内訳</h4>
-        <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted);">
-          表示設定
-        </div>
-      </div>
-
-      <!-- Account List Card -->
-      <div class="premium-card-v3">
-        ${accounts.length === 0 ? '<div style="text-align:center; padding:20px; color:var(--text-muted);">口座がありません</div>' : 
-          accounts.sort((a,b) => b.balance - a.balance).map(a => {
-            const isExcluded = state.excludedAccountIds.includes(a.id);
-            const isNegative = Number(a.balance) < 0;
-            return `
-              <div class="category-item-v3 ${isExcluded ? 'excluded' : ''}" data-id="${escape(a.id)}">
-                <div class="cat-check-v2" style="padding-right: 12px; display: flex; align-items: center;">
-                  <input type="checkbox" class="acc-checkbox" data-id="${escape(a.id)}" ${isExcluded ? '' : 'checked'} style="width: 16px; height: 16px; cursor: pointer;">
-                </div>
-                <div class="cat-icon-frame">${escape(a.icon || '🏦')}</div>
-                <div class="cat-info-v3">
-                  <div class="cat-title-row">
-                    <span class="cat-name-v3">${escape(a.name)}</span>
-                    <span class="cat-amount-v3 ${isNegative ? 'expense' : 'income'}" style="font-size: 0.85rem;">
-                      ¥${Number(a.balance).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('')}
       </div>
     </div>
   `;
