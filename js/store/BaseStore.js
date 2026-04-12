@@ -60,6 +60,14 @@ export function escapeHTML(str) {
     .replace(/'/g, '&#039;');
 }
 
+export function formatLocalDate(date) {
+  const d = date || new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function normalizeName(name) {
   if (!name) return '';
   return String(name).trim();

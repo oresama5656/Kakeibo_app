@@ -127,12 +127,12 @@ export function render(container) {
 
       <!-- Object Selectors (Stylish UI) -->
       <div class="premium-card-v3" style="padding: 12px; margin-bottom: 20px;">
-        <div class="select-v3-container" style="display: flex; gap: 8px;">
-          <select data-action="filterAccount" class="select-v3" style="flex: 1;">
+        <div class="select-v3-container" style="display: flex; gap: 8px; width: 100%; min-width: 0;">
+          <select data-action="filterAccount" class="select-v3" style="flex: 1; min-width: 0;">
             <option value="">🏦 全口座</option>
             ${accounts.map(a => `<option value="${a.id}" ${historyState.accountId === a.id ? 'selected' : ''}>${a.icon} ${escape(a.name)}</option>`).join('')}
           </select>
-          <select data-action="filterCategory" class="select-v3" style="flex: 1;">
+          <select data-action="filterCategory" class="select-v3" style="flex: 1; min-width: 0;">
             <option value="">🏷️ 全カテゴリ</option>
             ${categories.map(c => `<option value="${c.id}" ${historyState.categoryId === c.id ? 'selected' : ''}>${c.icon} ${escape(c.name)}</option>`).join('')}
           </select>
@@ -271,8 +271,8 @@ function showCustomPeriodModal(container) {
   modal.className = 'premium-modal-overlay fadeIn';
   
   const now = new Date();
-  const ds = historyState.customStart || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const de = historyState.customEnd || now.toISOString().split('T')[0];
+  const ds = historyState.customStart || store.formatLocalDate(new Date(now.getFullYear(), now.getMonth(), 1));
+  const de = historyState.customEnd || store.formatLocalDate(now);
   
   modal.innerHTML = `
     <div class="premium-modal-sheet slideUp">

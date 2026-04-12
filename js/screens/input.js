@@ -12,7 +12,7 @@ let state = {
   fromAccountId: null,
   toAccountId: null,
   categoryId: null,
-  date: new Date().toISOString().split('T')[0],
+  date: store.formatLocalDate(),
   memo: '',
   fromAccountsExpanded: false,
   toAccountsExpanded: false,
@@ -292,7 +292,7 @@ function handleClick(e) {
   else if (action === 'toggleFromAccounts') { state.fromAccountsExpanded = !state.fromAccountsExpanded; refresh(); }
   else if (action === 'toggleToAccounts') { state.toAccountsExpanded = !state.toAccountsExpanded; refresh(); }
   else if (action === 'toggleCategories') { state.categoriesExpanded = !state.categoriesExpanded; refresh(); }
-  else if (action === 'dateToday') { state.date = new Date().toISOString().split('T')[0]; refresh(); }
+  else if (action === 'dateToday') { state.date = store.formatLocalDate(); refresh(); }
   else if (action === 'submit') submit();
   else if (action === 'toggleBulk') { showBulkInput = !showBulkInput; refresh(); }
   else if (action === 'addBulkRow') { bulkRows.push({ date: state.date, amount: '', categoryId: '', fromAccountId: '', toAccountId: '', memo: '' }); refresh(); }

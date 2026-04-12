@@ -123,7 +123,7 @@ export async function syncToCloud(sheetId, options) {
 }
 
 // Misc
-export { escapeHTML } from './store/BaseStore.js';
+export { escapeHTML, formatLocalDate } from './store/BaseStore.js';
 export function updateSettings(s) { state.settings = { ...state.settings, ...s }; save(); }
 export function clearAllData() { state.transactions = []; state.deletedIds = []; AccountStore.updateAccountBalances(); save(); }
 export function importAllData(d) { setState(d); save(); }

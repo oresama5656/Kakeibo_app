@@ -1,7 +1,7 @@
 /**
  * 取引・履歴管理モジュール
  */
-import { state, normalizeDate, normalizeName } from './BaseStore.js';
+import { state, normalizeDate, normalizeName, formatLocalDate } from './BaseStore.js';
 import { getTotalBalance } from './AccountStore.js';
 
 export function getTransactions() { return state.transactions; }
@@ -78,7 +78,7 @@ export function getAssetHistory(days = 30) {
   const totalRaw = getTotalBalance();
   for (let i = 0; i <= days; i++) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const dStr = d.toISOString().split('T')[0];
+    const dStr = formatLocalDate(d);
     let bal = totalRaw;
     state.transactions.forEach(tx => {
       if (tx.date > dStr) {
@@ -100,7 +100,7 @@ export function getAccountHistory(accountId, days = 30) {
   
   for (let i = 0; i <= days; i++) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const dStr = d.toISOString().split('T')[0];
+    const dStr = formatLocalDate(d);
     let bal = currentAccBal;
     state.transactions.forEach(tx => {
       if (tx.date > dStr) {

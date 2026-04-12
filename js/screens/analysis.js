@@ -136,8 +136,8 @@ function showCustomPeriodModal(container) {
   modal.className = 'premium-modal-overlay fadeIn';
   
   const now = new Date();
-  const ds = analysisState.customStart || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-  const de = analysisState.customEnd || now.toISOString().split('T')[0];
+  const ds = analysisState.customStart || store.formatLocalDate(new Date(now.getFullYear(), now.getMonth(), 1));
+  const de = analysisState.customEnd || store.formatLocalDate(now);
   
   modal.innerHTML = `
     <div class="premium-modal-sheet slideUp">
@@ -166,7 +166,6 @@ function showCustomPeriodModal(container) {
   `;
   document.body.appendChild(modal);
 
-  // イベントハンドリング
   const close = () => {
     const sheet = modal.querySelector('.premium-modal-sheet');
     sheet.style.transform = 'translateY(100%)';

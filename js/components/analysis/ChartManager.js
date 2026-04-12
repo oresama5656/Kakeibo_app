@@ -36,6 +36,8 @@ export function renderPieChart(sorted) {
   });
 }
 
+import { formatLocalDate } from '../../store/BaseStore.js';
+
 export function renderPLLineChart(txs, start, end, viewType, excludedIds = []) {
   const ctx = document.getElementById('analysis-chart')?.getContext('2d');
   if (!ctx) return;
@@ -43,7 +45,7 @@ export function renderPLLineChart(txs, start, end, viewType, excludedIds = []) {
   const days = {};
   let cur = new Date(start);
   const fin = new Date(end);
-  while (cur <= fin) { days[cur.toISOString().split('T')[0]] = 0; cur.setDate(cur.getDate() + 1); }
+  while (cur <= fin) { days[formatLocalDate(cur)] = 0; cur.setDate(cur.getDate() + 1); }
   
   txs.forEach(tx => { 
     if (days[tx.date] !== undefined && !excludedIds.includes(tx.categoryId)) {
