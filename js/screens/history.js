@@ -241,7 +241,7 @@ function renderHistoryItem(tx, balance, isLast) {
   const amountColor = tx.type === 'expense' ? 'var(--color-expense)' : tx.type === 'income' ? 'var(--color-income)' : 'var(--color-transfer)';
 
   return `
-    <div class="category-item-v3" data-action="editTx" data-id="${tx.id}" style="${isLast ? 'border-bottom: none;' : ''} padding: 14px 16px;">
+    <div class="category-item-v3" data-action="editTx" data-id="${attrEsc(tx.id)}" style="${isLast ? 'border-bottom: none;' : ''} padding: 14px 16px;">
       <div class="cat-icon-frame" style="background: var(--bg-primary); border: 1px solid var(--border-light); font-size: 1.1rem;">${escape(icon)}</div>
       <div class="cat-info-v3" style="flex: 1;">
         <div class="cat-title-row">
@@ -275,10 +275,10 @@ function showCustomPeriodModal(container) {
   const de = historyState.customEnd || store.formatLocalDate(now);
   
   modal.innerHTML = `
-    <div class="premium-modal-sheet slideUp">
+    <div class="premium-modal-sheet slideUp" role="dialog" aria-labelledby="modal-title-v3">
       <div class="modal-drag-handle"></div>
       <div class="modal-header-v3">
-        <h3 class="modal-title-v3">📅 期間を指定</h3>
+        <h3 class="modal-title-v3" id="modal-title-v3">📅 期間を指定</h3>
         <button class="modal-close-v3" data-action="closeModal">&times;</button>
       </div>
       <div class="modal-body-v3">
@@ -341,9 +341,9 @@ function showEditModal(txId) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-content">
+    <div class="modal-content" role="dialog" aria-labelledby="edit-modal-title">
       <div class="modal-header">
-        <h3 class="modal-title">取引を編集</h3>
+        <h3 class="modal-title" id="edit-modal-title">取引を編集</h3>
         <button class="modal-close" data-action="closeModal">✕</button>
       </div>
 

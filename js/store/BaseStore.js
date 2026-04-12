@@ -10,6 +10,7 @@ export const DEFAULT_CATEGORIES = [
   { id: 'cat_05', name: '居住費', icon: '🏠', type: 'expense', order: 5, pinned: true },
   { id: 'cat_06', name: '娯楽', icon: '🎮', type: 'expense', order: 6, pinned: true },
   { id: 'cat_99', name: '残高修正', icon: '⚖️', type: 'expense', order: 99 },
+  { id: 'cat_98', name: 'その他', icon: '📂', type: 'expense', order: 98 },
   { id: 'cat_07', name: '給与', icon: '💰', type: 'income', order: 7, pinned: true },
   { id: 'cat_08', name: '他収入', icon: '🧧', type: 'income', order: 8, pinned: true },
   { id: 'cat_100', name: '残高修正', icon: '⚖️', type: 'income', order: 100 }
@@ -45,6 +46,13 @@ export function normalizeDate(d) {
     if (y.length === 2) y = '20' + y;
     const m = parts[1].trim().padStart(2, '0');
     const dVal = parts[2].trim().split(' ')[0].padStart(2, '0');
+    
+    // バリデーション: 存在する日付かチェック
+    const testDate = new Date(Number(y), Number(m) - 1, Number(dVal));
+    if (isNaN(testDate.getTime()) || testDate.getMonth() + 1 !== Number(m) || testDate.getDate() !== Number(dVal)) {
+      return ''; // 不正な日付は空文字で返す
+    }
+    
     return `${y}-${m}-${dVal}`;
   }
   return d.trim();

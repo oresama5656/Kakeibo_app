@@ -260,14 +260,16 @@ function bindEvents(container) {
   container.addEventListener('click', handleClick);
   const amountInput = container.querySelector('#amount-input-formatted');
   if (amountInput) {
-    amountInput.addEventListener('input', (e) => {
+    amountInput.oninput = (e) => {
       const val = e.target.value.replace(/[^0-9]/g, '');
       const formatted = formatComma(val);
       state.amount = formatted; e.target.value = formatted; 
-    });
+    };
   }
-  container.querySelector('#memo-input')?.addEventListener('input', (e) => { state.memo = e.target.value; });
-  container.querySelector('[data-action="setDate"]')?.addEventListener('change', (e) => { state.date = e.target.value; });
+  const memoInput = container.querySelector('#memo-input');
+  if (memoInput) memoInput.oninput = (e) => { state.memo = e.target.value; };
+  const dateInput = container.querySelector('[data-action="setDate"]');
+  if (dateInput) dateInput.onchange = (e) => { state.date = e.target.value; };
   container.querySelectorAll('.bulk-input').forEach(inp => {
     inp.addEventListener('change', e => { 
       const { field, row } = e.target.dataset; 
@@ -286,9 +288,9 @@ function handleClick(e) {
   const action = target.dataset.action;
   if (action === 'openCalculator') openCalculator();
   else if (action === 'setType') { state.type = target.dataset.type; state.categoryId = null; refresh(); }
-  else if (action === 'selectFromAccount') { state.fromAccountId = target.dataset.id; refresh(); }
-  else if (action === 'selectToAccount') { state.toAccountId = target.dataset.id; refresh(); }
-  else if (action === 'selectCategory') { state.categoryId = target.dataset.id; refresh(); }
+  else if (action === 'selectFromAccount') { state.fromAccountId = target.dataset.id; state.fromAccountsExpanded = false; refresh(); }
+  else if (action === 'selectToAccount') { state.toAccountId = target.dataset.id; state.toAccountsExpanded = false; refresh(); }
+  else if (action === 'selectCategory') { state.categoryId = target.dataset.id; state.categoriesExpanded = false; refresh(); }
   else if (action === 'toggleFromAccounts') { state.fromAccountsExpanded = !state.fromAccountsExpanded; refresh(); }
   else if (action === 'toggleToAccounts') { state.toAccountsExpanded = !state.toAccountsExpanded; refresh(); }
   else if (action === 'toggleCategories') { state.categoriesExpanded = !state.categoriesExpanded; refresh(); }
@@ -385,7 +387,10 @@ function handleCsvFile(e) {
 
 function submit() {
   const amount = parseComma(state.amount);
-  if (!amount || amount <= 0) { window.showToast?.('金額を入力してください', 'error'); return; }
+  if (amount <= 0) { 
+    window.showToast?.('金額を正の数値で入力してください', 'error'); 
+    return; 
+  }
   
   // 名称のスナップショットも一緒に保存
   const accs = store.getAccounts();

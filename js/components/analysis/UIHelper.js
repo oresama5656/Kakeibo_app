@@ -9,8 +9,8 @@ export function calculateCategoryTotals(txs) {
   txs.forEach(tx => {
     const cid = tx.categoryId || 'cat_other';
     if (!totals[cid]) {
-      const c = cats.find(a => a.id === cid);
-      totals[cid] = { id: cid, name: c?.name || tx.category || 'その他', icon: c?.icon || '❓', total: 0 };
+      const c = cats.find(a => a.id === cid) || cats.find(a => a.id === 'cat_98');
+      totals[cid] = { id: cid, name: c?.name || tx.category || 'その他', icon: c?.icon || '📂', total: 0 };
     }
     totals[cid].total += Number(tx.amount) || 0;
   });
