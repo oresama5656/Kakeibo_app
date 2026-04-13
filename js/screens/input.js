@@ -377,16 +377,18 @@ function handleCsvFile(e) {
           }
         }
 
-        // 2. 金額と種類の判定
+        // 2. 金額と種類の判定（振替明示を最優先）
         let amount = 0;
-        let mappedType = state.type;
+        let mappedType = typeMap[rawType] || (Object.values(typeMap).includes(rawType) ? rawType : null);
 
         const rawAmount = findVal(r, keyMap.amount);
-        const rawType = findVal(r, keyMap.type);
         const rawExp = findVal(r, keyMap.expense).replace(/,/g, '');
         const rawInc = findVal(r, keyMap.income).replace(/,/g, '');
 
-        if (rawExp && Number(rawExp) > 0) {
+        if (mappedType === 'transfer') {
+          // 振替の場合は種類優先、金額はいずれかの列から取得
+          amount = Number(rawAmount.replace(/,/g, '')) || Number(rawExp) || Number(rawInc) || 0;
+        } else if (rawExp && Number(rawExp) > 0) {
           amount = Number(rawExp);
           mappedType = 'expense';
         } else if (rawInc && Number(rawInc) > 0) {
@@ -394,7 +396,9 @@ function handleCsvFile(e) {
           mappedType = 'income';
         } else if (rawAmount) {
           amount = Number(rawAmount.replace(/,/g, '')) || 0;
-          mappedType = typeMap[rawType] || rawType || state.type;
+          mappedType = mappedType || rawType || state.type;
+        } else {
+          mappedType = mappedType || state.type;
         }
 
         // 3. 口座名とIDの自動マッピング（支出・収入・振替に応じて賢く振り分け）
@@ -414,10 +418,18 @@ function handleCsvFile(e) {
         const fromAccObj = accs.find(a => a.name.trim() === finalFromAcc.trim());
         const toAccObj = accs.find(a => a.name.trim() === finalToAcc.trim());
 
-        // 4. その他（メモ、カテゴリー）
+        // 4. その他（メモ、カテゴリー、口座IDの解決）
         const rawMemo = findVal(r, keyMap.memo);
         const rawCatName = findVal(r, keyMap.category);
-        const cat = cats.find(c => c.name.trim() === rawCatName.trim());
+        
+        // カテゴリーの検索（全角半角スペース無視、完全一致優先）
+        const clean = (s) => s.replace(/[\s　]/g, '');
+        let cat = cats.find(c => clean(c.name) === clean(rawCatName));
+        
+        // 見つからない場合、種類（支出/収入）に応じた「その他」を検索
+        if (!cat && rawCatName) {
+          cat = cats.find(c => (clean(c.name) === 'その他' || clean(c.name) === '未分類') && (c.type === mappedType || c.type === 'both'));
+        }
 
         return {
           date: date,
