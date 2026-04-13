@@ -379,6 +379,7 @@ function handleCsvFile(e) {
 
         // 2. 金額と種類の判定（振替明示を最優先）
         let amount = 0;
+        const rawType = findVal(r, keyMap.type);
         let mappedType = typeMap[rawType] || (Object.values(typeMap).includes(rawType) ? rawType : null);
 
         const rawAmount = findVal(r, keyMap.amount);
