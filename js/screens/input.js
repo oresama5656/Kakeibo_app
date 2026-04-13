@@ -352,7 +352,9 @@ function handleCsvFile(e) {
         amount: ['金額', 'amount'],
         type: ['種類', '種別', 'type'],
         memo: ['摘要', '内容', 'お取引内容', 'メモ', 'memo', 'description'],
-        category: ['カテゴリー', 'カテゴリ', 'category']
+        category: ['カテゴリー', 'カテゴリ', 'category'],
+        account: ['口座', 'account'],
+        toAccount: ['入金先', '振替先', 'toAccount']
       };
 
       const findVal = (row, keys) => {
@@ -393,7 +395,24 @@ function handleCsvFile(e) {
           mappedType = typeMap[rawType] || rawType || state.type;
         }
 
-        // 3. その他（メモ、カテゴリー）
+        // 3. 口座名とIDの自動マッピング（支出・収入・振替に応じて賢く振り分け）
+        const rawAcc = findVal(r, keyMap.account);
+        const rawToAcc = findVal(r, keyMap.toAccount);
+
+        let finalFromAcc = '', finalToAcc = '';
+        if (mappedType === 'expense') {
+          finalFromAcc = rawAcc;
+        } else if (mappedType === 'income') {
+          finalToAcc = rawAcc;
+        } else if (mappedType === 'transfer') {
+          finalFromAcc = rawAcc;
+          finalToAcc = rawToAcc || rawAcc; // テンプレ形式なら入金先を、それ以外なら共通口座を優先
+        }
+
+        const fromAccObj = accs.find(a => a.name.trim() === finalFromAcc.trim());
+        const toAccObj = accs.find(a => a.name.trim() === finalToAcc.trim());
+
+        // 4. その他（メモ、カテゴリー）
         const rawMemo = findVal(r, keyMap.memo);
         const rawCatName = findVal(r, keyMap.category);
         const cat = cats.find(c => c.name.trim() === rawCatName.trim());
@@ -404,13 +423,14 @@ function handleCsvFile(e) {
           amount: amount,
           category: rawCatName,
           categoryId: cat ? cat.id : '',
-          fromAccount: '', 
-          fromAccountId: '', 
-          toAccount: '', 
-          toAccountId: '', 
+          fromAccount: finalFromAcc,
+          fromAccountId: fromAccObj ? fromAccObj.id : '',
+          toAccount: finalToAcc,
+          toAccountId: toAccObj ? toAccObj.id : '',
           memo: rawMemo
         };
       });
+
       refresh();
       window.showToast?.(`${bulkRows.length}件を読み込みました`);
     }
