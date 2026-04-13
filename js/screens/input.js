@@ -212,6 +212,7 @@ function renderBulkInput(accounts, allCategories) {
               <th style="padding:10px; text-align:left;">金額</th>
               <th style="padding:10px; text-align:left;">口座/${state.type === 'transfer' ? '元' : ''}</th>
               <th style="padding:10px; text-align:left;">入金先</th>
+              <th style="padding:10px; text-align:left;">メモ</th>
               <th></th>
             </tr>
           </thead>
@@ -249,6 +250,7 @@ function renderBulkInput(accounts, allCategories) {
                     ${accounts.map(a => `<option value="${a.id}" ${a.id === row.toAccountId ? 'selected' : ''}>${a.name}</option>`).join('')}
                   </select>
                 </td>
+                <td style="padding:4px;"><input type="text" value="${row.memo || ''}" data-field="memo" data-row="${i}" class="bulk-input" placeholder="メモ" style="width:100%; border:none; background:transparent;"></td>
                 <td style="padding:4px; text-align:center;"><button data-action="deleteBulkRow" data-row="${i}" style="color:var(--color-danger); border:none; background:transparent; font-size:1rem; cursor:pointer;">✕</button></td>
               </tr>`;
             }).join('')}
