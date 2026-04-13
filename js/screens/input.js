@@ -344,43 +344,71 @@ function handleCsvFile(e) {
       const accs = store.getAccounts();
       const cats = store.getCategories();
 
+      // カラム名の特定を容易にするための候補リスト
+      const keyMap = {
+        date: ['日付', '取引日', '年月日', '取引年月日', 'date'],
+        expense: ['お引出し', 'お引出し額', '支出金額', '払い出し', '出金', 'withdraw'],
+        income: ['お預入れ', 'お預入れ額', '収入金額', '預け入れ', '入金', 'deposit'],
+        amount: ['金額', 'amount'],
+        type: ['種類', '種別', 'type'],
+        memo: ['摘要', '内容', 'お取引内容', 'メモ', 'memo', 'description'],
+        category: ['カテゴリー', 'カテゴリ', 'category']
+      };
+
+      const findVal = (row, keys) => {
+        const key = keys.find(k => k in row);
+        return key ? String(row[key] || '').trim() : '';
+      };
+
       bulkRows = res.data.map(r => {
-        const rawType = r['種類'] || r.type || '';
-        const mappedType = typeMap[rawType] || state.type;
-        
-        const rawFrom = r['口座'] || r.fromAccount || '';
-        const rawTo = r['入金先'] || r.toAccount || '';
-        const rawCat = r['カテゴリー'] || r.category || '';
-
-        // 名称からIDを検索（名寄せ）
-        const fromAcc = accs.find(a => a.name.trim() === rawFrom.trim());
-        const toAcc = accs.find(a => a.name.trim() === rawTo.trim());
-        const cat = cats.find(c => c.name.trim() === rawCat.trim());
-
-        // 日付の正規化 (YYYY/M/D -> YYYY-MM-DD)
-        let rawDate = r['日付'] || r.date || state.date;
-        let date = rawDate;
-        if (typeof rawDate === 'string') {
-          const parts = rawDate.split(/[\/\-]/);
+        // 1. 日付の取得と正規化 (YYYY-MM-DD)
+        let date = findVal(r, keyMap.date) || state.date;
+        if (date.includes('/') || date.includes('-')) {
+          const parts = date.split(/[\/\-]/);
           if (parts.length === 3) {
-            const y = parts[0];
+            const y = parts[0].length === 2 ? '20' + parts[0] : parts[0];
             const m = parts[1].padStart(2, '0');
-            const d = parts[2].padStart(2, '0');
+            const d = parts[2].split(' ')[0].padStart(2, '0');
             date = `${y}-${m}-${d}`;
           }
         }
 
+        // 2. 金額と種類の判定
+        let amount = 0;
+        let mappedType = state.type;
+
+        const rawAmount = findVal(r, keyMap.amount);
+        const rawType = findVal(r, keyMap.type);
+        const rawExp = findVal(r, keyMap.expense).replace(/,/g, '');
+        const rawInc = findVal(r, keyMap.income).replace(/,/g, '');
+
+        if (rawExp && Number(rawExp) > 0) {
+          amount = Number(rawExp);
+          mappedType = 'expense';
+        } else if (rawInc && Number(rawInc) > 0) {
+          amount = Number(rawInc);
+          mappedType = 'income';
+        } else if (rawAmount) {
+          amount = Number(rawAmount.replace(/,/g, '')) || 0;
+          mappedType = typeMap[rawType] || rawType || state.type;
+        }
+
+        // 3. その他（メモ、カテゴリー）
+        const rawMemo = findVal(r, keyMap.memo);
+        const rawCatName = findVal(r, keyMap.category);
+        const cat = cats.find(c => c.name.trim() === rawCatName.trim());
+
         return {
           date: date,
           type: mappedType,
-          amount: String(r['金額'] || r.amount || ''),
-          category: rawCat,
+          amount: amount,
+          category: rawCatName,
           categoryId: cat ? cat.id : '',
-          fromAccount: rawFrom,
-          fromAccountId: fromAcc ? fromAcc.id : '',
-          toAccount: rawTo,
-          toAccountId: toAcc ? toAcc.id : '',
-          memo: r['メモ'] || r.memo || ''
+          fromAccount: '', 
+          fromAccountId: '', 
+          toAccount: '', 
+          toAccountId: '', 
+          memo: rawMemo
         };
       });
       refresh();
@@ -388,6 +416,7 @@ function handleCsvFile(e) {
     }
   });
 }
+
 
 function submit() {
   const amount = parseComma(state.amount);
