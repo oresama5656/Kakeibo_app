@@ -105,7 +105,10 @@ export function render(container) {
         ${!auth.isLoggedIn() ? `
           <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 18px; color: var(--text-primary);">Googleクラウド同期</h3>
           <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 24px;">スプレッドシートと連携して<br>データを安全にバックアップ・共有できます。</p>
-          <button class="btn btn-primary" data-action="googleLogin" style="width: 100%; max-width: 260px; border-radius: 50px; font-weight: 800; padding: 14px;">連携を開始する</button>
+          <button class="btn btn-primary" data-action="googleLogin" style="width: 100%; max-width: 260px; border-radius: 50px; font-weight: 800; padding: 14px; margin-bottom: 16px;">連携を開始する</button>
+          <div data-action="exportData" style="font-size: 0.8rem; color: var(--color-accent); cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>💾</span> バックアップを保存 (Kakeibo_App_Data)
+          </div>
         ` : `
           <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em;">Connected Cloud ID</div>
           <div style="font-size: 10px; font-family: monospace; opacity: 0.8; margin-bottom: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 15px; color: var(--color-accent);">${sheetId}</div>
@@ -291,7 +294,7 @@ async function handleLogout() { if (confirm('解除?')) auth.signOut(); }
 async function handleSyncPush() { const sId = localStorage.getItem('kakeibo_sheet_id'); if (sId) { try { window.showToast?.('同期中...', 'info'); await store.syncToCloud(sId); window.showToast?.('完了'); } catch (e) { window.showToast?.('失敗', 'error'); } } }
 async function handleSyncPull() { const sId = localStorage.getItem('kakeibo_sheet_id'); if (sId && confirm('上書?')) { try { await store.loadFromCloud(sId); window.location.reload(); } catch (e) { window.showToast?.('失敗', 'error'); refresh(); } } }
 
-function exportData() { const blob = new Blob([JSON.stringify(store.exportAllData())], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'kakeibo_backup.json'; a.click(); }
+function exportData() { const blob = new Blob([JSON.stringify(store.exportAllData())], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Kakeibo_App_Data.json'; a.click(); }
 function clearData() { if (confirm('全削除?')) { store.clearAllData(); window.location.reload(); } }
 
 function refresh() {
