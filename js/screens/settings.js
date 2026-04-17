@@ -98,6 +98,39 @@ export function render(container) {
           <div data-action="addCategory" data-type="income" style="text-align: center; font-size: 0.8rem; color: var(--color-accent); margin-top: 14px; cursor: pointer; font-weight: 800;">＋ カテゴリの追加</div>
         </div>
       </div>
+      
+      <!-- データ管理セクション (常に表示) -->
+      <div class="settings-section-card" style="background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 24px; box-shadow: var(--shadow-sm);">
+        <div style="padding: 18px 20px; font-size: 0.85rem; font-weight: 800; border-bottom: 1px solid var(--border-light); background: rgba(0,0,0,0.01);">
+          📂 データ管理・バックアップ
+        </div>
+        <div style="padding: 12px 20px;">
+          <div class="settings-list-item" data-action="exportData" style="display: flex; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border-light); cursor: pointer;">
+            <span style="font-size: 1.2rem; margin-right: 14px;">💾</span>
+            <div style="flex:1;">
+              <div style="font-weight: 600; font-size: 0.95rem;">Kakeibo_App_Dataの保存 (JSON)</div>
+              <div style="font-size: 11px; color: var(--text-muted);">全設定・全履歴を保存。復元時はこのファイルを使います。</div>
+            </div>
+            <span style="color: var(--text-muted); opacity: 0.4;">›</span>
+          </div>
+          <div class="settings-list-item" data-action="importData" style="display: flex; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border-light); cursor: pointer;">
+            <span style="font-size: 1.2rem; margin-right: 14px;">📥</span>
+            <div style="flex:1;">
+              <div style="font-weight: 600; font-size: 0.95rem;">ファイルから復元 (インポート)</div>
+              <div style="font-size: 11px; color: var(--text-muted);">以前保存したJSONを選択してデータを上書き復元します。</div>
+            </div>
+            <span style="color: var(--text-muted); opacity: 0.4;">›</span>
+          </div>
+          <div class="settings-list-item" data-action="exportCSV" style="display: flex; align-items: center; padding: 14px 0; cursor: pointer;">
+            <span style="font-size: 1.2rem; margin-right: 14px;">📊</span>
+            <div style="flex:1;">
+              <div style="font-weight: 600; font-size: 0.95rem;">CSV形式で保存 (スプレッドシート用)</div>
+              <div style="font-size: 11px; color: var(--text-muted);">取引履歴をExcel等で直接開ける形式で出力します。</div>
+            </div>
+            <span style="color: var(--text-muted); opacity: 0.4;">›</span>
+          </div>
+        </div>
+      </div>
 
       <!-- クラウド・同期管理 (モダン・スタイル) -->
       <div style="padding: 28px; background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%); border-radius: 24px; border: 1px solid var(--border-color); text-align: center; margin-bottom: 40px; box-shadow: var(--shadow-sm);">
@@ -105,10 +138,7 @@ export function render(container) {
         ${!auth.isLoggedIn() ? `
           <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 18px; color: var(--text-primary);">Googleクラウド同期</h3>
           <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 24px;">スプレッドシートと連携して<br>データを安全にバックアップ・共有できます。</p>
-          <button class="btn btn-primary" data-action="googleLogin" style="width: 100%; max-width: 260px; border-radius: 50px; font-weight: 800; padding: 14px; margin-bottom: 16px;">連携を開始する</button>
-          <div data-action="exportData" style="font-size: 0.8rem; color: var(--color-accent); cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px;">
-            <span>💾</span> バックアップを保存 (Kakeibo_App_Data)
-          </div>
+          <button class="btn btn-primary" data-action="googleLogin" style="width: 100%; max-width: 260px; border-radius: 50px; font-weight: 800; padding: 14px;">連携を開始する</button>
         ` : `
           <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em;">Connected Cloud ID</div>
           <div style="font-size: 10px; font-family: monospace; opacity: 0.8; margin-bottom: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 15px; color: var(--color-accent);">${sheetId}</div>
@@ -166,6 +196,8 @@ function handleClick(e) {
     case 'addCategory': showCategoryModal(null, target.dataset.type); break;
     case 'toggleDarkMode': toggleDarkMode(); break;
     case 'exportData': exportData(); break;
+    case 'importData': importData(); break;
+    case 'exportCSV': exportToCSV(); break;
     case 'googleLogin': handleGoogleLogin(); break;
     case 'googleLogout': handleLogout(); break;
     case 'syncPush': handleSyncPush(); break;
@@ -295,6 +327,48 @@ async function handleSyncPush() { const sId = localStorage.getItem('kakeibo_shee
 async function handleSyncPull() { const sId = localStorage.getItem('kakeibo_sheet_id'); if (sId && confirm('上書?')) { try { await store.loadFromCloud(sId); window.location.reload(); } catch (e) { window.showToast?.('失敗', 'error'); refresh(); } } }
 
 function exportData() { const blob = new Blob([JSON.stringify(store.exportAllData())], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Kakeibo_App_Data.json'; a.click(); }
+
+function importData() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (confirm('現在のデータをすべて上書きして復元しますか？')) {
+          store.importAllData(data);
+          window.location.reload();
+        }
+      } catch (err) {
+        alert('ファイルの形式が正しくありません。');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function exportToCSV() {
+  const txs = store.getTransactions();
+  const header = ['ID', '日付', '金額', '種別', 'カテゴリ名', '出金口座名', 'メモ', '入金口座名', 'カテゴリID', '出金ID', '入金ID'];
+  const rows = txs.map(t => [
+    t.id, t.date, t.amount, t.type, t.category || '', t.fromAccount || '', t.memo || '', t.toAccount || '',
+    t.categoryId || '', t.fromAccountId || '', t.toAccountId || ''
+  ]);
+  
+  const csvContent = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const bom = new Uint8Array([0xEF, 0xBB, 0xBF]); // Excelでの文字化け防止
+  const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
+  
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Kakeibo_Transactions.csv';
+  a.click();
+}
 function clearData() { if (confirm('全削除?')) { store.clearAllData(); window.location.reload(); } }
 
 function refresh() {
