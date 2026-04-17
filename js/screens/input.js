@@ -100,7 +100,11 @@ function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, section
       <div class="selector-header">
         <span class="selector-title">
           ${store.escapeHTML(sectionTitle)}
-          ${selectedItem ? `<span class="selected-summary-chip">${store.escapeHTML(selectedItem.icon)} ${store.escapeHTML(selectedItem.name)}</span>` : ''}
+          ${selectedItem ? `
+            <span class="selected-summary-chip">
+              ${store.escapeHTML(selectedItem.icon)} ${store.escapeHTML(selectedItem.name)}
+              ${selectedItem.initialBalance !== undefined ? `<span style="font-size:0.75rem; opacity:0.7; margin-left:6px; font-weight: 500;">(残高: ¥${store.getAccountBalance(selectedId).toLocaleString()})</span>` : ''}
+            </span>` : ''}
         </span>
         ${showToggleButton ? `<button class="selector-expand" data-action="${store.escapeHTML(onToggle)}">${expanded ? '▲ 閉じる' : '▼ 全表示'}</button>` : ''}
       </div>
@@ -208,6 +212,7 @@ function renderBulkInput(accounts, allCategories) {
               <th style="padding:10px; text-align:left;">金額</th>
               <th style="padding:10px; text-align:left;">口座/${state.type === 'transfer' ? '元' : ''}</th>
               <th style="padding:10px; text-align:left;">入金先</th>
+              <th style="padding:10px; text-align:left;">メモ</th>
               <th></th>
             </tr>
           </thead>
@@ -245,6 +250,7 @@ function renderBulkInput(accounts, allCategories) {
                     ${accounts.map(a => `<option value="${a.id}" ${a.id === row.toAccountId ? 'selected' : ''}>${a.name}</option>`).join('')}
                   </select>
                 </td>
+                <td style="padding:4px;"><input type="text" value="${row.memo || ''}" data-field="memo" data-row="${i}" class="bulk-input" placeholder="メモ" style="width:100%; border:none; background:transparent;"></td>
                 <td style="padding:4px; text-align:center;"><button data-action="deleteBulkRow" data-row="${i}" style="color:var(--color-danger); border:none; background:transparent; font-size:1rem; cursor:pointer;">✕</button></td>
               </tr>`;
             }).join('')}
@@ -340,50 +346,112 @@ function handleCsvFile(e) {
       const accs = store.getAccounts();
       const cats = store.getCategories();
 
+      // カラム名の特定を容易にするための候補リスト
+      const keyMap = {
+        date: ['日付', '取引日', '年月日', '取引年月日', 'date'],
+        expense: ['お引出し', 'お引出し額', '支出金額', '払い出し', '出金', 'withdraw'],
+        income: ['お預入れ', 'お預入れ額', '収入金額', '預け入れ', '入金', 'deposit'],
+        amount: ['金額', 'amount'],
+        type: ['種類', '種別', 'type'],
+        memo: ['摘要', '内容', 'お取引内容', 'メモ', 'memo', 'description'],
+        category: ['カテゴリー', 'カテゴリ', 'category'],
+        account: ['口座', 'account'],
+        toAccount: ['入金先', '振替先', 'toAccount']
+      };
+
+      const findVal = (row, keys) => {
+        const key = keys.find(k => k in row);
+        return key ? String(row[key] || '').trim() : '';
+      };
+
       bulkRows = res.data.map(r => {
-        const rawType = r['種類'] || r.type || '';
-        const mappedType = typeMap[rawType] || state.type;
-        
-        const rawFrom = r['口座'] || r.fromAccount || '';
-        const rawTo = r['入金先'] || r.toAccount || '';
-        const rawCat = r['カテゴリー'] || r.category || '';
-
-        // 名称からIDを検索（名寄せ）
-        const fromAcc = accs.find(a => a.name.trim() === rawFrom.trim());
-        const toAcc = accs.find(a => a.name.trim() === rawTo.trim());
-        const cat = cats.find(c => c.name.trim() === rawCat.trim());
-
-        // 日付の正規化 (YYYY/M/D -> YYYY-MM-DD)
-        let rawDate = r['日付'] || r.date || state.date;
-        let date = rawDate;
-        if (typeof rawDate === 'string') {
-          const parts = rawDate.split(/[\/\-]/);
+        // 1. 日付の取得と正規化 (YYYY-MM-DD)
+        let date = findVal(r, keyMap.date) || state.date;
+        if (date.includes('/') || date.includes('-')) {
+          const parts = date.split(/[\/\-]/);
           if (parts.length === 3) {
-            const y = parts[0];
+            const y = parts[0].length === 2 ? '20' + parts[0] : parts[0];
             const m = parts[1].padStart(2, '0');
-            const d = parts[2].padStart(2, '0');
+            const d = parts[2].split(' ')[0].padStart(2, '0');
             date = `${y}-${m}-${d}`;
           }
+        }
+
+        // 2. 金額と種類の判定（振替明示を最優先）
+        let amount = 0;
+        const rawType = findVal(r, keyMap.type);
+        let mappedType = typeMap[rawType] || (Object.values(typeMap).includes(rawType) ? rawType : null);
+
+        const rawAmount = findVal(r, keyMap.amount);
+        const rawExp = findVal(r, keyMap.expense).replace(/,/g, '');
+        const rawInc = findVal(r, keyMap.income).replace(/,/g, '');
+
+        if (mappedType === 'transfer') {
+          // 振替の場合は種類優先、金額はいずれかの列から取得
+          amount = Number(rawAmount.replace(/,/g, '')) || Number(rawExp) || Number(rawInc) || 0;
+        } else if (rawExp && Number(rawExp) > 0) {
+          amount = Number(rawExp);
+          mappedType = 'expense';
+        } else if (rawInc && Number(rawInc) > 0) {
+          amount = Number(rawInc);
+          mappedType = 'income';
+        } else if (rawAmount) {
+          amount = Number(rawAmount.replace(/,/g, '')) || 0;
+          mappedType = mappedType || rawType || state.type;
+        } else {
+          mappedType = mappedType || state.type;
+        }
+
+        // 3. 口座名とIDの自動マッピング（支出・収入・振替に応じて賢く振り分け）
+        const rawAcc = findVal(r, keyMap.account);
+        const rawToAcc = findVal(r, keyMap.toAccount);
+
+        let finalFromAcc = '', finalToAcc = '';
+        if (mappedType === 'expense') {
+          finalFromAcc = rawAcc;
+        } else if (mappedType === 'income') {
+          finalToAcc = rawAcc;
+        } else if (mappedType === 'transfer') {
+          finalFromAcc = rawAcc;
+          finalToAcc = rawToAcc || rawAcc; // テンプレ形式なら入金先を、それ以外なら共通口座を優先
+        }
+
+        const fromAccObj = accs.find(a => a.name.trim() === finalFromAcc.trim());
+        const toAccObj = accs.find(a => a.name.trim() === finalToAcc.trim());
+
+        // 4. その他（メモ、カテゴリー、口座IDの解決）
+        const rawMemo = findVal(r, keyMap.memo);
+        const rawCatName = findVal(r, keyMap.category);
+        
+        // カテゴリーの検索（全角半角スペース無視、完全一致優先）
+        const clean = (s) => s.replace(/[\s　]/g, '');
+        let cat = cats.find(c => clean(c.name) === clean(rawCatName));
+        
+        // 見つからない場合、種類（支出/収入）に応じた「その他」を検索
+        if (!cat && rawCatName) {
+          cat = cats.find(c => (clean(c.name) === 'その他' || clean(c.name) === '未分類') && (c.type === mappedType || c.type === 'both'));
         }
 
         return {
           date: date,
           type: mappedType,
-          amount: String(r['金額'] || r.amount || ''),
-          category: rawCat,
+          amount: amount,
+          category: rawCatName,
           categoryId: cat ? cat.id : '',
-          fromAccount: rawFrom,
-          fromAccountId: fromAcc ? fromAcc.id : '',
-          toAccount: rawTo,
-          toAccountId: toAcc ? toAcc.id : '',
-          memo: r['メモ'] || r.memo || ''
+          fromAccount: finalFromAcc,
+          fromAccountId: fromAccObj ? fromAccObj.id : '',
+          toAccount: finalToAcc,
+          toAccountId: toAccObj ? toAccObj.id : '',
+          memo: rawMemo
         };
       });
+
       refresh();
       window.showToast?.(`${bulkRows.length}件を読み込みました`);
     }
   });
 }
+
 
 function submit() {
   const amount = parseComma(state.amount);
@@ -409,7 +477,27 @@ function submit() {
   };
 
   store.addTransaction(tx);
-  window.showToast?.('記録しました ✓'); resetState(); refresh();
+  
+  // 入力後残高の反映
+  let balanceMsg = '';
+  if (state.type === 'transfer') {
+    const f = accs.find(a => a.id === state.fromAccountId);
+    const t = accs.find(a => a.id === state.toAccountId);
+    const fb = store.getAccountBalance(state.fromAccountId).toLocaleString();
+    const tb = store.getAccountBalance(state.toAccountId).toLocaleString();
+    balanceMsg = `\n残高: ${f?.name} ¥${fb} / ${t?.name} ¥${tb}`;
+  } else {
+    const targetId = state.type === 'expense' ? state.fromAccountId : state.toAccountId;
+    const acc = accs.find(a => a.id === targetId);
+    if (acc) {
+      const b = store.getAccountBalance(targetId).toLocaleString();
+      balanceMsg = `\n[${acc.name}] 残高: ¥${b}`;
+    }
+  }
+
+  window.showToast?.('記録しました ✓' + balanceMsg); 
+  resetState(); 
+  refresh();
 }
 
 function submitBulk() {
