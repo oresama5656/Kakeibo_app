@@ -39,9 +39,9 @@ export function render(container) {
           <div style="width: 52px; height: 52px; background: var(--bg-card); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">${getDarkModeActive(settings) ? '🌙' : '☀️'}</div>
           <div style="font-size: 10px; margin-top: 6px; font-weight: 800; color: var(--text-secondary);">テーマ</div>
         </div>
-        <div class="quick-action" data-action="exportData" style="cursor: pointer; text-align: center;">
-          <div style="width: 52px; height: 52px; background: var(--bg-card); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">📤</div>
-          <div style="font-size: 10px; margin-top: 6px; font-weight: 800; color: var(--text-secondary);">全出力</div>
+        <div class="quick-action" data-action="exportDataExcel" style="cursor: pointer; text-align: center;">
+          <div style="width: 52px; height: 52px; background: var(--bg-card); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">📊</div>
+          <div style="font-size: 10px; margin-top: 6px; font-weight: 800; color: var(--text-secondary);">エクセル保存</div>
         </div>
       </div>
 
@@ -99,38 +99,6 @@ export function render(container) {
         </div>
       </div>
       
-      <!-- データ管理セクション (常に表示) -->
-      <div class="settings-section-card" style="background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 24px; box-shadow: var(--shadow-sm);">
-        <div style="padding: 18px 20px; font-size: 0.85rem; font-weight: 800; border-bottom: 1px solid var(--border-light); background: rgba(0,0,0,0.01);">
-          📂 データ管理・バックアップ
-        </div>
-        <div style="padding: 12px 20px;">
-          <div class="settings-list-item" data-action="exportData" style="display: flex; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border-light); cursor: pointer;">
-            <span style="font-size: 1.2rem; margin-right: 14px;">💾</span>
-            <div style="flex:1;">
-              <div style="font-weight: 600; font-size: 0.95rem;">Kakeibo_App_Dataの保存 (JSON)</div>
-              <div style="font-size: 11px; color: var(--text-muted);">全設定・全履歴を保存。復元時はこのファイルを使います。</div>
-            </div>
-            <span style="color: var(--text-muted); opacity: 0.4;">›</span>
-          </div>
-          <div class="settings-list-item" data-action="importData" style="display: flex; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--border-light); cursor: pointer;">
-            <span style="font-size: 1.2rem; margin-right: 14px;">📥</span>
-            <div style="flex:1;">
-              <div style="font-weight: 600; font-size: 0.95rem;">ファイルから復元 (インポート)</div>
-              <div style="font-size: 11px; color: var(--text-muted);">以前保存したJSONを選択してデータを上書き復元します。</div>
-            </div>
-            <span style="color: var(--text-muted); opacity: 0.4;">›</span>
-          </div>
-          <div class="settings-list-item" data-action="exportCSV" style="display: flex; align-items: center; padding: 14px 0; cursor: pointer;">
-            <span style="font-size: 1.2rem; margin-right: 14px;">📊</span>
-            <div style="flex:1;">
-              <div style="font-weight: 600; font-size: 0.95rem;">CSV形式で保存 (スプレッドシート用)</div>
-              <div style="font-size: 11px; color: var(--text-muted);">取引履歴をExcel等で直接開ける形式で出力します。</div>
-            </div>
-            <span style="color: var(--text-muted); opacity: 0.4;">›</span>
-          </div>
-        </div>
-      </div>
 
       <!-- クラウド・同期管理 (モダン・スタイル) -->
       <div style="padding: 28px; background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%); border-radius: 24px; border: 1px solid var(--border-color); text-align: center; margin-bottom: 40px; box-shadow: var(--shadow-sm);">
@@ -138,7 +106,8 @@ export function render(container) {
         ${!auth.isLoggedIn() ? `
           <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 18px; color: var(--text-primary);">Googleクラウド同期</h3>
           <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 24px;">スプレッドシートと連携して<br>データを安全にバックアップ・共有できます。</p>
-          <button class="btn btn-primary" data-action="googleLogin" style="width: 100%; max-width: 260px; border-radius: 50px; font-weight: 800; padding: 14px;">連携を開始する</button>
+          <button class="btn btn-primary" data-action="googleLogin" style="width: 100%; max-width: 260px; border-radius: 50px; font-weight: 800; padding: 14px; margin-bottom: 16px;">連携を開始する</button>
+          <div data-action="exportDataExcel" style="font-size: 0.8rem; color: var(--color-accent); text-decoration: underline; cursor: pointer; font-weight: 800; opacity: 0.9;">💾 エクセル形式で全データを保存 (.xlsx)</div>
         ` : `
           <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em;">Connected Cloud ID</div>
           <div style="font-size: 10px; font-family: monospace; opacity: 0.8; margin-bottom: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 15px; color: var(--color-accent);">${sheetId}</div>
@@ -195,13 +164,11 @@ function handleClick(e) {
     case 'editCategory': showCategoryModal(target.dataset.id); break;
     case 'addCategory': showCategoryModal(null, target.dataset.type); break;
     case 'toggleDarkMode': toggleDarkMode(); break;
-    case 'exportData': exportData(); break;
-    case 'importData': importData(); break;
-    case 'exportCSV': exportToCSV(); break;
     case 'googleLogin': handleGoogleLogin(); break;
     case 'googleLogout': handleLogout(); break;
     case 'syncPush': handleSyncPush(); break;
     case 'syncPull': handleSyncPull(); break;
+    case 'exportDataExcel': exportDataExcel(); break;
     case 'clearData': clearData(); break;
   }
 }
@@ -326,48 +293,61 @@ async function handleLogout() { if (confirm('解除?')) auth.signOut(); }
 async function handleSyncPush() { const sId = localStorage.getItem('kakeibo_sheet_id'); if (sId) { try { window.showToast?.('同期中...', 'info'); await store.syncToCloud(sId); window.showToast?.('完了'); } catch (e) { window.showToast?.('失敗', 'error'); } } }
 async function handleSyncPull() { const sId = localStorage.getItem('kakeibo_sheet_id'); if (sId && confirm('上書?')) { try { await store.loadFromCloud(sId); window.location.reload(); } catch (e) { window.showToast?.('失敗', 'error'); refresh(); } } }
 
-function exportData() { const blob = new Blob([JSON.stringify(store.exportAllData())], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Kakeibo_App_Data.json'; a.click(); }
+function exportDataExcel() {
+  try {
+    const wb = XLSX.utils.book_new();
+    
+    // 1. transactions
+    const txs = store.getTransactions();
+    const txRows = [
+      ['ID', '日付', '金額', '種別', 'カテゴリ名', '出金口座名', 'メモ', '入金口座名', 'カテゴリID', '出金ID', '入金ID'],
+      ...txs.map(t => [
+        t.id, t.date, t.amount, t.type, t.category, t.fromAccount, t.memo, t.toAccount || '',
+        t.categoryId || '', t.fromAccountId || '', t.toAccountId || ''
+      ])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(txRows), "transactions");
 
-function importData() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
-  input.onchange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = JSON.parse(e.target.result);
-        if (confirm('現在のデータをすべて上書きして復元しますか？')) {
-          store.importAllData(data);
-          window.location.reload();
-        }
-      } catch (err) {
-        alert('ファイルの形式が正しくありません。');
-      }
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-}
+    // 2. accounts
+    const accs = store.getAccounts();
+    const accRows = [
+      ['ID', '名前', 'アイコン', '現在の残高', '初期残高', '順序', 'ピン留め'],
+      ...accs.length ? accs.map(a => [a.id, a.name, a.icon, a.balance, a.initialBalance, a.order, a.pinned ? 1 : 0]) : [['EMPTY']]
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(accRows), "accounts");
 
-function exportToCSV() {
-  const txs = store.getTransactions();
-  const header = ['ID', '日付', '金額', '種別', 'カテゴリ名', '出金口座名', 'メモ', '入金口座名', 'カテゴリID', '出金ID', '入金ID'];
-  const rows = txs.map(t => [
-    t.id, t.date, t.amount, t.type, t.category || '', t.fromAccount || '', t.memo || '', t.toAccount || '',
-    t.categoryId || '', t.fromAccountId || '', t.toAccountId || ''
-  ]);
-  
-  const csvContent = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-  const bom = new Uint8Array([0xEF, 0xBB, 0xBF]); // Excelでの文字化け防止
-  const blob = new Blob([bom, csvContent], { type: 'text/csv;charset=utf-8;' });
-  
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'Kakeibo_Transactions.csv';
-  a.click();
+    // 3. categories
+    const cats = store.getCategories();
+    const catRows = [
+      ['ID', '名前', 'アイコン', 'タイプ', '順序', 'ピン留め'],
+      ...cats.map(c => [c.id, c.name, c.icon, c.type, c.order, c.pinned ? 1 : 0])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(catRows), "categories");
+
+    // 4. shortcuts
+    const scs = store.getShortcuts?.() || [];
+    const scRows = [
+      ['ID', '名前', 'タイプ', '金額', 'カテゴリ', '出金元', '入金先', '順序', 'カテゴリID', '出金ID', '入金ID'],
+      ...(scs.length ? scs.map(s => [
+        s.id, s.name, s.type, s.amount, s.category, s.fromAccount, s.toAccount, s.order,
+        s.categoryId || '', s.fromAccountId || '', s.toAccountId || ''
+      ]) : [['EMPTY']])
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(scRows), "shortcuts");
+
+    // 5. settings
+    const settingsRows = [
+      ['JSON_SETTINGS'],
+      [JSON.stringify(store.getSettings())]
+    ];
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(settingsRows), "settings");
+
+    XLSX.writeFile(wb, "Kakeibo_App_Full_Data.xlsx");
+    window.showToast?.('エクセルを保存しました ✓');
+  } catch (e) {
+    console.error('Export failed:', e);
+    alert('エクスポートに失敗しました。');
+  }
 }
 function clearData() { if (confirm('全削除?')) { store.clearAllData(); window.location.reload(); } }
 
