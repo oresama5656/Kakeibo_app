@@ -279,7 +279,7 @@ function showCategoryModal(id, type) {
 
 function toggleDarkMode() {
   const settings = store.getSettings();
-  let next = settings.darkMode === 'dark' ? 'light' : settings.darkMode === 'light' ? 'auto' : 'dark';
+  let next = settings.darkMode === 'dark' ? 'light' : 'dark';
   store.updateSettings({ darkMode: next });
   applyTheme(next);
   refresh();
