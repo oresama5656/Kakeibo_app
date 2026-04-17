@@ -294,56 +294,74 @@ async function handleSyncPush() { const sId = localStorage.getItem('kakeibo_shee
 async function handleSyncPull() { const sId = localStorage.getItem('kakeibo_sheet_id'); if (sId && confirm('上書?')) { try { await store.loadFromCloud(sId); window.location.reload(); } catch (e) { window.showToast?.('失敗', 'error'); refresh(); } } }
 
 function exportDataExcel() {
+  if (!store || typeof store.getTransactions !== 'function') {
+    alert('データの取得に失敗しました。');
+    return;
+  }
+
   try {
     const wb = XLSX.utils.book_new();
-    
+    const makeSheet = (name, rows) => {
+      if (!rows || rows.length === 0) return;
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), name);
+    };
+
     // 1. transactions
-    const txs = store.getTransactions();
+    const txs = store.getTransactions() || [];
+    const txHeader = ['ID', '日付', '金額', '種別', 'カテゴリ名', '出金口座名', 'メモ', '入金口座名', 'カテゴリID', '出金ID', '入金ID'];
     const txRows = [
-      ['ID', '日付', '金額', '種別', 'カテゴリ名', '出金口座名', 'メモ', '入金口座名', 'カテゴリID', '出金ID', '入金ID'],
-      ...txs.map(t => [
-        t.id, t.date, t.amount, t.type, t.category, t.fromAccount, t.memo, t.toAccount || '',
+      txHeader,
+      ...txs.length ? txs.map(t => [
+        t.id, t.date, t.amount, t.type, t.category || '', t.fromAccount || '', t.memo || '', t.toAccount || '',
         t.categoryId || '', t.fromAccountId || '', t.toAccountId || ''
-      ])
+      ]) : [txHeader.map((_, i) => i === 0 ? 'EMPTY' : '')]
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(txRows), "transactions");
+    makeSheet("transactions", txRows);
 
     // 2. accounts
-    const accs = store.getAccounts();
+    const accs = store.getAccounts() || [];
+    const accHeader = ['ID', '名前', 'アイコン', '現在の残高', '初期残高', '順序', 'ピン留め'];
     const accRows = [
-      ['ID', '名前', 'アイコン', '現在の残高', '初期残高', '順序', 'ピン留め'],
-      ...accs.length ? accs.map(a => [a.id, a.name, a.icon, a.balance, a.initialBalance, a.order, a.pinned ? 1 : 0]) : [['EMPTY']]
+      accHeader,
+      ...accs.length ? accs.map(a => [a.id, a.name, a.icon, a.balance, a.initialBalance, a.order, a.pinned ? 1 : 0]) : [accHeader.map((_, i) => i === 0 ? 'EMPTY' : '')]
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(accRows), "accounts");
+    makeSheet("accounts", accRows);
 
     // 3. categories
-    const cats = store.getCategories();
+    const cats = store.getCategories() || [];
+    const catHeader = ['ID', '名前', 'アイコン', 'タイプ', '順序', 'ピン留め'];
     const catRows = [
-      ['ID', '名前', 'アイコン', 'タイプ', '順序', 'ピン留め'],
-      ...cats.map(c => [c.id, c.name, c.icon, c.type, c.order, c.pinned ? 1 : 0])
+      catHeader,
+      ...cats.length ? cats.map(c => [c.id, c.name, c.icon, c.type, c.order, c.pinned ? 1 : 0]) : [catHeader.map((_, i) => i === 0 ? 'EMPTY' : '')]
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(catRows), "categories");
+    makeSheet("categories", catRows);
 
     // 4. shortcuts
-    const scs = store.getShortcuts?.() || [];
+    const scs = (typeof store.getShortcuts === 'function' ? store.getShortcuts() : []) || [];
+    const scHeader = ['ID', '名前', 'タイプ', '金額', 'カテゴリ', '出金元', '入金先', '順序', 'カテゴリID', '出金ID', '入金ID'];
     const scRows = [
-      ['ID', '名前', 'タイプ', '金額', 'カテゴリ', '出金元', '入金先', '順序', 'カテゴリID', '出金ID', '入金ID'],
-      ...(scs.length ? scs.map(s => [
-        s.id, s.name, s.type, s.amount, s.category, s.fromAccount, s.toAccount, s.order,
+      scHeader,
+      ...scs.length ? scs.map(s => [
+        s.id, s.name, s.type, s.amount, s.category || '', s.fromAccount || '', s.toAccount || '', s.order,
         s.categoryId || '', s.fromAccountId || '', s.toAccountId || ''
-      ]) : [['EMPTY']])
+      ]) : [scHeader.map((_, i) => i === 0 ? 'EMPTY' : '')]
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(scRows), "shortcuts");
+    makeSheet("shortcuts", scRows);
 
     // 5. settings
-    const settingsRows = [
-      ['JSON_SETTINGS'],
-      [JSON.stringify(store.getSettings())]
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(settingsRows), "settings");
+    const settings = typeof store.getSettings === 'function' ? store.getSettings() : {};
+    let settingsStr;
+    try {
+      settingsStr = JSON.stringify(settings);
+    } catch (err) {
+      settingsStr = '{"error": "Serialization failed"}';
+    }
+    makeSheet("settings", [['JSON_SETTINGS'], [settingsStr]]);
 
     XLSX.writeFile(wb, "Kakeibo_App_Full_Data.xlsx");
-    window.showToast?.('エクセルを保存しました ✓');
+    if (typeof window.showToast === 'function') {
+      window.showToast('エクセルを保存しました ✓');
+    }
   } catch (e) {
     console.error('Export failed:', e);
     alert('エクスポートに失敗しました。');
