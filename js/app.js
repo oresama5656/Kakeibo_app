@@ -70,6 +70,9 @@ async function initGoogleBackground() {
       } else if (retryCount < 15) {
         retryCount++;
         setTimeout(checkGoogle, 1000);
+      } else {
+        console.warn('Google SDK failed to load. Operating in offline mode.');
+        window.showToast('Google連携の読み込みに失敗しました。オフラインで動作します。', 'warning');
       }
     };
     checkGoogle();
@@ -159,6 +162,10 @@ document.addEventListener('DOMContentLoaded', initializeApp);
 
 // Global Toast
 window.showToast = (message, type = 'success') => {
+  // Existing toast removal
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+
   const toast = document.createElement('div');
   toast.className = `toast ${type} show`;
   toast.textContent = message;
