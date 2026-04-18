@@ -24,8 +24,19 @@ let showBulkInput = false;
 let calcState = { display: '0', currentValue: null, operator: null, waitingForNextValue: false };
 
 const formatComma = (val) => {
-  const num = val.toString().replace(/[^0-9]/g, '');
-  return num ? Number(num).toLocaleString('ja-JP') : '';
+  if (val === undefined || val === null) return '';
+  // 数字と小数点以外を除去（二記号目以降の小数点は無視）
+  let s = val.toString().replace(/[^0-9.]/g, '');
+  const parts = s.split('.');
+  
+  // 整数部分のフォーマット
+  let integerPart = parts[0] ? Number(parts[0]).toLocaleString('ja-JP') : (s.startsWith('.') ? '0' : '');
+  
+  // 小数部分の結合（2項目以降のドットは無視して、最大2桁に制限）
+  if (parts.length > 1) {
+    return integerPart + '.' + parts.slice(1).join('').substring(0, 2);
+  }
+  return integerPart;
 };
 
 const parseComma = (str) => Number(str.toString().replace(/,/g, '')) || 0;
@@ -267,7 +278,7 @@ function bindEvents(container) {
   const amountInput = container.querySelector('#amount-input-formatted');
   if (amountInput) {
     amountInput.oninput = (e) => {
-      const val = e.target.value.replace(/[^0-9]/g, '');
+      const val = e.target.value.replace(/[^0-9.]/g, '');
       const formatted = formatComma(val);
       state.amount = formatted; e.target.value = formatted; 
     };
