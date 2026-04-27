@@ -113,3 +113,10 @@ export function migrateTransactionIds(transactions, accounts, categories) {
     return updated;
   });
 }
+
+// --- ID生成 ---
+let idCounter = 0;
+export function generateId(prefix = 'tx') {
+  idCounter++;
+  return prefix + '_' + Date.now() + '_' + String(idCounter).padStart(5, '0');
+}

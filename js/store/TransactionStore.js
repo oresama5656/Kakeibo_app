@@ -1,16 +1,12 @@
 /**
  * 取引・履歴管理モジュール
  */
-import { state, normalizeDate, normalizeName, formatLocalDate } from './BaseStore.js';
+import { state, normalizeDate, normalizeName, formatLocalDate, generateId } from './BaseStore.js';
+
 import { getTotalBalance } from './AccountStore.js';
 
 export function getTransactions() { return state.transactions; }
 
-let idCounter = 0;
-function generateId() {
-  idCounter++;
-  return 'tx_' + Date.now() + '_' + String(idCounter).padStart(5, '0');
-}
 
 function sanitizeTransaction(tx) {
   tx.date = normalizeDate(tx.date);
@@ -55,7 +51,8 @@ function sanitizeTransaction(tx) {
 }
 
 export function addTransaction(tx) {
-  if (!tx.id) tx.id = generateId();
+  if (!tx.id) tx.id = generateId('tx');
+
   state.transactions.unshift(sanitizeTransaction(tx));
 }
 
