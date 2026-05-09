@@ -111,9 +111,9 @@ function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, section
   const showToggleButton = all.length > pinned.length;
 
   return `
-    <div class="premium-card-v3" style="margin-bottom: 20px; padding: 16px;">
-      <div class="selector-header" style="margin-bottom: 12px;">
-        <span class="selector-title" style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">
+    <div class="premium-card-v3">
+      <div class="selector-header">
+        <span class="section-title-v3">
           ${store.escapeHTML(sectionTitle)}
           ${selectedItem ? `
             <span class="selected-summary-chip" style="background: var(--color-accent-light); color: var(--color-accent); border: none;">
@@ -124,11 +124,11 @@ function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, section
           ${expanded ? '<i data-lucide="chevron-up" style="width: 12px; height: 12px;"></i> 閉じる' : '<i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i> 全て表示'}
         </button>` : ''}
       </div>
-      <div class="icon-grid ${expanded ? 'expanded' : ''}" style="grid-template-columns: repeat(3, 1fr); gap: 10px;">
+      <div class="icon-grid ${expanded ? 'expanded' : ''}">
         ${displayItems.length > 0 ? displayItems.map(item => `
-          <div class="icon-item ${item.id === selectedId ? 'selected' : ''}" data-action="${store.escapeHTML(onSelect)}" data-id="${store.escapeHTML(item.id)}" style="min-height: 80px; padding: 12px 4px; border-radius: 16px; background: var(--bg-primary); border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+          <div class="icon-item ${item.id === selectedId ? 'selected' : ''}" data-action="${store.escapeHTML(onSelect)}" data-id="${store.escapeHTML(item.id)}">
             ${renderIconHTML(item.icon, item.id, { size: 22 })}
-            <span class="icon-label" style="font-size: 0.75rem; font-weight: 700; opacity: 0.8;">${store.escapeHTML(item.name)}</span>
+            <span class="icon-label">${store.escapeHTML(item.name)}</span>
           </div>
         `).join('') : `<div style="padding: 20px; color: var(--text-muted); font-size: 0.8rem; text-align: center; width: 100%; font-weight: 600;">選択可能な項目がありません</div>`}
       </div>
@@ -174,15 +174,15 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
 
   return `
     <!-- ... 通常入力用UI (v2.5と同じ) ... -->
-    <div class="premium-card-v3" style="margin-bottom: 20px; padding: 16px;">
-      <div class="selector-header" style="margin-bottom: 12px;">
-        <span class="selector-title" style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">金額入力</span>
+    <div class="premium-card-v3">
+      <div class="selector-header">
+        <span class="section-title-v3">金額入力</span>
       </div>
-      <div class="amount-input-wrapper" style="display: flex; align-items: center; border-radius: 16px; background: var(--bg-primary); padding: 4px 16px; border: 1px solid var(--border-light); width: 100%; box-sizing: border-box;">
-        <span class="amount-yen" style="font-size: 1.1rem; color: var(--text-muted); font-weight: 800; margin-right: 12px;">¥</span>
-        <input type="text" class="amount-field" id="amount-input-formatted" value="${store.escapeHTML(state.amount)}" placeholder="0" inputmode="numeric" style="flex: 1; width: 0; border: none; background: transparent; font-size: 2rem; font-weight: 900; color: var(--text-primary); text-align: left; padding: 12px 0; letter-spacing: -1px; min-width: 0;">
-        <button data-action="openCalculator" title="電卓" style="background: var(--bg-card); border: 1px solid var(--border-light); width: 44px; height: 44px; min-width: 44px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 8px; box-shadow: var(--shadow-sm); flex-shrink: 0;">
-          <i data-lucide="calculator" style="width: 20px; height: 20px; color: var(--color-accent);"></i>
+      <div class="amount-input-container-v3">
+        <span class="amount-yen" style="font-size: 1.2rem; color: var(--text-muted); font-weight: 800; margin-right: 12px;">¥</span>
+        <input type="text" class="amount-field" id="amount-input-formatted" value="${store.escapeHTML(state.amount)}" placeholder="0" inputmode="numeric" style="flex: 1; width: 0; border: none; background: transparent; font-size: 2.2rem; font-weight: 900; color: var(--text-primary); text-align: left; padding: 12px 0; letter-spacing: -1px; min-width: 0;">
+        <button data-action="openCalculator" title="電卓" style="background: var(--bg-card); border: 1.5px solid var(--border-light); width: 48px; height: 48px; min-width: 48px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 8px; box-shadow: var(--shadow-sm); flex-shrink: 0;">
+          <i data-lucide="calculator" style="width: 22px; height: 22px; color: var(--color-accent);"></i>
         </button>
       </div>
     </div>
@@ -191,18 +191,18 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
     ${showToAccount ? renderIconGrid(accounts, state.toAccountId, state.toAccountsExpanded, 'selectToAccount', 'toggleToAccounts', state.type === 'transfer' ? '入金先' : '入金口座') : ''}
     ${showCategories ? renderIconGrid(categories, state.categoryId, state.categoriesExpanded, 'selectCategory', 'toggleCategories', 'カテゴリー') : ''}
 
-    <div class="premium-card-v3" style="margin-bottom: 20px; padding: 16px;">
-      <div class="selector-header" style="margin-bottom: 12px;">
-        <span class="selector-title" style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">日付・メモ</span>
+    <div class="premium-card-v3">
+      <div class="selector-header">
+        <span class="section-title-v3">日付・メモ</span>
       </div>
-      <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+      <div style="display: flex; gap: 12px; margin-bottom: 16px;">
         <div style="flex: 1; position: relative;">
-          <input type="date" class="date-input" value="${store.escapeHTML(state.date)}" data-action="setDate" style="width: 100%; padding: 14px; border-radius: 14px; border: 1px solid var(--border-light); background: var(--bg-primary); font-weight: 800; font-size: 0.9rem; color: var(--text-primary); cursor: pointer;">
+          <input type="date" class="date-memo-input-v3" value="${store.escapeHTML(state.date)}" data-action="setDate" style="cursor: pointer;">
         </div>
-        <button data-action="dateToday" style="padding: 0 20px; border-radius: 14px; border: none; background: var(--color-accent-light); color: var(--color-accent); font-size: 0.8rem; font-weight: 900; white-space: nowrap; cursor: pointer;">今日</button>
+        <button data-action="dateToday" style="padding: 0 24px; border-radius: 16px; border: none; background: var(--color-accent-light); color: var(--color-accent); font-size: 0.85rem; font-weight: 900; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;">今日</button>
       </div>
       <div style="position: relative;">
-        <input type="text" placeholder="メモを残す（任意）" value="${store.escapeHTML(state.memo)}" id="memo-input" style="width: 100%; height: 54px; padding: 0 16px; border-radius: 14px; border: 1px solid var(--border-light); background: var(--bg-primary); font-size: 0.9rem; font-weight: 500; box-sizing: border-box; color: var(--text-primary);">
+        <input type="text" placeholder="メモを残す（任意）" value="${store.escapeHTML(state.memo)}" id="memo-input" class="date-memo-input-v3">
       </div>
     </div>
 
@@ -212,9 +212,9 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
     </button>
     
     ${shortcuts.length > 0 ? `
-      <div class="premium-card-v3" style="margin-top: 10px; padding: 16px;">
-        <div class="selector-header" style="margin-bottom: 12px;">
-          <span class="selector-title" style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">⚡ クイック入力</span>
+      <div class="premium-card-v3">
+        <div class="selector-header">
+          <span class="section-title-v3">⚡ クイック入力</span>
         </div>
         <div class="shortcuts-scroll" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;">
           ${shortcuts.map(s => `<button class="shortcut-chip" data-action="useShortcut" data-id="${store.escapeHTML(s.id)}">${store.escapeHTML(s.name)}</button>`).join('')}
@@ -230,7 +230,7 @@ function renderBulkInput(accounts, allCategories) {
   }
 
   return `
-    <div class="bulk-input-container" style="background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color); padding: 20px; overflow-x: hidden;">
+    <div class="premium-card-v3">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3 style="font-size: 1rem; font-weight: 800;">一括入力・CSV管理</h3>
         <div style="display: flex; gap: 8px;">
