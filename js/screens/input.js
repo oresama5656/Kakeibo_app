@@ -12,7 +12,7 @@ let state = {
   fromAccountId: null,
   toAccountId: null,
   categoryId: null,
-  date: store.formatLocalDate(),
+  date: lastUsedDate || store.formatLocalDate(),
   memo: '',
   fromAccountsExpanded: false,
   toAccountsExpanded: false,
@@ -75,9 +75,6 @@ function resetState() {
   state = { 
     ...state, 
     amount: '', 
-    fromAccountId: null, 
-    toAccountId: null, 
-    categoryId: null, 
     memo: '', 
     fromAccountsExpanded: false, 
     toAccountsExpanded: false, 
@@ -507,6 +504,7 @@ function submit() {
   }
 
   window.showToast?.('記録しました ✓' + balanceMsg); 
+  localStorage.setItem('kakeibo_last_date', state.date);
   resetState(); 
   refresh();
 }
