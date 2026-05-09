@@ -34,9 +34,6 @@ export function renderPLContent(state, start, end) {
     <div class="pl-content fadeIn">
       <!-- Summary Master Card (深縹) -->
       <div class="total-summary-card">
-        <div style="font-size: 0.75rem; opacity: 0.8; font-weight: 600; letter-spacing: 1px;">
-          ${escape(start.replace(/-/g, '.'))} — ${escape(end.replace(/-/g, '.'))}
-        </div>
         <div class="total-amount ${state.viewType}">¥${grandTotal.toLocaleString()}</div>
         <div style="font-size: 0.7rem; opacity: 0.7; font-weight: 600;">現在の${state.viewType === 'expense' ? '支出' : '収入'}合計</div>
       </div>
@@ -58,10 +55,25 @@ export function renderPLContent(state, start, end) {
         <button class="segmented-item ${state.chartMode === 'line' ? 'active' : ''}" data-action="setChartMode" data-val="line" role="tab" ${state.chartMode === 'line' ? 'aria-selected="true"' : ''} type="button">推移</button>
       </div>
 
-      <!-- Period Navigation -->
+      <!-- Period Navigation (Premium) -->
       <div class="period-nav-strip">
         <button class="nav-round-btn" data-action="prevPeriod" type="button">‹</button>
-        <div class="period-display">${escape(store.formatDateLabel(start))} — ${escape(store.formatDateLabel(end))}</div>
+        <div class="period-display">
+          ${(() => {
+            const startParts = start.split('-');
+            const endParts = end.split('-');
+            const startLabel = store.formatDateLabel(start);
+            const endLabel = store.formatDateLabel(end);
+            
+            if (start === end) {
+              return `<span class="year-label">${startParts[0]}年</span> <span>${escape(startLabel)}</span>`;
+            }
+            if (startParts[0] === endParts[0]) {
+              return `<span class="year-label">${startParts[0]}年</span> <span>${escape(startLabel)} — ${escape(endLabel)}</span>`;
+            }
+            return `<span>${escape(store.formatFullDateLabel(start))} — ${escape(store.formatFullDateLabel(end))}</span>`;
+          })()}
+        </div>
         <button class="nav-round-btn" data-action="nextPeriod" type="button">›</button>
       </div>
 
@@ -125,22 +137,6 @@ export function renderBSContent(state, start, end) {
 
   return `
     <div class="bs-content fadeIn">
-      <!-- Period Selector (PLと統一) -->
-      <div class="analysis-controls-container">
-        <div class="analysis-period-nav">
-          <button class="nav-btn-v3" data-action="prevPeriod" aria-label="前の期間">‹</button>
-          <div class="current-period-v3">${formatDateRange(start, end)}</div>
-          <button class="nav-btn-v3" data-action="nextPeriod" aria-label="次の期間">›</button>
-        </div>
-        
-        <div class="analysis-segmented-control sub-nav">
-          <button class="segmented-item mini ${state.periodType === 'week' ? 'active' : ''}" data-val="week" data-action="setPeriod">週</button>
-          <button class="segmented-item mini ${state.periodType === 'month' ? 'active' : ''}" data-val="month" data-action="setPeriod">月</button>
-          <button class="segmented-item mini ${state.periodType === 'year' ? 'active' : ''}" data-val="year" data-action="setPeriod">年</button>
-          <button class="segmented-item mini ${state.periodType === 'custom' ? 'active' : ''}" data-val="custom" data-action="setPeriod">指定</button>
-        </div>
-      </div>
-
       <!-- Total Net Worth Master Card -->
       <div class="total-summary-card">
         <div class="total-amount income">¥${netWorth.toLocaleString()}</div>
@@ -150,6 +146,36 @@ export function renderBSContent(state, start, end) {
             表示中の合計: ¥${visibleBalance.toLocaleString()}
           </div>
         ` : ''}
+      </div>
+
+      <!-- Period Selector (PL/履歴と統一) -->
+      <div class="analysis-segmented-control sub-nav">
+        <button class="segmented-item mini ${state.periodType === 'week' ? 'active' : ''}" data-val="week" data-action="setPeriod">週</button>
+        <button class="segmented-item mini ${state.periodType === 'month' ? 'active' : ''}" data-val="month" data-action="setPeriod">月</button>
+        <button class="segmented-item mini ${state.periodType === 'year' ? 'active' : ''}" data-val="year" data-action="setPeriod">年</button>
+        <button class="segmented-item mini ${state.periodType === 'custom' ? 'active' : ''}" data-val="custom" data-action="setPeriod">指定</button>
+      </div>
+
+      <!-- Period Navigation (Premium) -->
+      <div class="period-nav-strip">
+        <button class="nav-round-btn" data-action="prevPeriod" type="button">‹</button>
+        <div class="period-display">
+          ${(() => {
+            const startParts = start.split('-');
+            const endParts = end.split('-');
+            const startLabel = store.formatDateLabel(start);
+            const endLabel = store.formatDateLabel(end);
+            
+            if (start === end) {
+              return `<span class="year-label">${startParts[0]}年</span> <span>${escape(startLabel)}</span>`;
+            }
+            if (startParts[0] === endParts[0]) {
+              return `<span class="year-label">${startParts[0]}年</span> <span>${escape(startLabel)} — ${escape(endLabel)}</span>`;
+            }
+            return `<span>${escape(store.formatFullDateLabel(start))} — ${escape(store.formatFullDateLabel(end))}</span>`;
+          })()}
+        </div>
+        <button class="nav-round-btn" data-action="nextPeriod" type="button">›</button>
       </div>
 
       <!-- Asset Balance Chart -->

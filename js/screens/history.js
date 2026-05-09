@@ -142,8 +142,8 @@ export function render(container) {
       </div>
 
       <!-- Object Selectors (Stylish UI) -->
-      <div class="premium-card-v3" style="padding: 12px; margin-bottom: 20px;">
-        <div class="select-v3-container" style="display: flex; gap: 8px; width: 100%; min-width: 0;">
+      <div style="padding: 0 var(--space-md); margin-bottom: 8px;">
+        <div class="select-v3-container" style="display: flex; gap: 10px; width: 100%; min-width: 0;">
           <select data-action="filterAccount" class="select-v3" style="flex: 1; min-width: 0;">
             <option value="">🏦 全口座</option>
             ${accounts.map(a => `<option value="${attrEsc(a.id)}" ${historyState.accountId === a.id ? 'selected' : ''}>${a.icon} ${escape(a.name)}</option>`).join('')}
@@ -153,6 +153,10 @@ export function render(container) {
             ${categories.map(c => `<option value="${attrEsc(c.id)}" ${historyState.categoryId === c.id ? 'selected' : ''}>${c.icon} ${escape(c.name)}</option>`).join('')}
           </select>
         </div>
+      </div>
+
+      <!-- Date Navigation (Standalone Premium Pill) -->
+      <div style="padding: 0 var(--space-md); margin-bottom: 24px;">
         <div class="period-nav-strip">
           <button class="nav-round-btn" data-action="prevPeriod" type="button">‹</button>
           <div class="period-display">
