@@ -3,6 +3,7 @@
 // ============================================
 
 import * as store from '../store.js';
+import { renderIconHTML } from '../utils/IconRenderer.js';
 
 let lastUsedDate = localStorage.getItem('kakeibo_last_date') || '';
 
@@ -95,13 +96,11 @@ function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, section
   const selectedItem = all.find(i => i.id === selectedId);
   const pinned = all.filter(i => i.pinned);
   
-  // 表示アイテムの決定 (ロジックを整理)
   let displayItems;
   if (expanded) {
     displayItems = all;
   } else if (pinned.length > 0) {
     displayItems = [...pinned];
-    // 選択中のアイテムがピン留めになければ追加
     if (selectedItem && !pinned.some(i => i.id === selectedId)) {
       displayItems.push(selectedItem);
     }
@@ -112,27 +111,26 @@ function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, section
   const showToggleButton = all.length > pinned.length;
 
   return `
-    <div class="selector-section">
-      <div class="selector-header">
-        <span class="selector-title">
+    <div class="premium-card-v3" style="margin-bottom: 20px; padding: 16px;">
+      <div class="selector-header" style="margin-bottom: 12px;">
+        <span class="selector-title" style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">
           ${store.escapeHTML(sectionTitle)}
           ${selectedItem ? `
-            <span class="selected-summary-chip">
-              ${store.escapeHTML(selectedItem.icon)} ${store.escapeHTML(selectedItem.name)}
-              ${selectedItem.initialBalance !== undefined ? `<span style="font-size:0.75rem; opacity:0.7; margin-left:6px; font-weight: 500;">(残高: ¥${store.getAccountBalance(selectedId).toLocaleString()})</span>` : ''}
+            <span class="selected-summary-chip" style="background: var(--color-accent-light); color: var(--color-accent); border: none;">
+              ${store.escapeHTML(selectedItem.name)}
             </span>` : ''}
         </span>
-        ${showToggleButton ? `<button class="selector-expand" data-action="${store.escapeHTML(onToggle)}" style="display: flex; align-items: center; gap: 4px;">
-          ${expanded ? '<i data-lucide="chevron-up" style="width: 14px; height: 14px;"></i> 閉じる' : '<i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i> 全表示'}
+        ${showToggleButton ? `<button class="selector-expand" data-action="${store.escapeHTML(onToggle)}" style="color: var(--color-accent); font-weight: 800; font-size: 0.7rem;">
+          ${expanded ? '<i data-lucide="chevron-up" style="width: 12px; height: 12px;"></i> 閉じる' : '<i data-lucide="chevron-down" style="width: 12px; height: 12px;"></i> 全て表示'}
         </button>` : ''}
       </div>
-      <div class="icon-grid ${expanded ? 'expanded' : ''}">
+      <div class="icon-grid ${expanded ? 'expanded' : ''}" style="grid-template-columns: repeat(3, 1fr); gap: 10px;">
         ${displayItems.length > 0 ? displayItems.map(item => `
-          <div class="icon-item ${item.id === selectedId ? 'selected' : ''}" data-action="${store.escapeHTML(onSelect)}" data-id="${store.escapeHTML(item.id)}">
-            <span class="icon-emoji">${store.escapeHTML(item.icon)}</span>
-            <span class="icon-label">${store.escapeHTML(item.name)}</span>
+          <div class="icon-item ${item.id === selectedId ? 'selected' : ''}" data-action="${store.escapeHTML(onSelect)}" data-id="${store.escapeHTML(item.id)}" style="min-height: 80px; padding: 12px 4px; border-radius: 16px; background: var(--bg-primary); border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;">
+            ${renderIconHTML(item.icon, item.id, { size: 22 })}
+            <span class="icon-label" style="font-size: 0.75rem; font-weight: 700; opacity: 0.8;">${store.escapeHTML(item.name)}</span>
           </div>
-        `).join('') : `<div style="padding: 10px; color: var(--text-muted); font-size: 0.8rem; text-align: center; width: 100%;">選択してください</div>`}
+        `).join('') : `<div style="padding: 20px; color: var(--text-muted); font-size: 0.8rem; text-align: center; width: 100%; font-weight: 600;">選択可能な項目がありません</div>`}
       </div>
     </div>
   `;
@@ -146,13 +144,15 @@ export function render(container) {
   const isPC = window.innerWidth >= 768;
 
   container.innerHTML = `
-    <div class="input-screen" style="max-width: 100%; box-sizing: border-box; overflow-x: hidden;">
-      <div class="type-toggle" style="margin-bottom: 20px;">
-        <button class="type-btn ${state.type === 'expense' ? 'active' : ''}" data-action="setType" data-type="expense">支出</button>
-        <button class="type-btn ${state.type === 'income' ? 'active' : ''}" data-action="setType" data-type="income">収入</button>
-        <button class="type-btn ${state.type === 'transfer' ? 'active' : ''}" data-action="setType" data-type="transfer">振替</button>
-        ${isPC ? `<button class="type-btn bulk-toggle ${showBulkInput ? 'active' : ''}" data-action="toggleBulk" style="display: flex; align-items: center; justify-content: center; gap: 6px;">
-          <i data-lucide="list-plus" style="width: 16px; height: 16px;"></i> 一括・CSV
+    <div class="input-screen premium-mode" style="max-width: 100%; box-sizing: border-box; overflow-x: hidden;">
+      <div class="analysis-segmented-control" style="margin-bottom: 20px;">
+        <button class="segmented-item ${state.type === 'expense' ? 'active' : ''}" data-action="setType" data-type="expense">支出</button>
+        <button class="segmented-item ${state.type === 'income' ? 'active' : ''}" data-action="setType" data-type="income">収入</button>
+        <button class="segmented-item ${state.type === 'transfer' ? 'active' : ''}" data-action="setType" data-type="transfer">振替</button>
+        ${isPC ? `
+        <div style="border-left: 1px solid var(--border-color); margin: 4px 8px; height: 16px;"></div>
+        <button class="segmented-item bulk-toggle ${showBulkInput ? 'active' : ''}" data-action="toggleBulk" style="flex: 1.5; display: flex; align-items: center; justify-content: center; gap: 4px;">
+          <i data-lucide="list-plus" style="width: 14px; height: 14px;"></i> 一括入力
         </button>` : ''}
       </div>
 
@@ -174,12 +174,15 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
 
   return `
     <!-- ... 通常入力用UI (v2.5と同じ) ... -->
-    <div class="amount-input-section" style="margin-bottom: 24px;">
-      <div class="amount-input-wrapper" style="display: flex; align-items: center; border-radius: 20px; background: var(--bg-card); padding: 8px 16px; box-shadow: var(--shadow-sm); border: 2px solid var(--border-color); width: 100%; box-sizing: border-box;">
-        <span class="amount-yen" style="font-size: 1.4rem; color: var(--text-muted); font-weight: 800; margin-right: 12px;">¥</span>
-        <input type="text" class="amount-field" id="amount-input-formatted" value="${store.escapeHTML(state.amount)}" placeholder="0" inputmode="numeric" style="flex: 1; width: 0; border: none; background: transparent; font-size: 2rem; font-weight: 800; color: var(--text-primary); text-align: left; padding: 12px 0;">
-        <button data-action="openCalculator" title="電卓" style="background: var(--bg-hover); border: none; width: 44px; height: 44px; min-width: 44px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 8px;">
-          <i data-lucide="calculator" style="width: 20px; height: 20px; color: var(--text-primary);"></i>
+    <div class="premium-card-v3" style="margin-bottom: 20px; padding: 16px;">
+      <div class="selector-header" style="margin-bottom: 12px;">
+        <span class="selector-title" style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">金額入力</span>
+      </div>
+      <div class="amount-input-wrapper" style="display: flex; align-items: center; border-radius: 16px; background: var(--bg-primary); padding: 4px 16px; border: 1px solid var(--border-light); width: 100%; box-sizing: border-box;">
+        <span class="amount-yen" style="font-size: 1.1rem; color: var(--text-muted); font-weight: 800; margin-right: 12px;">¥</span>
+        <input type="text" class="amount-field" id="amount-input-formatted" value="${store.escapeHTML(state.amount)}" placeholder="0" inputmode="numeric" style="flex: 1; width: 0; border: none; background: transparent; font-size: 2rem; font-weight: 900; color: var(--text-primary); text-align: left; padding: 12px 0; letter-spacing: -1px; min-width: 0;">
+        <button data-action="openCalculator" title="電卓" style="background: var(--bg-card); border: 1px solid var(--border-light); width: 44px; height: 44px; min-width: 44px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 8px; box-shadow: var(--shadow-sm); flex-shrink: 0;">
+          <i data-lucide="calculator" style="width: 20px; height: 20px; color: var(--color-accent);"></i>
         </button>
       </div>
     </div>
@@ -188,24 +191,32 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
     ${showToAccount ? renderIconGrid(accounts, state.toAccountId, state.toAccountsExpanded, 'selectToAccount', 'toggleToAccounts', state.type === 'transfer' ? '入金先' : '入金口座') : ''}
     ${showCategories ? renderIconGrid(categories, state.categoryId, state.categoriesExpanded, 'selectCategory', 'toggleCategories', 'カテゴリー') : ''}
 
-    <div class="selector-section">
-      <div class="selector-header"><span class="selector-title">日付・メモ</span></div>
-      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-        <input type="date" class="date-input" value="${store.escapeHTML(state.date)}" data-action="setDate" style="flex: 1; padding: 12px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); min-width: 0;">
-        <button data-action="dateToday" style="padding: 0 16px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.8rem; font-weight: 800; white-space: nowrap;">今日</button>
+    <div class="premium-card-v3" style="margin-bottom: 20px; padding: 16px;">
+      <div class="selector-header" style="margin-bottom: 12px;">
+        <span class="selector-title" style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">日付・メモ</span>
       </div>
-      <input type="text" placeholder="メモを入力..." value="${store.escapeHTML(state.memo)}" id="memo-input" style="width: 100%; height: 50px; padding: 0 16px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.9rem; box-sizing: border-box;">
+      <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+        <div style="flex: 1; position: relative;">
+          <input type="date" class="date-input" value="${store.escapeHTML(state.date)}" data-action="setDate" style="width: 100%; padding: 14px; border-radius: 14px; border: 1px solid var(--border-light); background: var(--bg-primary); font-weight: 800; font-size: 0.9rem; color: var(--text-primary); cursor: pointer;">
+        </div>
+        <button data-action="dateToday" style="padding: 0 20px; border-radius: 14px; border: none; background: var(--color-accent-light); color: var(--color-accent); font-size: 0.8rem; font-weight: 900; white-space: nowrap; cursor: pointer;">今日</button>
+      </div>
+      <div style="position: relative;">
+        <input type="text" placeholder="メモを残す（任意）" value="${store.escapeHTML(state.memo)}" id="memo-input" style="width: 100%; height: 54px; padding: 0 16px; border-radius: 14px; border: 1px solid var(--border-light); background: var(--bg-primary); font-size: 0.9rem; font-weight: 500; box-sizing: border-box; color: var(--text-primary);">
+      </div>
     </div>
 
-    <button class="submit-btn ${state.type}-mode" data-action="submit" style="width: 100%; height: 64px; font-size: 1.2rem; font-weight: 800; border-radius: 20px; margin-top: 24px; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center; gap: 10px;">
+    <button class="submit-btn ${state.type}-mode" data-action="submit" style="width: 100%; height: 68px; font-size: 1.15rem; font-weight: 900; border-radius: 20px; margin-top: 10px; margin-bottom: 30px; box-shadow: 0 10px 20px var(--premium-shadow); display: flex; align-items: center; justify-content: center; gap: 12px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); border: none; cursor: pointer;">
       <i data-lucide="check-circle-2" style="width: 24px; height: 24px;"></i>
-      ${state.type === 'expense' ? '支出' : state.type === 'income' ? '収入' : '振替'}を記録する
+      ${state.type === 'expense' ? '支出を記録する' : state.type === 'income' ? '収入を記録する' : '振替を実行する'}
     </button>
     
     ${shortcuts.length > 0 ? `
-      <div style="margin-top: 32px;">
-        <div class="selector-header"><span class="selector-title">⚡ クイック入力</span></div>
-        <div class="shortcuts-scroll" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px;">
+      <div class="premium-card-v3" style="margin-top: 10px; padding: 16px;">
+        <div class="selector-header" style="margin-bottom: 12px;">
+          <span class="selector-title" style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">⚡ クイック入力</span>
+        </div>
+        <div class="shortcuts-scroll" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;">
           ${shortcuts.map(s => `<button class="shortcut-chip" data-action="useShortcut" data-id="${store.escapeHTML(s.id)}">${store.escapeHTML(s.name)}</button>`).join('')}
         </div>
       </div>

@@ -2,6 +2,7 @@
  * 分析画面のUIテンプレート生成
  */
 import * as store from '../../store.js';
+import { renderIconHTML } from '../../utils/IconRenderer.js';
 
 export function calculateCategoryTotals(txs) {
   const totals = {};
@@ -10,7 +11,7 @@ export function calculateCategoryTotals(txs) {
     const cid = tx.categoryId || 'cat_other';
     if (!totals[cid]) {
       const c = cats.find(cat => cat.id === cid) || cats.find(cat => cat.id === 'cat_98');
-      totals[cid] = { id: cid, name: c?.name || tx.category || 'その他', icon: c?.icon || '<i data-lucide="folder" style="width: 14px; height: 14px;"></i>', total: 0 };
+      totals[cid] = { id: cid, name: c?.name || tx.category || 'その他', icon: c?.icon || 'lucide:folder', total: 0 };
     }
     totals[cid].total += Number(tx.amount) || 0;
   });
@@ -98,12 +99,12 @@ export function renderPLContent(state, start, end) {
             const isExcluded = state.excludedCategoryIds.includes(c.id);
             const pct = grandTotal > 0 && !isExcluded ? (c.total/grandTotal)*100 : 0;
             return `
-              <div class="category-item-v3 ${isExcluded ? 'excluded' : ''}" data-id="${escape(c.id)}">
+              <div class="category-item-v3 ${isExcluded ? 'excluded' : ''}" data-id="${escape(c.id)}" style="align-items: center;">
                 <div class="cat-check-v2" style="padding-right: 12px; display: flex; align-items: center;">
                   <input type="checkbox" class="cat-checkbox" data-id="${escape(c.id)}" ${isExcluded ? '' : 'checked'} style="width: 16px; height: 16px; cursor: pointer;">
                 </div>
-                <div class="cat-icon-frame">${c.icon.includes('<i') ? c.icon : escape(c.icon)}</div>
-                <div class="cat-info-v3" data-action="drillDown" data-category-id="${escape(c.id)}" style="cursor: pointer;">
+                ${renderIconHTML(c.icon, c.id, { size: 20 })}
+                <div class="cat-info-v3" data-action="drillDown" data-category-id="${escape(c.id)}" style="cursor: pointer; flex: 1; margin-left: 12px;">
                   <div class="cat-title-row">
                     <span class="cat-name-v3">${escape(c.name)}</span>
                     <span class="cat-amount-v3">¥${c.total.toLocaleString()}</span>
@@ -213,12 +214,12 @@ export function renderBSContent(state, start, end) {
             const isExcluded = state.excludedAccountIds.includes(a.id);
             const isNegative = Number(a.balance) < 0;
             return `
-              <div class="category-item-v3 ${isExcluded ? 'excluded' : ''}" data-id="${escape(a.id)}">
+              <div class="category-item-v3 ${isExcluded ? 'excluded' : ''}" data-id="${escape(a.id)}" style="align-items: center;">
                 <div class="cat-check-v2" style="padding-right: 12px; display: flex; align-items: center;">
                   <input type="checkbox" class="acc-checkbox" data-id="${escape(a.id)}" ${isExcluded ? '' : 'checked'} style="width: 16px; height: 16px; cursor: pointer;">
                 </div>
-                <div class="cat-icon-frame">${(a.icon && a.icon.includes('<i')) ? a.icon : (escape(a.icon || '') || '<i data-lucide="landmark" style="width: 14px; height: 14px;"></i>')}</div>
-                <div class="cat-info-v3">
+                ${renderIconHTML(a.icon, a.id, { size: 20 })}
+                <div class="cat-info-v3" style="flex: 1; margin-left: 12px;">
                   <div class="cat-title-row">
                     <span class="cat-name-v3">${escape(a.name)}</span>
                     <span class="cat-amount-v3 ${isNegative ? 'expense' : 'income'}" style="font-size: 0.85rem;">

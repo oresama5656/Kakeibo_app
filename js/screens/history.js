@@ -4,6 +4,7 @@
 
 import * as store from '../store.js';
 import * as PeriodManager from '../components/analysis/PeriodManager.js';
+import { renderIconHTML } from '../utils/IconRenderer.js';
 
 let historyState = {
   periodType: 'month',
@@ -148,14 +149,14 @@ export function render(container) {
             <i data-lucide="wallet" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-muted); pointer-events: none;"></i>
             <select data-action="filterAccount" class="select-v3" style="width: 100%; padding-left: 34px;">
               <option value="">全口座</option>
-              ${accounts.map(a => `<option value="${attrEsc(a.id)}" ${historyState.accountId === a.id ? 'selected' : ''}>${a.icon} ${escape(a.name)}</option>`).join('')}
+              ${accounts.map(a => `<option value="${attrEsc(a.id)}" ${historyState.accountId === a.id ? 'selected' : ''}>${renderIconHTML(a.icon, a.id, { size: 14 })} ${escape(a.name)}</option>`).join('')}
             </select>
           </div>
           <div style="flex: 1; position: relative;">
             <i data-lucide="tag" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-muted); pointer-events: none;"></i>
             <select data-action="filterCategory" class="select-v3" style="width: 100%; padding-left: 34px;">
               <option value="">全カテゴリ</option>
-              ${categories.map(c => `<option value="${attrEsc(c.id)}" ${historyState.categoryId === c.id ? 'selected' : ''}>${c.icon} ${escape(c.name)}</option>`).join('')}
+              ${categories.map(c => `<option value="${attrEsc(c.id)}" ${historyState.categoryId === c.id ? 'selected' : ''}>${renderIconHTML(c.icon, c.id, { size: 14 })} ${escape(c.name)}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -257,7 +258,6 @@ function renderHistoryItem(tx, balance, isLast) {
   const accounts = store.getAccounts();
   
   const cat = categories.find(c => c.id === tx.categoryId);
-  const icon = cat ? cat.icon : (tx.type === 'transfer' ? '<i data-lucide="repeat" style="width: 14px; height: 14px;"></i>' : '？');
   const categoryName = tx.type === 'transfer' ? '振替' : (cat ? cat.name : tx.category);
 
   const fromAcc = accounts.find(a => a.id === tx.fromAccountId);
@@ -274,9 +274,9 @@ function renderHistoryItem(tx, balance, isLast) {
   const amountColor = tx.type === 'expense' ? 'var(--color-expense)' : tx.type === 'income' ? 'var(--color-income)' : 'var(--color-transfer)';
 
   return `
-    <div class="category-item-v3" data-action="editTx" data-id="${attrEsc(tx.id)}" style="${isLast ? 'border-bottom: none;' : ''} padding: 14px 16px;">
-      <div class="cat-icon-frame" style="background: var(--bg-primary); border: 1px solid var(--border-light); font-size: 1.1rem;">${icon.includes('<i') ? icon : escape(icon)}</div>
-      <div class="cat-info-v3" style="flex: 1;">
+    <div class="category-item-v3" data-action="editTx" data-id="${attrEsc(tx.id)}" style="${isLast ? 'border-bottom: none;' : ''} padding: 14px 16px; align-items: center;">
+      ${renderIconHTML(tx.type === 'transfer' ? 'lucide:repeat' : (cat ? cat.icon : 'lucide:help-circle'), tx.categoryId, { size: 20 })}
+      <div class="cat-info-v3" style="flex: 1; margin-left: 12px;">
         <div class="cat-title-row">
           <span class="cat-name-v3" style="font-size: 0.9rem; font-weight: 700; color: var(--premium-deep);">${escape(categoryName)}</span>
           <span class="cat-amount-v3" style="color: ${amountColor}; font-weight: 800; font-size: 1rem;">${typeLabel}¥${Number(tx.amount).toLocaleString('ja-JP')}</span>
