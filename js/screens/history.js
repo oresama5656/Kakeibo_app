@@ -127,9 +127,6 @@ export function render(container) {
     <div class="history-screen premium-mode fadeIn">
       <!-- Summary Master Card -->
       <div class="total-summary-card">
-        <div style="font-size: 0.75rem; opacity: 0.8; font-weight: 600; letter-spacing: 1px; margin-bottom: 4px;">
-           ${escape(safeStart.replace(/-/g, '.'))} — ${escape(safeEnd.replace(/-/g, '.'))}
-        </div>
         <div class="total-amount">¥${currentAssetSum.toLocaleString('ja-JP')}</div>
         <div style="font-size: 0.7rem; opacity: 0.7; font-weight: 600;">
           ${historyState.accountId ? escape(accounts.find(a => a.id === historyState.accountId)?.name || '選択中口座') + ' の残高' : '総資産額'}
@@ -156,9 +153,24 @@ export function render(container) {
             ${categories.map(c => `<option value="${attrEsc(c.id)}" ${historyState.categoryId === c.id ? 'selected' : ''}>${c.icon} ${escape(c.name)}</option>`).join('')}
           </select>
         </div>
-        <div class="period-nav-strip" style="margin-top: 12px; border-top: 1px solid var(--border-light); padding-top: 12px;">
+        <div class="period-nav-strip">
           <button class="nav-round-btn" data-action="prevPeriod" type="button">‹</button>
-          <div class="period-display" style="font-size: 0.8rem; font-weight: 800; color: var(--premium-deep);">${escape(store.formatDateLabel(safeStart))} — ${escape(store.formatDateLabel(safeEnd))}</div>
+          <div class="period-display">
+            ${(() => {
+              const startParts = safeStart.split('-');
+              const endParts = safeEnd.split('-');
+              const startLabel = store.formatDateLabel(safeStart);
+              const endLabel = store.formatDateLabel(safeEnd);
+              
+              if (safeStart === safeEnd) {
+                return `<span class="year-label">${startParts[0]}年</span> <span>${escape(startLabel)}</span>`;
+              }
+              if (startParts[0] === endParts[0]) {
+                return `<span class="year-label">${startParts[0]}年</span> <span>${escape(startLabel)} — ${escape(endLabel)}</span>`;
+              }
+              return `<span>${escape(store.formatFullDateLabel(safeStart))} — ${escape(store.formatFullDateLabel(safeEnd))}</span>`;
+            })()}
+          </div>
           <button class="nav-round-btn" data-action="nextPeriod" type="button">›</button>
         </div>
       </div>
