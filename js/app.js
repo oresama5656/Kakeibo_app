@@ -140,6 +140,8 @@ function setupNavigation() {
       btn.classList.toggle('active', btn.dataset.screen === screenName);
     });
 
+    if (window.lucide) lucide.createIcons();
+
     localStorage.setItem('kakeibo_current_screen', screenName);
   }
 

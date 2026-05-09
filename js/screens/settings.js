@@ -28,7 +28,9 @@ export function render(container) {
       
       <!-- ヒーローセクション -->
       <div class="settings-header-hero" style="text-align: center; padding: 40px 0 20px;">
-        <div style="font-size: 3.5rem; margin-bottom: 8px;">⚙️</div>
+        <div style="margin-bottom: 12px; display: flex; justify-content: center; color: var(--text-muted);">
+          <i data-lucide="settings" style="width: 48px; height: 48px; stroke-width: 1.5px;"></i>
+        </div>
         <h2 style="font-size: 1.6rem; font-weight: 800; margin:0; color: var(--text-primary);">アプリ設定</h2>
         <div style="font-size: 11px; color: var(--text-muted); letter-spacing: 0.1em; margin-top: 5px;">SYNC ENGINE v5.6</div>
       </div>
@@ -36,11 +38,15 @@ export function render(container) {
       <!-- クイックアクション -->
       <div class="settings-quick-actions" style="display: flex; justify-content: center; gap: 24px; margin: 10px 0 32px;">
         <div class="quick-action" data-action="toggleDarkMode" style="cursor: pointer; text-align: center;">
-          <div style="width: 52px; height: 52px; background: var(--bg-card); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">${getDarkModeActive(settings) ? '🌙' : '☀️'}</div>
+          <div style="width: 52px; height: 52px; background: var(--bg-card); border-radius: 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); color: var(--text-primary);">
+            <i data-lucide="${getDarkModeActive(settings) ? 'moon' : 'sun'}" style="width: 22px; height: 22px;"></i>
+          </div>
           <div style="font-size: 10px; margin-top: 6px; font-weight: 800; color: var(--text-secondary);">テーマ</div>
         </div>
         <div class="quick-action" data-action="exportDataExcel" style="cursor: pointer; text-align: center;">
-          <div style="width: 52px; height: 52px; background: var(--bg-card); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">📊</div>
+          <div style="width: 52px; height: 52px; background: var(--bg-card); border-radius: 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); color: var(--text-primary);">
+            <i data-lucide="file-spreadsheet" style="width: 22px; height: 22px;"></i>
+          </div>
           <div style="font-size: 10px; margin-top: 6px; font-weight: 800; color: var(--text-secondary);">エクセル保存</div>
         </div>
       </div>
@@ -48,7 +54,10 @@ export function render(container) {
       <!-- 口座セクション (全幅) -->
       <div class="settings-section-card" style="background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 24px; box-shadow: var(--shadow-sm);">
         <div style="padding: 18px 20px; font-size: 0.85rem; font-weight: 800; border-bottom: 1px solid var(--border-light); background: rgba(0,0,0,0.01); display: flex; justify-content: space-between; align-items: center;">
-          <span>💴 口座の管理</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="wallet" style="width: 18px; height: 18px; color: var(--color-accent);"></i>
+            <span>口座の管理</span>
+          </div>
           <span style="font-size: 10px; background: var(--bg-hover); padding: 2px 8px; border-radius: 10px; color: var(--text-muted);">${accounts.length}件</span>
         </div>
         <div id="settings-accounts-list">
@@ -102,20 +111,32 @@ export function render(container) {
 
       <!-- クラウド・同期管理 (モダン・スタイル) -->
       <div style="padding: 28px; background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%); border-radius: 24px; border: 1px solid var(--border-color); text-align: center; margin-bottom: 40px; box-shadow: var(--shadow-sm);">
-        <div style="font-size: 2.8rem; margin-bottom: 16px;">☁️</div>
+        <div style="display: flex; justify-content: center; margin-bottom: 20px; color: var(--color-accent);">
+          <i data-lucide="cloud-cog" style="width: 48px; height: 48px; stroke-width: 1.5px;"></i>
+        </div>
         ${!auth.isLoggedIn() ? `
           <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 18px; color: var(--text-primary);">Googleクラウド同期</h3>
           <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 24px;">スプレッドシートと連携して<br>データを安全にバックアップ・共有できます。</p>
-          <button class="btn btn-primary" data-action="googleLogin" style="width: 100%; max-width: 260px; border-radius: 50px; font-weight: 800; padding: 14px; margin-bottom: 16px;">連携を開始する</button>
-          <div data-action="exportDataExcel" style="font-size: 0.8rem; color: var(--color-accent); text-decoration: underline; cursor: pointer; font-weight: 800; opacity: 0.9;">💾 エクセル形式で全データを保存 (.xlsx)</div>
+          <button class="btn btn-primary" data-action="googleLogin" style="width: 100%; max-width: 260px; border-radius: 50px; font-weight: 800; padding: 14px; margin-bottom: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+            <i data-lucide="log-in" style="width: 18px; height: 18px;"></i> 連携を開始する
+          </button>
+          <div data-action="exportDataExcel" style="font-size: 0.8rem; color: var(--color-accent); text-decoration: underline; cursor: pointer; font-weight: 800; opacity: 0.9; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <i data-lucide="save" style="width: 14px; height: 14px;"></i> エクセル形式で全データを保存 (.xlsx)
+          </div>
         ` : `
           <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em;">Connected Cloud ID</div>
           <div style="font-size: 10px; font-family: monospace; opacity: 0.8; margin-bottom: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 15px; color: var(--color-accent);">${sheetId}</div>
           <div style="display: flex; gap: 12px; justify-content: center; max-width: 320px; margin: 0 auto;">
-            <button data-action="syncPull" style="flex:1; padding: 14px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.85rem; font-weight: 800; cursor: pointer; color: var(--text-primary);">📥 読込</button>
-            <button data-action="syncPush" style="flex:1; padding: 14px; border-radius: 14px; border: none; background: var(--color-accent); color: white; font-size: 0.85rem; font-weight: 800; cursor: pointer;">📤 保存</button>
+            <button data-action="syncPull" style="flex:1; padding: 14px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.85rem; font-weight: 800; cursor: pointer; color: var(--text-primary); display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <i data-lucide="download" style="width: 16px; height: 16px;"></i> 読込
+            </button>
+            <button data-action="syncPush" style="flex:1; padding: 14px; border-radius: 14px; border: none; background: var(--color-accent); color: white; font-size: 0.85rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <i data-lucide="upload" style="width: 16px; height: 16px;"></i> 保存
+            </button>
           </div>
-          <div data-action="googleLogout" style="margin-top: 24px; font-size: 0.75rem; color: var(--color-danger); text-decoration: underline; cursor: pointer; opacity: 0.7; font-weight: bold;">連携を解除する</div>
+          <div data-action="googleLogout" style="margin-top: 24px; font-size: 0.75rem; color: var(--color-danger); text-decoration: underline; cursor: pointer; opacity: 0.7; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 4px;">
+            <i data-lucide="log-out" style="width: 14px; height: 14px;"></i> 連携を解除する
+          </div>
         `}
       </div>
 
@@ -132,6 +153,7 @@ export function render(container) {
   initSortable('settings-income-list', 'category');
 
   container.addEventListener('click', handleClick);
+  if (window.lucide) lucide.createIcons();
 }
 
 // -------------------------------------------------------------
@@ -360,7 +382,7 @@ function exportDataExcel() {
 
     XLSX.writeFile(wb, "Kakeibo_App_Full_Data.xlsx");
     if (typeof window.showToast === 'function') {
-      window.showToast('エクセルを保存しました ✓');
+      window.showToast('エクセルを保存しました');
     }
   } catch (e) {
     console.error('Export failed:', e);

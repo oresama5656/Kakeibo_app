@@ -122,7 +122,9 @@ function renderIconGrid(items, selectedId, expanded, onSelect, onToggle, section
               ${selectedItem.initialBalance !== undefined ? `<span style="font-size:0.75rem; opacity:0.7; margin-left:6px; font-weight: 500;">(残高: ¥${store.getAccountBalance(selectedId).toLocaleString()})</span>` : ''}
             </span>` : ''}
         </span>
-        ${showToggleButton ? `<button class="selector-expand" data-action="${store.escapeHTML(onToggle)}">${expanded ? '▲ 閉じる' : '▼ 全表示'}</button>` : ''}
+        ${showToggleButton ? `<button class="selector-expand" data-action="${store.escapeHTML(onToggle)}" style="display: flex; align-items: center; gap: 4px;">
+          ${expanded ? '<i data-lucide="chevron-up" style="width: 14px; height: 14px;"></i> 閉じる' : '<i data-lucide="chevron-down" style="width: 14px; height: 14px;"></i> 全表示'}
+        </button>` : ''}
       </div>
       <div class="icon-grid ${expanded ? 'expanded' : ''}">
         ${displayItems.length > 0 ? displayItems.map(item => `
@@ -149,7 +151,9 @@ export function render(container) {
         <button class="type-btn ${state.type === 'expense' ? 'active' : ''}" data-action="setType" data-type="expense">支出</button>
         <button class="type-btn ${state.type === 'income' ? 'active' : ''}" data-action="setType" data-type="income">収入</button>
         <button class="type-btn ${state.type === 'transfer' ? 'active' : ''}" data-action="setType" data-type="transfer">振替</button>
-        ${isPC ? `<button class="type-btn bulk-toggle ${showBulkInput ? 'active' : ''}" data-action="toggleBulk">📋 一括・CSV</button>` : ''}
+        ${isPC ? `<button class="type-btn bulk-toggle ${showBulkInput ? 'active' : ''}" data-action="toggleBulk" style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <i data-lucide="list-plus" style="width: 16px; height: 16px;"></i> 一括・CSV
+        </button>` : ''}
       </div>
 
       <div class="input-fields" style="padding: 0 4px; box-sizing: border-box;">
@@ -159,6 +163,7 @@ export function render(container) {
     <input type="file" id="csv-import-input" accept=".csv" style="display: none;">
   `;
   bindEvents(container);
+  if (window.lucide) lucide.createIcons();
 }
 
 function renderSingleInput(accounts, allCategories, shortcuts) {
@@ -173,16 +178,18 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
       <div class="amount-input-wrapper" style="display: flex; align-items: center; border-radius: 20px; background: var(--bg-card); padding: 8px 16px; box-shadow: var(--shadow-sm); border: 2px solid var(--border-color); width: 100%; box-sizing: border-box;">
         <span class="amount-yen" style="font-size: 1.4rem; color: var(--text-muted); font-weight: 800; margin-right: 12px;">¥</span>
         <input type="text" class="amount-field" id="amount-input-formatted" value="${store.escapeHTML(state.amount)}" placeholder="0" inputmode="numeric" style="flex: 1; width: 0; border: none; background: transparent; font-size: 2rem; font-weight: 800; color: var(--text-primary); text-align: left; padding: 12px 0;">
-        <button data-action="openCalculator" title="電卓" style="background: var(--bg-hover); border: none; width: 44px; height: 44px; min-width: 44px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 8px;">🧮</button>
+        <button data-action="openCalculator" title="電卓" style="background: var(--bg-hover); border: none; width: 44px; height: 44px; min-width: 44px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 8px;">
+          <i data-lucide="calculator" style="width: 20px; height: 20px; color: var(--text-primary);"></i>
+        </button>
       </div>
     </div>
 
-    ${showFromAccount ? renderIconGrid(accounts, state.fromAccountId, state.fromAccountsExpanded, 'selectFromAccount', 'toggleFromAccounts', state.type === 'transfer' ? '💴 出金元' : '💴 口座') : ''}
-    ${showToAccount ? renderIconGrid(accounts, state.toAccountId, state.toAccountsExpanded, 'selectToAccount', 'toggleToAccounts', state.type === 'transfer' ? '💴 入金先' : '💴 入金口座') : ''}
-    ${showCategories ? renderIconGrid(categories, state.categoryId, state.categoriesExpanded, 'selectCategory', 'toggleCategories', '📁 カテゴリー') : ''}
+    ${showFromAccount ? renderIconGrid(accounts, state.fromAccountId, state.fromAccountsExpanded, 'selectFromAccount', 'toggleFromAccounts', state.type === 'transfer' ? '出金元' : '口座') : ''}
+    ${showToAccount ? renderIconGrid(accounts, state.toAccountId, state.toAccountsExpanded, 'selectToAccount', 'toggleToAccounts', state.type === 'transfer' ? '入金先' : '入金口座') : ''}
+    ${showCategories ? renderIconGrid(categories, state.categoryId, state.categoriesExpanded, 'selectCategory', 'toggleCategories', 'カテゴリー') : ''}
 
     <div class="selector-section">
-      <div class="selector-header"><span class="selector-title">📅 日付・メモ</span></div>
+      <div class="selector-header"><span class="selector-title">日付・メモ</span></div>
       <div style="display: flex; gap: 8px; margin-bottom: 12px;">
         <input type="date" class="date-input" value="${store.escapeHTML(state.date)}" data-action="setDate" style="flex: 1; padding: 12px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); min-width: 0;">
         <button data-action="dateToday" style="padding: 0 16px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.8rem; font-weight: 800; white-space: nowrap;">今日</button>
@@ -190,7 +197,10 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
       <input type="text" placeholder="メモを入力..." value="${store.escapeHTML(state.memo)}" id="memo-input" style="width: 100%; height: 50px; padding: 0 16px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.9rem; box-sizing: border-box;">
     </div>
 
-    <button class="submit-btn ${state.type}-mode" data-action="submit" style="width: 100%; height: 64px; font-size: 1.2rem; font-weight: 800; border-radius: 20px; margin-top: 24px; box-shadow: var(--shadow-sm);">${state.type === 'expense' ? '支出' : state.type === 'income' ? '収入' : '振替'}を記録する ✓</button>
+    <button class="submit-btn ${state.type}-mode" data-action="submit" style="width: 100%; height: 64px; font-size: 1.2rem; font-weight: 800; border-radius: 20px; margin-top: 24px; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center; gap: 10px;">
+      <i data-lucide="check-circle-2" style="width: 24px; height: 24px;"></i>
+      ${state.type === 'expense' ? '支出' : state.type === 'income' ? '収入' : '振替'}を記録する
+    </button>
     
     ${shortcuts.length > 0 ? `
       <div style="margin-top: 32px;">
@@ -213,9 +223,15 @@ function renderBulkInput(accounts, allCategories) {
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h3 style="font-size: 1rem; font-weight: 800;">一括入力・CSV管理</h3>
         <div style="display: flex; gap: 8px;">
-          <button data-action="addBulkRow" style="background: var(--color-accent-light); color: var(--color-accent); padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 0.75rem;">＋ 行追加</button>
-          <button data-action="downloadCsvTemplate" style="background: var(--bg-hover); padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 0.75rem;">📄 テンプレ</button>
-          <button data-action="triggerCsvImport" style="background: var(--bg-hover); padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 0.75rem;">📥 読込</button>
+          <button data-action="addBulkRow" style="background: var(--color-accent-light); color: var(--color-accent); padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 0.75rem; display: flex; align-items: center; gap: 4px;">
+            <i data-lucide="plus" style="width: 14px; height: 14px;"></i> 行追加
+          </button>
+          <button data-action="downloadCsvTemplate" style="background: var(--bg-hover); padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 0.75rem; display: flex; align-items: center; gap: 4px;">
+            <i data-lucide="file-text" style="width: 14px; height: 14px;"></i> テンプレ
+          </button>
+          <button data-action="triggerCsvImport" style="background: var(--bg-hover); padding: 8px 14px; border-radius: 10px; font-weight: bold; font-size: 0.75rem; display: flex; align-items: center; gap: 4px;">
+            <i data-lucide="upload" style="width: 14px; height: 14px;"></i> 読込
+          </button>
         </div>
       </div>
       <div style="max-height: 400px; overflow: auto; border: 1px solid var(--border-light); border-radius: 12px;">

@@ -144,14 +144,20 @@ export function render(container) {
       <!-- Object Selectors (Stylish UI) -->
       <div style="padding: 0 var(--space-md); margin-bottom: 8px;">
         <div class="select-v3-container" style="display: flex; gap: 10px; width: 100%; min-width: 0;">
-          <select data-action="filterAccount" class="select-v3" style="flex: 1; min-width: 0;">
-            <option value="">🏦 全口座</option>
-            ${accounts.map(a => `<option value="${attrEsc(a.id)}" ${historyState.accountId === a.id ? 'selected' : ''}>${a.icon} ${escape(a.name)}</option>`).join('')}
-          </select>
-          <select data-action="filterCategory" class="select-v3" style="flex: 1; min-width: 0;">
-            <option value="">🏷️ 全カテゴリ</option>
-            ${categories.map(c => `<option value="${attrEsc(c.id)}" ${historyState.categoryId === c.id ? 'selected' : ''}>${c.icon} ${escape(c.name)}</option>`).join('')}
-          </select>
+          <div style="flex: 1; position: relative;">
+            <i data-lucide="wallet" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-muted); pointer-events: none;"></i>
+            <select data-action="filterAccount" class="select-v3" style="width: 100%; padding-left: 34px;">
+              <option value="">全口座</option>
+              ${accounts.map(a => `<option value="${attrEsc(a.id)}" ${historyState.accountId === a.id ? 'selected' : ''}>${a.icon} ${escape(a.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div style="flex: 1; position: relative;">
+            <i data-lucide="tag" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-muted); pointer-events: none;"></i>
+            <select data-action="filterCategory" class="select-v3" style="width: 100%; padding-left: 34px;">
+              <option value="">全カテゴリ</option>
+              ${categories.map(c => `<option value="${attrEsc(c.id)}" ${historyState.categoryId === c.id ? 'selected' : ''}>${c.icon} ${escape(c.name)}</option>`).join('')}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -182,7 +188,9 @@ export function render(container) {
       <div class="history-list">
         ${groupedTransactions.length === 0 ? `
           <div class="premium-card-v3" style="text-align: center; padding: 60px var(--space-md);">
-            <div style="font-size: 3.5rem; margin-bottom: 20px; opacity: 0.5;">📋</div>
+            <div style="display: flex; justify-content: center; margin-bottom: 20px; color: var(--text-muted); opacity: 0.3;">
+              <i data-lucide="clipboard-list" style="width: 56px; height: 56px; stroke-width: 1px;"></i>
+            </div>
             <div style="color: var(--text-muted); font-weight: 700; font-size: 0.9rem;">対象期間に取引がありません</div>
           </div>
         ` : groupedTransactions.map(group => `
@@ -200,6 +208,7 @@ export function render(container) {
   `;
 
   bindEvents(container);
+  if (window.lucide) lucide.createIcons();
 }
 
 function bindEvents(container) {
@@ -248,7 +257,7 @@ function renderHistoryItem(tx, balance, isLast) {
   const accounts = store.getAccounts();
   
   const cat = categories.find(c => c.id === tx.categoryId);
-  const icon = cat ? cat.icon : (tx.type === 'transfer' ? '🔄' : '❓');
+  const icon = cat ? cat.icon : (tx.type === 'transfer' ? '<i data-lucide="repeat" style="width: 14px; height: 14px;"></i>' : '？');
   const categoryName = tx.type === 'transfer' ? '振替' : (cat ? cat.name : tx.category);
 
   const fromAcc = accounts.find(a => a.id === tx.fromAccountId);
@@ -266,7 +275,7 @@ function renderHistoryItem(tx, balance, isLast) {
 
   return `
     <div class="category-item-v3" data-action="editTx" data-id="${attrEsc(tx.id)}" style="${isLast ? 'border-bottom: none;' : ''} padding: 14px 16px;">
-      <div class="cat-icon-frame" style="background: var(--bg-primary); border: 1px solid var(--border-light); font-size: 1.1rem;">${escape(icon)}</div>
+      <div class="cat-icon-frame" style="background: var(--bg-primary); border: 1px solid var(--border-light); font-size: 1.1rem;">${icon.includes('<i') ? icon : escape(icon)}</div>
       <div class="cat-info-v3" style="flex: 1;">
         <div class="cat-title-row">
           <span class="cat-name-v3" style="font-size: 0.9rem; font-weight: 700; color: var(--premium-deep);">${escape(categoryName)}</span>
@@ -302,7 +311,10 @@ function showCustomPeriodModal(container) {
     <div class="premium-modal-sheet slideUp" role="dialog" aria-modal="true" aria-labelledby="modal-title-v3">
       <div class="modal-drag-handle"></div>
       <div class="modal-header-v3">
-        <h3 class="modal-title-v3" id="modal-title-v3">📅 期間を指定</h3>
+        <h3 class="modal-title-v3" id="modal-title-v3" style="display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="calendar" style="width: 20px; height: 20px; color: var(--color-accent);"></i>
+          期間を指定
+        </h3>
         <button class="modal-close-v3" data-action="closeModal" type="button">&times;</button>
       </div>
       <div class="modal-body-v3">

@@ -41,7 +41,7 @@
   --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.15);
 
   /* Typography */
-  --font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-family: 'Inter', 'Sora', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-size-xs: 0.7rem;
   --font-size-sm: 0.8rem;
   --font-size-base: 0.95rem;
@@ -227,16 +227,23 @@ textarea:focus {
 }
 
 .logo-icon {
-  font-size: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent);
+}
+
+.logo-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2px;
 }
 
 .logo-text {
   font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--premium-deep);
 }
 
 .sidebar-nav {
@@ -272,7 +279,15 @@ textarea:focus {
 }
 
 .nav-icon {
-  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.5px;
 }
 
 /* --- Main Content --- */
@@ -347,15 +362,24 @@ textarea:focus {
   content: '';
   position: absolute;
   top: 0;
-  left: 25%;
-  right: 25%;
-  height: 3px;
+  left: 30%;
+  right: 30%;
+  height: 2px;
   background: var(--color-accent);
-  border-radius: 0 0 3px 3px;
+  border-radius: 0 0 2px 2px;
 }
 
 .tab-icon {
-  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+}
+
+.tab-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.5px;
 }
 
 .tab-label {

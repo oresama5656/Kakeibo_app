@@ -22,7 +22,10 @@ export function render(container) {
       </div>
 
       <div class="chart-card">
-        <div class="chart-card-title">💰 口座別残高</div>
+        <div class="chart-card-title" style="display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="wallet" style="width: 18px; height: 18px; color: var(--color-accent);"></i>
+          口座別残高
+        </div>
         <div class="account-cards">
           ${[...accounts].sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(acc => {
             const balance = store.getAccountBalance(acc.id);
@@ -39,14 +42,16 @@ export function render(container) {
             `;
           }).join('')}
         </div>
-        <div style="margin-top: 16px; font-size: 11px; color: var(--text-muted); text-align: center; opacity: 0.8;">
-          💡 口座をタップで入出金・残高調整メニューを表示
+        <div style="margin-top: 16px; font-size: 11px; color: var(--text-muted); text-align: center; opacity: 0.8; display: flex; align-items: center; justify-content: center; gap: 4px;">
+          <i data-lucide="info" style="width: 12px; height: 12px;"></i>
+          口座をタップで入出金・残高調整メニューを表示
         </div>
       </div>
     </div>
   `;
 
   container.addEventListener('click', handleClick);
+  if (window.lucide) lucide.createIcons();
 
   // Drag & Drop for PC (振り替え用)
   const el = container.querySelector('.account-cards');

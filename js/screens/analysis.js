@@ -56,12 +56,12 @@ export function render(container) {
                   data-tab="pl" data-action="setTab" 
                   aria-label="収支分析を表示" 
                   aria-selected="${analysisState.tab === 'pl' ? 'true' : 'false'}" 
-                  role="tab">📊 収支</button>
+                  role="tab"><i data-lucide="trending-up" style="width: 16px; height: 16px; margin-right: 6px;"></i>収支</button>
           <button class="segmented-item ${analysisState.tab === 'bs' ? 'active' : ''}" 
                   data-tab="bs" data-action="setTab" 
                   aria-label="資産分析を表示" 
                   aria-selected="${analysisState.tab === 'bs' ? 'true' : 'false'}" 
-                  role="tab">💎 資産</button>
+                  role="tab"><i data-lucide="gem" style="width: 16px; height: 16px; margin-right: 6px;"></i>資産</button>
         </div>
       </div>
       <div class="analysis-body">${contentHtml}</div>
@@ -69,6 +69,7 @@ export function render(container) {
   `;
 
   bindEvents(container);
+  if (window.lucide) lucide.createIcons();
 
   setTimeout(() => {
     if (analysisState.tab === 'pl') {
@@ -190,7 +191,10 @@ function showCustomPeriodModal(container) {
     <div class="premium-modal-sheet slideUp">
       <div class="modal-drag-handle"></div>
       <div class="modal-header-v3">
-        <h3 class="modal-title-v3">📅 期間を指定</h3>
+        <h3 class="modal-title-v3" style="display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="calendar" style="width: 20px; height: 20px; color: var(--color-accent);"></i>
+          期間を指定
+        </h3>
         <button class="modal-close-v3" data-action="closeModal">&times;</button>
       </div>
       <div class="modal-body-v3">

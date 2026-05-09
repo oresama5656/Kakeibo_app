@@ -10,7 +10,7 @@ export function calculateCategoryTotals(txs) {
     const cid = tx.categoryId || 'cat_other';
     if (!totals[cid]) {
       const c = cats.find(cat => cat.id === cid) || cats.find(cat => cat.id === 'cat_98');
-      totals[cid] = { id: cid, name: c?.name || tx.category || 'その他', icon: c?.icon || '📂', total: 0 };
+      totals[cid] = { id: cid, name: c?.name || tx.category || 'その他', icon: c?.icon || '<i data-lucide="folder" style="width: 14px; height: 14px;"></i>', total: 0 };
     }
     totals[cid].total += Number(tx.amount) || 0;
   });
@@ -102,7 +102,7 @@ export function renderPLContent(state, start, end) {
                 <div class="cat-check-v2" style="padding-right: 12px; display: flex; align-items: center;">
                   <input type="checkbox" class="cat-checkbox" data-id="${escape(c.id)}" ${isExcluded ? '' : 'checked'} style="width: 16px; height: 16px; cursor: pointer;">
                 </div>
-                <div class="cat-icon-frame">${escape(c.icon)}</div>
+                <div class="cat-icon-frame">${c.icon.includes('<i') ? c.icon : escape(c.icon)}</div>
                 <div class="cat-info-v3" data-action="drillDown" data-category-id="${escape(c.id)}" style="cursor: pointer;">
                   <div class="cat-title-row">
                     <span class="cat-name-v3">${escape(c.name)}</span>
@@ -180,13 +180,19 @@ export function renderBSContent(state, start, end) {
 
       <!-- Asset Balance Chart -->
       <div class="premium-card-v3">
-        <h4 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 20px; color: #1a2a4d;">🏦 資産・負債バランス</h4>
+        <h4 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 20px; color: #1a2a4d; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="landmark" style="width: 18px; height: 18px; color: var(--color-accent);"></i>
+          資産・負債バランス
+        </h4>
         <div style="height: 320px;"><canvas id="bs-balance-chart"></canvas></div>
       </div>
 
       <!-- Asset Trend Chart -->
       <div class="premium-card-v3">
-        <h4 style="font-size: 0.9rem; font-weight: 800; color: #1a2a4d; margin-bottom: 20px;">📈 資産推移</h4>
+        <h4 style="font-size: 0.9rem; font-weight: 800; color: #1a2a4d; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="trending-up" style="width: 18px; height: 18px; color: var(--color-accent);"></i>
+          資産推移
+        </h4>
         <div style="height: 240px;"><canvas id="total-asset-chart"></canvas></div>
       </div>
       ...
@@ -211,7 +217,7 @@ export function renderBSContent(state, start, end) {
                 <div class="cat-check-v2" style="padding-right: 12px; display: flex; align-items: center;">
                   <input type="checkbox" class="acc-checkbox" data-id="${escape(a.id)}" ${isExcluded ? '' : 'checked'} style="width: 16px; height: 16px; cursor: pointer;">
                 </div>
-                <div class="cat-icon-frame">${escape(a.icon || '🏦')}</div>
+                <div class="cat-icon-frame">${(a.icon && a.icon.includes('<i')) ? a.icon : (escape(a.icon || '') || '<i data-lucide="landmark" style="width: 14px; height: 14px;"></i>')}</div>
                 <div class="cat-info-v3">
                   <div class="cat-title-row">
                     <span class="cat-name-v3">${escape(a.name)}</span>
