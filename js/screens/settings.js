@@ -14,7 +14,9 @@ const RECOMMENDED_LUCIDE_ICONS = [
   'lucide:shopping-bag', 'lucide:briefcase', 'lucide:wallet', 'lucide:banknote', 'lucide:credit-card',
   'lucide:landmark', 'lucide:coins', 'lucide:piggy-bank', 'lucide:trending-up', 'lucide:stethoscope', 
   'lucide:pill', 'lucide:dumbbell', 'lucide:bike', 'lucide:plane', 'lucide:star', 
-  'lucide:zap', 'lucide:flame', 'lucide:cat', 'lucide:dog', 'lucide:leaf'
+  'lucide:zap', 'lucide:flame', 'lucide:cat', 'lucide:dog', 'lucide:leaf',
+  'lucide:hand-coins', 'lucide:graduation-cap', 'lucide:baby', 'lucide:laptop', 'lucide:percent',
+  'lucide:line-chart', 'lucide:smartphone', 'lucide:palmtree', 'lucide:party-popper', 'lucide:droplets', 'lucide:wifi'
 ];
 
 export function render(container) {
