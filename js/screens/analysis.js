@@ -147,6 +147,19 @@ function bindEvents(container) {
     };
   });
 
+  const accAllCheck = container.querySelector('#acc-all-check');
+  if (accAllCheck) {
+    accAllCheck.onchange = (e) => {
+      if (e.target.checked) {
+        analysisState.excludedAccountIds = [];
+      } else {
+        analysisState.excludedAccountIds = store.getAccounts().map(a => a.id);
+      }
+      saveState();
+      refresh();
+    };
+  }
+
   const bsSel = container.querySelector('#bs-period-selector');
   if (bsSel) bsSel.onchange = e => { analysisState.bsPeriod = Number(e.target.value); saveState(); refresh(); };
   const accSel = container.querySelector('#analysis-account-selector');

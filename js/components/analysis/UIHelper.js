@@ -194,8 +194,9 @@ export function renderBSContent(state, start, end) {
       <!-- Account List Title -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px var(--space-md) 10px;">
         <h4 style="font-size: 0.9rem; font-weight: 800; color: #1a2a4d; margin: 0;">口座別内訳</h4>
-        <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted);">
-          表示設定
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem; font-weight: 700;">
+          <input type="checkbox" id="acc-all-check" ${state.excludedAccountIds.length === 0 ? 'checked' : ''} style="width: 14px; height: 14px; cursor: pointer;">
+          <label for="acc-all-check" style="cursor: pointer; color: var(--text-muted);">全表示</label>
         </div>
       </div>
 
