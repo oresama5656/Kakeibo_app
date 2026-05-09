@@ -24,15 +24,16 @@ let showBulkInput = false;
 let calcState = { display: '0', currentValue: null, operator: null, waitingForNextValue: false };
 
 const formatComma = (val) => {
-  if (val === undefined || val === null) return '';
-  // 数字と小数点以外を除去（二記号目以降の小数点は無視）
+  if (val === undefined || val === null || val === '') return '';
+  // 数字と小数点以外を除去
   let s = val.toString().replace(/[^0-9.]/g, '');
+  if (s === '' || s === '.') return s === '.' ? '0.' : '';
+  
   const parts = s.split('.');
-  
   // 整数部分のフォーマット
-  let integerPart = parts[0] ? Number(parts[0]).toLocaleString('ja-JP') : (s.startsWith('.') ? '0' : '');
+  let integerPart = parts[0] ? Number(parts[0]).toLocaleString('ja-JP') : '0';
   
-  // 小数部分の結合（2項目以降のドットは無視して、最大2桁に制限）
+  // 小数部分の結合（最大2桁に制限）
   if (parts.length > 1) {
     return integerPart + '.' + parts.slice(1).join('').substring(0, 2);
   }
@@ -42,33 +43,40 @@ const formatComma = (val) => {
 const parseComma = (str) => Number(str.toString().replace(/,/g, '')) || 0;
 
 export function setQuickInput(data) {
+  const accs = store.getAccounts();
+  const cats = store.getCategories();
+  
+  let fromAccountId = data.fromAccountId || null;
+  let toAccountId = data.toAccountId || null;
+  let categoryId = data.categoryId || null;
+
+  if (data.fromAccount && !fromAccountId) {
+    const a = accs.find(i => i.name === data.fromAccount);
+    if (a) fromAccountId = a.id;
+  }
+  if (data.toAccount && !toAccountId) {
+    const a = accs.find(i => i.name === data.toAccount);
+    if (a) toAccountId = a.id;
+  }
+  if (data.category && !categoryId) {
+    const c = cats.find(i => i.name === data.category);
+    if (c) categoryId = c.id;
+  }
+
+  if (data.type === 'expense') toAccountId = null;
+  else if (data.type === 'income') fromAccountId = null;
+
   state = { 
     ...state, 
     ...data, 
+    fromAccountId,
+    toAccountId,
+    categoryId,
     amount: data.amount ? formatComma(data.amount) : '', 
     fromAccountsExpanded: false, 
     toAccountsExpanded: false, 
     categoriesExpanded: false 
   };
-  
-  // ショートカットが名称で持っている場合の補完
-  const accs = store.getAccounts();
-  const cats = store.getCategories();
-  if (data.fromAccount && !state.fromAccountId) {
-    const a = accs.find(i => i.name === data.fromAccount);
-    if (a) state.fromAccountId = a.id;
-  }
-  if (data.toAccount && !state.toAccountId) {
-    const a = accs.find(i => i.name === data.toAccount);
-    if (a) state.toAccountId = a.id;
-  }
-  if (data.category && !state.categoryId) {
-    const c = cats.find(i => i.name === data.category);
-    if (c) state.categoryId = c.id;
-  }
-
-  if (data.type === 'expense') state.toAccountId = null;
-  else if (data.type === 'income') state.fromAccountId = null;
 }
 
 function resetState() {
@@ -311,7 +319,7 @@ function handleClick(e) {
   else if (action === 'dateToday') { state.date = store.formatLocalDate(); refresh(); }
   else if (action === 'submit') submit();
   else if (action === 'toggleBulk') { showBulkInput = !showBulkInput; refresh(); }
-  else if (action === 'addBulkRow') { bulkRows.push({ date: state.date, amount: '', categoryId: '', fromAccountId: '', toAccountId: '', memo: '' }); refresh(); }
+  else if (action === 'addBulkRow') { bulkRows.push({ date: state.date, type: state.type, amount: '', categoryId: '', fromAccountId: '', toAccountId: '', memo: '' }); refresh(); }
   else if (action === 'deleteBulkRow') { bulkRows.splice(Number(target.dataset.row), 1); if (bulkRows.length===0) bulkRows=[{date:state.date,amount:'',categoryId:'',fromAccountId:'',toAccountId:'',memo:''}]; refresh(); }
   else if (action === 'submitBulk') submitBulk();
   else if (action === 'triggerCsvImport') document.getElementById('csv-import-input').click();
@@ -322,7 +330,10 @@ function handleClick(e) {
 function downloadCsvTemplate() {
   const header = "日付,種類,カテゴリー,金額,口座,入金先,メモ\n";
   const now = new Date();
-  const dateStr = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`;
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const dateStr = `${y}-${m}-${d}`;
   
   const row1 = `${dateStr},支出,食料品,1000,現金,,スーパーで買い物\n`;
   const row2 = `${dateStr},収入,給料,200000,,常陽銀行,4月分給料\n`;
@@ -552,7 +563,8 @@ function openCalculator() {
   overlay.innerHTML = `<div class="calc-container" style="width:100%; max-width:440px; background:var(--bg-app); border-top-left-radius:30px; border-top-right-radius:30px; padding:20px; padding-bottom: max(30px, env(safe-area-inset-bottom)); box-shadow: 0 -10px 40px rgba(0,0,0,0.2); animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);"><div style="width:40px; height:4px; background:var(--border-color); border-radius:2px; margin:0 auto 20px; opacity:0.5;"></div><div id="calc-display" style="background:var(--bg-card); padding:16px 20px; border-radius:18px; text-align:right; font-size:2.4rem; font-weight:800; margin-bottom:20px; border:2px solid var(--border-color); min-height:80px; display:flex; flex-direction:column; justify-content:center;"><div id="calc-formula" style="font-size:0.9rem; color:var(--text-muted); min-height:1.2em; font-weight:500;"></div><div id="calc-main-num">0</div></div><div class="calc-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px;"><button class="calc-btn" data-val="AC" style="background:#ef4444; color:white; border-radius:12px; height:50px; font-weight:800; border:none;">AC</button><button class="calc-btn" data-val="C" style="background:var(--bg-hover); border-radius:12px; height:50px; font-weight:800; border:none;">C</button><button class="calc-btn" data-val="/" style="background:var(--bg-hover); border-radius:12px; height:50px; font-weight:800; border:none;">÷</button><button class="calc-btn" data-val="*" style="background:var(--bg-hover); border-radius:12px; height:50px; font-weight:800; border:none;">×</button><button class="calc-btn num" data-val="7">7</button><button class="calc-btn num" data-val="8">8</button><button class="calc-btn num" data-val="9">9</button><button class="calc-btn" data-val="-" style="background:var(--bg-hover); border-radius:12px; height:50px; font-weight:800; border:none;">-</button><button class="calc-btn num" data-val="4">4</button><button class="calc-btn num" data-val="5">5</button><button class="calc-btn num" data-val="6">6</button><button class="calc-btn" data-val="+" style="background:var(--bg-hover); border-radius:12px; height:50px; font-weight:800; border:none;">+</button><button class="calc-btn num" data-val="1">1</button><button class="calc-btn num" data-val="2">2</button><button class="calc-btn num" data-val="3">3</button><button class="calc-btn" data-val="=" style="grid-row: span 2; background:var(--color-accent); color:white; border-radius:12px; font-weight:800; border:none; font-size:1.6rem;">=</button><button class="calc-btn num" data-val="0" style="grid-column: span 2;">0</button><button class="calc-btn num" data-val=".">.</button></div><div style="display:flex; gap:12px; margin-top:20px;"><button id="calc-cancel-btn" style="flex:1; height:56px; border:1px solid var(--border-color); background:var(--bg-card); border-radius:16px; font-weight:800;">キャンセル</button><button id="calc-apply-btn" style="flex:2; height:56px; border:none; background:var(--color-accent); color:white; border-radius:16px; font-weight:800;">適用 ✓</button></div></div><style>.calc-btn.num { background:var(--bg-card); border:1px solid var(--border-color); border-radius:12px; height:50px; font-weight:800; }</style>`;
   document.body.appendChild(overlay);
   const m = overlay.querySelector('#calc-main-num'), f = overlay.querySelector('#calc-formula');
-  calcState = { display: String(parseComma(state.amount)), currentValue: null, operator: null, waitingForNextValue: false };
+  const initialNum = state.amount ? parseComma(state.amount) : 0;
+  calcState = { display: String(initialNum), currentValue: null, operator: null, waitingForNextValue: false };
   updateCalcDisplay(m, f);
   overlay.addEventListener('click', (e) => {
     const btn = e.target.closest('.calc-btn'); if (btn) handleCalcInput(btn.dataset.val, m, f);
