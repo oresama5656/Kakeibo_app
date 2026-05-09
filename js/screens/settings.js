@@ -49,106 +49,118 @@ export function render(container) {
       </div>
 
       <!-- クイックアクション -->
-      <div class="settings-quick-actions" style="display: flex; justify-content: center; gap: 24px; margin: 10px 0 32px;">
-        <div class="quick-action" data-action="toggleDarkMode" style="cursor: pointer; text-align: center;">
-          <div style="width: 52px; height: 52px; background: var(--bg-card); border-radius: 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); color: var(--text-primary);">
-            <i data-lucide="${getDarkModeActive(settings) ? 'moon' : 'sun'}" style="width: 22px; height: 22px;"></i>
+      <div class="settings-quick-actions-v3">
+        <div class="quick-action-v3" data-action="toggleDarkMode">
+          <div class="quick-action-icon-v3">
+            <i data-lucide="${getDarkModeActive(settings) ? 'moon' : 'sun'}"></i>
           </div>
-          <div style="font-size: 10px; margin-top: 6px; font-weight: 800; color: var(--text-secondary);">テーマ</div>
+          <div class="quick-action-label-v3">テーマ</div>
         </div>
-        <div class="quick-action" data-action="exportDataExcel" style="cursor: pointer; text-align: center;">
-          <div style="width: 52px; height: 52px; background: var(--bg-card); border-radius: 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); color: var(--text-primary);">
-            <i data-lucide="file-spreadsheet" style="width: 22px; height: 22px;"></i>
+        <div class="quick-action-v3" data-action="exportDataExcel">
+          <div class="quick-action-icon-v3">
+            <i data-lucide="file-spreadsheet"></i>
           </div>
-          <div style="font-size: 10px; margin-top: 6px; font-weight: 800; color: var(--text-secondary);">エクセル保存</div>
+          <div class="quick-action-label-v3">エクセル</div>
         </div>
       </div>
 
       <!-- 口座セクション -->
-      <div class="settings-section-card" style="background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color); overflow: hidden; margin-bottom: 24px; box-shadow: var(--shadow-sm);">
-        <div style="padding: 18px 20px; font-size: 0.85rem; font-weight: 800; border-bottom: 1px solid var(--border-light); background: rgba(0,0,0,0.01); display: flex; justify-content: space-between; align-items: center;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <i data-lucide="wallet" style="width: 18px; height: 18px; color: var(--color-accent);"></i>
+      <div class="premium-card-v3 settings-section-card-v3">
+        <div class="settings-card-header-v3">
+          <div class="header-title-group">
+            <i data-lucide="wallet"></i>
             <span>口座の管理</span>
           </div>
-          <span style="font-size: 10px; background: var(--bg-hover); padding: 2px 8px; border-radius: 10px; color: var(--text-muted);">${accounts.length}件</span>
+          <span class="count-badge-v3">${accounts.length}件</span>
         </div>
         <div id="settings-accounts-list">
           ${accounts.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(acc => `
-            <div class="settings-list-item draggable" data-id="${acc.id}" style="display: flex; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--border-light); cursor: pointer;" data-action="editAccount">
-              <span class="settings-drag-handle" style="color: var(--border-color); cursor: grab; padding-right: 16px; font-size: 1.1rem;">⠿</span>
-              ${renderIconHTML(acc.icon, acc.id, { size: 24 })}
-              <span style="flex: 1; font-weight: 600; font-size: 1rem; color: var(--text-primary); margin-left: 12px;">${store.escapeHTML(acc.name)} ${acc.pinned ? '<span style="font-size: 12px; margin-left: 4px; vertical-align: middle;">📌</span>' : ''}</span>
-              <span style="color: var(--text-muted); opacity: 0.4;">›</span>
+            <div class="settings-list-item-v3 draggable" data-id="${acc.id}" data-action="editAccount">
+              <span class="settings-drag-handle-v3">⠿</span>
+              <div class="item-icon-v3">${renderIconHTML(acc.icon, acc.id, { size: 24 })}</div>
+              <span class="item-name-v3">${store.escapeHTML(acc.name)} ${acc.pinned ? '📌' : ''}</span>
+              <span class="item-chevron-v3">›</span>
             </div>
           `).join('')}
         </div>
-        <div data-action="addAccount" style="padding: 16px; text-align: center; color: var(--color-accent); font-weight: 800; font-size: 0.85rem; cursor: pointer; background: rgba(99, 102, 241, 0.03); border-top: 1px solid var(--border-light);">＋ 新しい口座を追加</div>
+        <div class="settings-add-btn-v3" data-action="addAccount">＋ 新しい口座を追加</div>
       </div>
 
       <!-- カテゴリーセクション -->
-      <div class="settings-category-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 32px;">
+      <div class="settings-category-grid-v3">
         <!-- 支出カテゴリ -->
-        <div style="background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color); padding: 18px; box-shadow: var(--shadow-sm);">
-          <div style="font-size: 0.75rem; font-weight: 800; color: var(--color-expense); margin-bottom: 16px; text-align:center; letter-spacing: 0.05em;">▼ 支出カテゴリ一覧</div>
+        <div class="premium-card-v3 settings-section-card-v3">
+          <div class="settings-card-header-v3">
+            <div class="header-title-group">
+              <i data-lucide="minus-circle" style="color: var(--color-expense);"></i>
+              <span>支出カテゴリ</span>
+            </div>
+            <span class="count-badge-v3">${expenseCategories.length}件</span>
+          </div>
           <div id="settings-expense-list">
             ${expenseCategories.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(cat => `
-              <div class="settings-list-item draggable" data-id="${cat.id}" data-action="editCategory" style="display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border-light); cursor: pointer;">
-                <span class="settings-drag-handle" style="color: var(--border-color); cursor: grab; font-size: 13px;">⠿</span>
-                ${renderIconHTML(cat.icon, cat.id, { size: 20 })}
-                <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); flex:1; margin-left: 8px;">${store.escapeHTML(cat.name)} ${cat.pinned ? '📌' : ''}</span>
-                <span style="color: var(--text-muted); opacity:0.3;">›</span>
+              <div class="settings-list-item-v3 draggable" data-id="${cat.id}" data-action="editCategory">
+                <span class="settings-drag-handle-v3 small">⠿</span>
+                <div class="item-icon-v3 small">${renderIconHTML(cat.icon, cat.id, { size: 20 })}</div>
+                <span class="item-name-v3 small">${store.escapeHTML(cat.name)} ${cat.pinned ? '📌' : ''}</span>
+                <span class="item-chevron-v3">›</span>
               </div>
             `).join('')}
           </div>
-          <div data-action="addCategory" data-type="expense" style="text-align: center; font-size: 0.8rem; color: var(--color-accent); margin-top: 14px; cursor: pointer; font-weight: 800;">＋ カテゴリの追加</div>
+          <div class="settings-add-btn-v3" data-action="addCategory" data-type="expense" style="color: var(--color-expense); background: rgba(239, 68, 68, 0.03);">＋ カテゴリ追加</div>
         </div>
-        
+
         <!-- 収入カテゴリ -->
-        <div style="background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border-color); padding: 18px; box-shadow: var(--shadow-sm);">
-          <div style="font-size: 0.75rem; font-weight: 800; color: var(--color-income); margin-bottom: 16px; text-align:center; letter-spacing: 0.05em;">▲ 収入カテゴリ一覧</div>
+        <div class="premium-card-v3 settings-section-card-v3">
+          <div class="settings-card-header-v3">
+            <div class="header-title-group">
+              <i data-lucide="plus-circle" style="color: var(--color-income);"></i>
+              <span>収入カテゴリ</span>
+            </div>
+            <span class="count-badge-v3">${incomeCategories.length}件</span>
+          </div>
           <div id="settings-income-list">
             ${incomeCategories.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(cat => `
-              <div class="settings-list-item draggable" data-id="${cat.id}" data-action="editCategory" style="display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border-light); cursor: pointer;">
-                <span class="settings-drag-handle" style="color: var(--border-color); cursor: grab; font-size: 13px;">⠿</span>
-                ${renderIconHTML(cat.icon, cat.id, { size: 20 })}
-                <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary); flex:1; margin-left: 8px;">${store.escapeHTML(cat.name)} ${cat.pinned ? '📌' : ''}</span>
-                <span style="color: var(--text-muted); opacity:0.3;">›</span>
+              <div class="settings-list-item-v3 draggable" data-id="${cat.id}" data-action="editCategory">
+                <span class="settings-drag-handle-v3 small">⠿</span>
+                <div class="item-icon-v3 small">${renderIconHTML(cat.icon, cat.id, { size: 20 })}</div>
+                <span class="item-name-v3 small">${store.escapeHTML(cat.name)} ${cat.pinned ? '📌' : ''}</span>
+                <span class="item-chevron-v3">›</span>
               </div>
             `).join('')}
           </div>
-          <div data-action="addCategory" data-type="income" style="text-align: center; font-size: 0.8rem; color: var(--color-accent); margin-top: 14px; cursor: pointer; font-weight: 800;">＋ カテゴリの追加</div>
+          <div class="settings-add-btn-v3" data-action="addCategory" data-type="income" style="color: var(--color-income); background: rgba(34, 197, 94, 0.03);">＋ カテゴリ追加</div>
         </div>
       </div>
       
       <!-- クラウド・同期管理 -->
-      <div style="padding: 28px; background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-hover) 100%); border-radius: 24px; border: 1px solid var(--border-color); text-align: center; margin-bottom: 40px; box-shadow: var(--shadow-sm);">
-        <div style="display: flex; justify-content: center; margin-bottom: 20px; color: var(--color-accent);">
-          <i data-lucide="cloud-cog" style="width: 48px; height: 48px; stroke-width: 1.5px;"></i>
+      <div class="premium-card-v3 settings-cloud-card-v3">
+        <div class="cloud-icon-wrapper-v3">
+          <i data-lucide="cloud-cog"></i>
         </div>
         ${!auth.isLoggedIn() ? `
-          <h3 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 18px; color: var(--text-primary);">Googleクラウド同期</h3>
-          <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 24px;">スプレッドシートと連携して<br>データを安全にバックアップ・共有できます。</p>
-          <button class="btn btn-primary" data-action="googleLogin" style="width: 100%; max-width: 260px; border-radius: 50px; font-weight: 800; padding: 14px; margin-bottom: 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
-            <i data-lucide="log-in" style="width: 18px; height: 18px;"></i> 連携を開始する
+          <h3 class="cloud-title-v3">Googleクラウド同期</h3>
+          <p class="cloud-desc-v3">スプレッドシートと連携して<br>データを安全にバックアップ・共有できます。</p>
+          <button class="btn-primary-v3" data-action="googleLogin">
+            <i data-lucide="log-in"></i> 連携を開始する
           </button>
         ` : `
-          <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em;">Connected Cloud ID</div>
-          <div style="font-size: 10px; font-family: monospace; opacity: 0.8; margin-bottom: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 15px; color: var(--color-accent);">${sheetId}</div>
-          <div style="display: flex; gap: 12px; justify-content: center; max-width: 320px; margin: 0 auto;">
-            <button data-action="syncPull" style="flex:1; padding: 14px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.85rem; font-weight: 800; cursor: pointer; color: var(--text-primary); display: flex; align-items: center; justify-content: center; gap: 6px;">
-              <i data-lucide="download" style="width: 16px; height: 16px;"></i> 読込
+          <div class="cloud-status-v3">Connected Cloud ID</div>
+          <div class="cloud-id-v3">${sheetId}</div>
+          <div class="cloud-actions-v3">
+            <button class="cloud-btn-v3 secondary" data-action="syncPull">
+              <i data-lucide="download"></i> 読込
             </button>
-            <button data-action="syncPush" style="flex:1; padding: 14px; border-radius: 14px; border: none; background: var(--color-accent); color: white; font-size: 0.85rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-              <i data-lucide="upload" style="width: 16px; height: 16px;"></i> 保存
+            <button class="cloud-btn-v3 primary" data-action="syncPush">
+              <i data-lucide="upload"></i> 保存
             </button>
           </div>
         `}
       </div>
 
       <!-- デンジャーゾーン -->
-      <div style="text-align: center; padding-bottom: 40px;">
-        <button data-action="clearData" style="background: transparent; border: none; color: var(--color-danger); font-size: 0.75rem; opacity: 0.5; text-decoration: underline; cursor: pointer; font-weight: 500;">アプリの全データを初期化</button>
+      <div class="danger-zone-v3">
+        <button class="danger-btn-v3" data-action="clearData">アプリの全データを初期化</button>
       </div>
     </div>
   `;

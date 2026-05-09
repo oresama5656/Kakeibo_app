@@ -144,19 +144,19 @@ export function render(container) {
   const isPC = window.innerWidth >= 768;
 
   container.innerHTML = `
-    <div class="input-screen premium-mode" style="max-width: 100%; box-sizing: border-box; overflow-x: hidden;">
-      <div class="analysis-segmented-control" style="margin-bottom: 20px;">
+    <div class="input-screen premium-mode">
+      <div class="analysis-segmented-control">
         <button class="segmented-item ${state.type === 'expense' ? 'active' : ''}" data-action="setType" data-type="expense">支出</button>
         <button class="segmented-item ${state.type === 'income' ? 'active' : ''}" data-action="setType" data-type="income">収入</button>
         <button class="segmented-item ${state.type === 'transfer' ? 'active' : ''}" data-action="setType" data-type="transfer">振替</button>
         ${isPC ? `
-        <div style="border-left: 1px solid var(--border-color); margin: 4px 8px; height: 16px;"></div>
-        <button class="segmented-item bulk-toggle ${showBulkInput ? 'active' : ''}" data-action="toggleBulk" style="flex: 1.5; display: flex; align-items: center; justify-content: center; gap: 4px;">
-          <i data-lucide="list-plus" style="width: 14px; height: 14px;"></i> 一括入力
+        <div class="segmented-divider"></div>
+        <button class="segmented-item bulk-toggle ${showBulkInput ? 'active' : ''}" data-action="toggleBulk">
+          <i data-lucide="list-plus"></i> 一括入力
         </button>` : ''}
       </div>
 
-      <div class="input-fields" style="padding: 0 4px; box-sizing: border-box;">
+      <div class="input-fields">
         ${showBulkInput && isPC ? renderBulkInput(accounts, allCategories) : renderSingleInput(accounts, allCategories, shortcuts)}
       </div>
     </div>
@@ -179,10 +179,10 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
         <span class="section-title-v3">金額入力</span>
       </div>
       <div class="amount-input-container-v3">
-        <span class="amount-yen" style="font-size: 1.2rem; color: var(--text-muted); font-weight: 800; margin-right: 12px;">¥</span>
-        <input type="text" class="amount-field" id="amount-input-formatted" value="${store.escapeHTML(state.amount)}" placeholder="0" inputmode="numeric" style="flex: 1; width: 0; border: none; background: transparent; font-size: 2.2rem; font-weight: 900; color: var(--text-primary); text-align: left; padding: 12px 0; letter-spacing: -1px; min-width: 0;">
-        <button data-action="openCalculator" title="電卓" style="background: var(--bg-card); border: 1.5px solid var(--border-light); width: 48px; height: 48px; min-width: 48px; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 8px; box-shadow: var(--shadow-sm); flex-shrink: 0;">
-          <i data-lucide="calculator" style="width: 22px; height: 22px; color: var(--color-accent);"></i>
+        <span class="amount-yen">¥</span>
+        <input type="text" class="amount-field" id="amount-input-formatted" value="${store.escapeHTML(state.amount)}" placeholder="0" inputmode="numeric">
+        <button class="calc-trigger-v3" data-action="openCalculator" title="電卓">
+          <i data-lucide="calculator"></i>
         </button>
       </div>
     </div>
@@ -197,17 +197,17 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
       </div>
       <div style="display: flex; gap: 12px; margin-bottom: 16px;">
         <div style="flex: 1; position: relative;">
-          <input type="date" class="date-memo-input-v3" value="${store.escapeHTML(state.date)}" data-action="setDate" style="cursor: pointer;">
+          <input type="date" class="date-memo-input-v3" value="${store.escapeHTML(state.date)}" data-action="setDate">
         </div>
-        <button data-action="dateToday" style="padding: 0 24px; border-radius: 16px; border: none; background: var(--color-accent-light); color: var(--color-accent); font-size: 0.85rem; font-weight: 900; white-space: nowrap; cursor: pointer; transition: all 0.2s ease;">今日</button>
+        <button class="date-today-btn-v3" data-action="dateToday">今日</button>
       </div>
       <div style="position: relative;">
         <input type="text" placeholder="メモを残す（任意）" value="${store.escapeHTML(state.memo)}" id="memo-input" class="date-memo-input-v3">
       </div>
     </div>
 
-    <button class="submit-btn ${state.type}-mode" data-action="submit" style="width: 100%; height: 68px; font-size: 1.15rem; font-weight: 900; border-radius: 20px; margin-top: 10px; margin-bottom: 30px; box-shadow: 0 10px 20px var(--premium-shadow); display: flex; align-items: center; justify-content: center; gap: 12px; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); border: none; cursor: pointer;">
-      <i data-lucide="check-circle-2" style="width: 24px; height: 24px;"></i>
+    <button class="submit-btn-v3 ${state.type}-mode" data-action="submit">
+      <i data-lucide="check-circle-2"></i>
       ${state.type === 'expense' ? '支出を記録する' : state.type === 'income' ? '収入を記録する' : '振替を実行する'}
     </button>
     
