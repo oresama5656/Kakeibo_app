@@ -164,7 +164,7 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
     <div class="amount-input-section" style="margin-bottom: 24px;">
       <div class="amount-input-wrapper" style="display: flex; align-items: center; border-radius: 20px; background: var(--bg-card); padding: 8px 16px; box-shadow: var(--shadow-sm); border: 2px solid var(--border-color); width: 100%; box-sizing: border-box;">
         <span class="amount-yen" style="font-size: 1.4rem; color: var(--text-muted); font-weight: 800; margin-right: 12px;">¥</span>
-        <input type="text" class="amount-field" id="amount-input-formatted" value="${state.amount}" placeholder="0" inputmode="numeric" style="flex: 1; width: 0; border: none; background: transparent; font-size: 2rem; font-weight: 800; color: var(--text-primary); text-align: left; padding: 12px 0;">
+        <input type="text" class="amount-field" id="amount-input-formatted" value="${store.escapeHTML(state.amount)}" placeholder="0" inputmode="numeric" style="flex: 1; width: 0; border: none; background: transparent; font-size: 2rem; font-weight: 800; color: var(--text-primary); text-align: left; padding: 12px 0;">
         <button data-action="openCalculator" title="電卓" style="background: var(--bg-hover); border: none; width: 44px; height: 44px; min-width: 44px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-left: 8px;">🧮</button>
       </div>
     </div>
@@ -176,10 +176,10 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
     <div class="selector-section">
       <div class="selector-header"><span class="selector-title">📅 日付・メモ</span></div>
       <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-        <input type="date" class="date-input" value="${state.date}" data-action="setDate" style="flex: 1; padding: 12px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); min-width: 0;">
+        <input type="date" class="date-input" value="${store.escapeHTML(state.date)}" data-action="setDate" style="flex: 1; padding: 12px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); min-width: 0;">
         <button data-action="dateToday" style="padding: 0 16px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.8rem; font-weight: 800; white-space: nowrap;">今日</button>
       </div>
-      <input type="text" placeholder="メモを入力..." value="${state.memo}" id="memo-input" style="width: 100%; height: 50px; padding: 0 16px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.9rem; box-sizing: border-box;">
+      <input type="text" placeholder="メモを入力..." value="${store.escapeHTML(state.memo)}" id="memo-input" style="width: 100%; height: 50px; padding: 0 16px; border-radius: 14px; border: 1px solid var(--border-color); background: var(--bg-card); font-size: 0.9rem; box-sizing: border-box;">
     </div>
 
     <button class="submit-btn ${state.type}-mode" data-action="submit" style="width: 100%; height: 64px; font-size: 1.2rem; font-weight: 800; border-radius: 20px; margin-top: 24px; box-shadow: var(--shadow-sm);">${state.type === 'expense' ? '支出' : state.type === 'income' ? '収入' : '振替'}を記録する ✓</button>
@@ -188,7 +188,7 @@ function renderSingleInput(accounts, allCategories, shortcuts) {
       <div style="margin-top: 32px;">
         <div class="selector-header"><span class="selector-title">⚡ クイック入力</span></div>
         <div class="shortcuts-scroll" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px;">
-          ${shortcuts.map(s => `<button class="shortcut-chip" data-action="useShortcut" data-id="${s.id}">${s.name}</button>`).join('')}
+          ${shortcuts.map(s => `<button class="shortcut-chip" data-action="useShortcut" data-id="${store.escapeHTML(s.id)}">${store.escapeHTML(s.name)}</button>`).join('')}
         </div>
       </div>
     ` : ''}
@@ -231,7 +231,7 @@ function renderBulkInput(accounts, allCategories) {
               
               return `
               <tr style="border-bottom: 1px solid var(--border-light);">
-                <td style="padding:4px;"><input type="date" value="${row.date}" data-field="date" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent;"></td>
+                <td style="padding:4px;"><input type="date" value="${store.escapeHTML(row.date)}" data-field="date" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent;"></td>
                 <td style="padding:4px;">
                   <select data-field="type" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent;">
                     <option value="expense" ${rowType === 'expense' ? 'selected' : ''}>支出</option>
@@ -242,23 +242,23 @@ function renderBulkInput(accounts, allCategories) {
                 <td style="padding:4px;">
                   <select data-field="categoryId" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent; ${rowType === 'transfer' ? 'opacity:0.3;' : ''}" ${rowType === 'transfer' ? 'disabled' : ''}>
                     <option value="">-</option>
-                    ${catOptions.map(c => `<option value="${c.id}" ${c.id === row.categoryId ? 'selected' : ''}>${c.name}</option>`).join('')}
+                    ${catOptions.map(c => `<option value="${store.escapeHTML(c.id)}" ${c.id === row.categoryId ? 'selected' : ''}>${store.escapeHTML(c.name)}</option>`).join('')}
                   </select>
                 </td>
-                <td style="padding:4px;"><input type="number" value="${row.amount}" data-field="amount" data-row="${i}" class="bulk-input" placeholder="0" style="width:100%; border:none; background:transparent; font-weight:bold;"></td>
+                <td style="padding:4px;"><input type="number" value="${store.escapeHTML(row.amount)}" data-field="amount" data-row="${i}" class="bulk-input" placeholder="0" style="width:100%; border:none; background:transparent; font-weight:bold;"></td>
                 <td style="padding:4px;">
                   <select data-field="fromAccountId" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent;">
                     <option value="">-</option>
-                    ${accounts.map(a => `<option value="${a.id}" ${a.id === row.fromAccountId ? 'selected' : ''}>${a.name}</option>`).join('')}
+                    ${accounts.map(a => `<option value="${store.escapeHTML(a.id)}" ${a.id === row.fromAccountId ? 'selected' : ''}>${store.escapeHTML(a.name)}</option>`).join('')}
                   </select>
                 </td>
                 <td style="padding:4px;">
                   <select data-field="toAccountId" data-row="${i}" class="bulk-input" style="width:100%; border:none; background:transparent; ${rowType !== 'transfer' ? 'opacity:0.3;' : ''}" ${rowType !== 'transfer' ? 'disabled' : ''}>
                     <option value="">-</option>
-                    ${accounts.map(a => `<option value="${a.id}" ${a.id === row.toAccountId ? 'selected' : ''}>${a.name}</option>`).join('')}
+                    ${accounts.map(a => `<option value="${store.escapeHTML(a.id)}" ${a.id === row.toAccountId ? 'selected' : ''}>${store.escapeHTML(a.name)}</option>`).join('')}
                   </select>
                 </td>
-                <td style="padding:4px;"><input type="text" value="${row.memo || ''}" data-field="memo" data-row="${i}" class="bulk-input" placeholder="メモ" style="width:100%; border:none; background:transparent;"></td>
+                <td style="padding:4px;"><input type="text" value="${store.escapeHTML(row.memo || '')}" data-field="memo" data-row="${i}" class="bulk-input" placeholder="メモ" style="width:100%; border:none; background:transparent;"></td>
                 <td style="padding:4px; text-align:center;"><button data-action="deleteBulkRow" data-row="${i}" style="color:var(--color-danger); border:none; background:transparent; font-size:1rem; cursor:pointer;">✕</button></td>
               </tr>`;
             }).join('')}
@@ -605,7 +605,13 @@ function performCalculation(v1, v2, op) {
   if (op === '+') return v1 + v2;
   if (op === '-') return v1 - v2;
   if (op === '*') return v1 * v2;
-  if (op === '/') return v1 / v2;
+  if (op === '/') {
+    if (v2 === 0) {
+      window.showToast?.('0で割ることはできません', 'error');
+      return 0;
+    }
+    return v1 / v2;
+  }
   return v2;
 }
 
