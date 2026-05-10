@@ -91,6 +91,7 @@ export function getAvailableIcons() {
     'shirt', 'watch', 'shopping-cart', 'package', 'truck',
     'phone', 'wifi', 'zap', 'droplets', 'flame',
     'coffee', 'beer', 'wine', 'pizza', 'ice-cream',
-    'map-pin', 'navigation', 'ticket', 'umbrella', 'cloud', 'stethoscope', 'heart-pulse'
+    'map-pin', 'navigation', 'ticket', 'umbrella', 'cloud', 'stethoscope', 'heart-pulse',
+    'hand-coins', 'trash-2', 'wrench', 'scale', 'receipt'
   ];
 }

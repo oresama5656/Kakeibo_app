@@ -1,7 +1,7 @@
  * Service Worker (v8.0 - 強制リフレッシュ対応・ネットワーク優先)
  */
 
-const CACHE_NAME = 'kakeibo-cache-v8.3';
+const CACHE_NAME = 'kakeibo-cache-v8.4';
 const FILES_TO_CACHE = [
   './',
   './index.html',
