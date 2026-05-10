@@ -4,7 +4,6 @@
 
 import * as store from '../store.js';
 import * as auth from '../auth.js';
-import { RECOMMENDED_EMOJIS } from '../data.js';
 import { renderIconHTML } from '../utils/IconRenderer.js';
 
 const RECOMMENDED_LUCIDE_ICONS = [
@@ -238,9 +237,6 @@ function showAccountModal(id) {
             ${RECOMMENDED_LUCIDE_ICONS.map(icon => `
               <div class="icon-option-v3" data-icon="${icon}">${renderIconHTML(icon, 'preview', { size: 20 })}</div>
             `).join('')}
-            ${RECOMMENDED_EMOJIS.slice(0, 12).map(e => `
-              <div class="icon-option-v3" data-icon="${e}">${e}</div>
-            `).join('')}
           </div>
         </div>
 
@@ -311,9 +307,6 @@ function showCategoryModal(id, type) {
           <div class="icon-picker-grid-v3">
             ${RECOMMENDED_LUCIDE_ICONS.map(icon => `
               <div class="icon-option-v3" data-icon="${icon}">${renderIconHTML(icon, 'preview', { size: 20 })}</div>
-            `).join('')}
-            ${RECOMMENDED_EMOJIS.slice(0, 12).map(e => `
-              <div class="icon-option-v3" data-icon="${e}">${e}</div>
             `).join('')}
           </div>
         </div>

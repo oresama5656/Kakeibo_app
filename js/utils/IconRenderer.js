@@ -1,33 +1,23 @@
 /**
- * アイコン描画ユーティリティ (v5.0 - Glassmorphism対応版)
+ * アイコン描画ユーティリティ (v5.1 - モダンアイコン完全移行版)
  */
 
-// 絵文字から Lucide アイコン名へのマッピング
+// 絵文字から Lucide アイコン名へのマッピング (移行用)
 const EMOJI_TO_LUCIDE = {
-  '🍎': 'utensils',
-  '🍔': 'utensils',
-  '🧻': 'shopping-bag',
-  '🚃': 'car',
-  '🚗': 'car',
-  '🚲': 'bike',
-  '🍻': 'users',
-  '🏠': 'home',
-  '🎮': 'gamepad-2',
-  '⚖️': 'scale',
-  '📂': 'folder',
-  '💰': 'banknote',
-  '🧧': 'gift',
-  '💵': 'wallet',
-  '🏦': 'landmark',
-  '💳': 'credit-card',
-  '🏥': 'stethoscope',
-  '🔌': 'zap',
-  '👔': 'briefcase',
-  '📚': 'book-open',
-  '✈️': 'plane'
+  '🍎': 'utensils', '🍔': 'utensils', '🍱': 'utensils', '🍣': 'utensils', '🍚': 'utensils',
+  '🧻': 'shopping-bag', '🛒': 'shopping-cart', '🛍️': 'shopping-cart',
+  '🚃': 'car', '🚗': 'car', '🚙': 'car', '🚕': 'car', '🚲': 'bike', '✈️': 'plane',
+  '🍻': 'users', '🍺': 'beer', '🍷': 'wine', '🏠': 'home', '🏨': 'home',
+  '🎮': 'gamepad-2', '⚖️': 'scale', '📂': 'folder', '📄': 'receipt',
+  '💰': 'banknote', '💴': 'banknote', '💵': 'wallet', '👛': 'wallet', '💳': 'credit-card',
+  '🏦': 'landmark', '💹': 'trending-up', '📈': 'trending-up', '📉': 'trending-down', '📊': 'bar-chart',
+  '🧧': 'gift', '🎁': 'gift', '🏥': 'stethoscope', '💊': 'pill', '🔌': 'zap', '⚡': 'zap',
+  '👔': 'briefcase', '💼': 'briefcase', '📚': 'book-open', '🎓': 'graduation-cap',
+  '📱': 'smartphone', '🌐': 'globe', '🛡️': 'shield', '🏖️': 'palmtree', '🏝️': 'palmtree',
+  '👶': 'baby', '👴': 'user', '👩‍💼': 'user-check', '📧': 'mail', '✉️': 'mail', '💸': 'banknote',
+  '❓': 'help-circle'
 };
 
-// カテゴリーIDからカラークラスへのマッピング
 const CATEGORY_COLORS = {
   'cat_01': 'color-food',
   'cat_02': 'color-daily',
@@ -42,12 +32,6 @@ const CATEGORY_COLORS = {
   'cat_98': 'color-other'
 };
 
-/**
- * グラスモフィズム・アイコンのHTMLを生成する
- * @param {string} iconStr - 絵文字または lucide:icon_name 形式の文字列
- * @param {string} categoryId - カテゴリーID（色決定用）
- * @param {object} options - { size, strokeWidth }
- */
 export function renderIconHTML(iconStr, categoryId = '', options = {}) {
   const size = options.size || 20;
   const strokeWidth = options.strokeWidth || 2;
@@ -56,17 +40,12 @@ export function renderIconHTML(iconStr, categoryId = '', options = {}) {
   let contentHtml = '';
   
   if (iconStr && iconStr.startsWith('lucide:')) {
-    const iconName = iconStr.replace('lucide:', '').replace(/[^a-z0-9-]/g, ''); // 属性値の安全性を確保
-    contentHtml = `<i data-lucide="${iconName}" width="${size}" height="${size}" stroke-width="${strokeWidth}"></i>`;
-  } else if (EMOJI_TO_LUCIDE[iconStr]) {
-    const iconName = EMOJI_TO_LUCIDE[iconStr];
+    const iconName = iconStr.replace('lucide:', '').replace(/[^a-z0-9-]/g, '');
     contentHtml = `<i data-lucide="${iconName}" width="${size}" height="${size}" stroke-width="${strokeWidth}"></i>`;
   } else {
-    // フォールバック: 絵文字をそのまま表示（XSS対策のためエスケープ）
-    const escaped = (iconStr || '📂').replace(/[&<>"']/g, m => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[m]));
-    contentHtml = `<span class="icon-emoji">${escaped}</span>`;
+    // 絵文字、または未定義の形式の場合のフォールバック
+    const iconName = EMOJI_TO_LUCIDE[iconStr] || 'help-circle';
+    contentHtml = `<i data-lucide="${iconName}" width="${size}" height="${size}" stroke-width="${strokeWidth}"></i>`;
   }
 
   return `
@@ -78,9 +57,6 @@ export function renderIconHTML(iconStr, categoryId = '', options = {}) {
   `;
 }
 
-/**
- * ユーザーが選択可能なアイコンのリストを返す
- */
 export function getAvailableIcons() {
   return [
     'utensils', 'shopping-bag', 'car', 'train', 'bus', 'bike', 'plane',
@@ -91,7 +67,7 @@ export function getAvailableIcons() {
     'shirt', 'watch', 'shopping-cart', 'package', 'truck',
     'phone', 'wifi', 'zap', 'droplets', 'flame',
     'coffee', 'beer', 'wine', 'pizza', 'ice-cream',
-    'map-pin', 'navigation', 'ticket', 'umbrella', 'cloud', 'stethoscope', 'heart-pulse',
+    'map-pin', 'navigation', 'ticket', 'umbrella', 'cloud',
     'hand-coins', 'trash-2', 'wrench', 'scale', 'receipt'
   ];
 }
