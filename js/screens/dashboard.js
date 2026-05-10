@@ -35,7 +35,7 @@ export function render(container) {
                 <div class="cat-icon-frame" style="background: var(--bg-primary); border: 1px solid var(--border-light); font-size: 1.1rem;">${renderIconHTML(acc.icon, acc.id, { size: 22 })}</div>
                 <div class="cat-info-v3">
                   <div class="cat-title-row">
-                    <span class="cat-name-v3" style="font-size: 0.9rem; font-weight: 700; color: var(--premium-deep);">${store.escapeHTML(acc.name)}</span>
+                    <span class="cat-name-v3" style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">${store.escapeHTML(acc.name)}</span>
                     <span class="cat-amount-v3" style="color: ${balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)'}">
                       ¥${Math.abs(balance).toLocaleString('ja-JP')}
                     </span>

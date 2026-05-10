@@ -85,7 +85,7 @@ export function renderPLContent(state, start, end) {
 
       <!-- Category List Title -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px var(--space-md);">
-        <h4 style="font-size: 0.9rem; font-weight: 800; color: #1a2a4d; margin: 0;">カテゴリー別内訳</h4>
+        <h4 style="font-size: 0.9rem; font-weight: 800; color: var(--text-primary); margin: 0;">カテゴリー別内訳</h4>
         <div style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem; font-weight: 700;">
           <input type="checkbox" id="cat-all-check" ${state.excludedCategoryIds.length === 0 ? 'checked' : ''} style="width: 14px; height: 14px; cursor: pointer;">
           <label for="cat-all-check" style="cursor: pointer; color: var(--text-muted);">全表示</label>
@@ -181,7 +181,7 @@ export function renderBSContent(state, start, end) {
 
       <!-- Asset Balance Chart -->
       <div class="premium-card-v3">
-        <h4 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 20px; color: #1a2a4d; display: flex; align-items: center; gap: 8px;">
+        <h4 style="font-size: 0.9rem; font-weight: 800; margin-bottom: 20px; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
           <i data-lucide="landmark" style="width: 18px; height: 18px; color: var(--color-accent);"></i>
           資産・負債バランス
         </h4>
@@ -190,7 +190,7 @@ export function renderBSContent(state, start, end) {
 
       <!-- Asset Trend Chart -->
       <div class="premium-card-v3">
-        <h4 style="font-size: 0.9rem; font-weight: 800; color: #1a2a4d; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+        <h4 style="font-size: 0.9rem; font-weight: 800; color: var(--text-primary); margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
           <i data-lucide="trending-up" style="width: 18px; height: 18px; color: var(--color-accent);"></i>
           資産推移
         </h4>
@@ -200,7 +200,7 @@ export function renderBSContent(state, start, end) {
 
       <!-- Account List Title -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px var(--space-md) 10px;">
-        <h4 style="font-size: 0.9rem; font-weight: 800; color: #1a2a4d; margin: 0;">口座別内訳</h4>
+        <h4 style="font-size: 0.9rem; font-weight: 800; color: var(--text-primary); margin: 0;">口座別内訳</h4>
         <div style="display: flex; align-items: center; gap: 6px; font-size: 0.7rem; font-weight: 700;">
           <input type="checkbox" id="acc-all-check" ${state.excludedAccountIds.length === 0 ? 'checked' : ''} style="width: 14px; height: 14px; cursor: pointer;">
           <label for="acc-all-check" style="cursor: pointer; color: var(--text-muted);">全表示</label>

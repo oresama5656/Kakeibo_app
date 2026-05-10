@@ -149,15 +149,19 @@ export function render(container) {
         <button class="segmented-item ${state.type === 'expense' ? 'active' : ''}" data-action="setType" data-type="expense">支出</button>
         <button class="segmented-item ${state.type === 'income' ? 'active' : ''}" data-action="setType" data-type="income">収入</button>
         <button class="segmented-item ${state.type === 'transfer' ? 'active' : ''}" data-action="setType" data-type="transfer">振替</button>
-        ${isPC ? `
-        <div class="segmented-divider"></div>
-        <button class="segmented-item bulk-toggle ${showBulkInput ? 'active' : ''}" data-action="toggleBulk">
+        <div class="segmented-divider pc-only"></div>
+        <button class="segmented-item bulk-toggle pc-only ${showBulkInput ? 'active' : ''}" data-action="toggleBulk">
           <i data-lucide="list-plus"></i> 一括入力
-        </button>` : ''}
+        </button>
       </div>
 
       <div class="input-fields">
-        ${showBulkInput && isPC ? renderBulkInput(accounts, allCategories) : renderSingleInput(accounts, allCategories, shortcuts)}
+        <div class="bulk-input-container pc-only">
+          ${showBulkInput ? renderBulkInput(accounts, allCategories) : ''}
+        </div>
+        <div class="single-input-container ${showBulkInput ? 'pc-hide' : ''}">
+          ${renderSingleInput(accounts, allCategories, shortcuts)}
+        </div>
       </div>
     </div>
     <input type="file" id="csv-import-input" accept=".csv" style="display: none;">

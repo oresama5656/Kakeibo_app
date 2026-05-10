@@ -278,7 +278,7 @@ function renderHistoryItem(tx, balance, isLast) {
       ${renderIconHTML(tx.type === 'transfer' ? 'lucide:repeat' : (cat ? cat.icon : 'lucide:help-circle'), tx.categoryId, { size: 20 })}
       <div class="cat-info-v3" style="flex: 1; margin-left: 12px;">
         <div class="cat-title-row">
-          <span class="cat-name-v3" style="font-size: 0.9rem; font-weight: 700; color: var(--premium-deep);">${escape(categoryName)}</span>
+          <span class="cat-name-v3" style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">${escape(categoryName)}</span>
           <span class="cat-amount-v3" style="color: ${amountColor}; font-weight: 800; font-size: 1rem;">${typeLabel}¥${Number(tx.amount).toLocaleString('ja-JP')}</span>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">

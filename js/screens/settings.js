@@ -215,7 +215,7 @@ function showAccountModal(id) {
   const overlay = document.createElement('div');
   overlay.className = 'premium-modal-overlay fadeIn';
   overlay.innerHTML = `
-    <div class="premium-modal-sheet slideUp" style="max-width: 450px;">
+    <div class="premium-modal-sheet slideUp">
       <div class="modal-drag-handle"></div>
       <div class="modal-header-v3">
         <h3 class="modal-title-v3">${isNew ? '口座追加' : '口座編集'}</h3>
@@ -229,31 +229,26 @@ function showAccountModal(id) {
         
         <div class="form-group-v3">
           <label>アイコン設定</label>
-          <div style="display: flex; gap: 12px; margin-bottom: 12px; align-items: center;">
+          <div class="icon-setting-row">
             <div id="acc-icon-preview">${renderIconHTML(acc?.icon || 'lucide:wallet', id, { size: 32 })}</div>
-            <input type="text" id="acc-icon" class="input-v3" value="${acc?.icon || 'lucide:wallet'}" style="flex: 1; font-family: monospace; font-size: 0.8rem;" placeholder="lucide:name or emoji">
+            <input type="text" id="acc-icon" class="input-v3" value="${acc?.icon || 'lucide:wallet'}" placeholder="lucide:name or emoji">
           </div>
           <div class="icon-picker-grid-v3">
             ${RECOMMENDED_LUCIDE_ICONS.map(icon => `
               <div class="icon-option-v3" data-icon="${icon}">${renderIconHTML(icon, 'preview', { size: 20 })}</div>
             `).join('')}
             ${RECOMMENDED_EMOJIS.slice(0, 12).map(e => `
-              <div class="icon-option-v3" data-icon="${e}" style="font-size: 1.2rem; display: flex; align-items: center; justify-content: center;">${e}</div>
+              <div class="icon-option-v3" data-icon="${e}">${e}</div>
             `).join('')}
           </div>
         </div>
 
-        <div class="form-group-v3">
-          <label>初期残高</label>
-          <input type="number" id="acc-balance" class="input-v3" value="${acc?.initialBalance || 0}">
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg-hover); border-radius: 12px; margin-top: 10px;">
-          <input type="checkbox" id="acc-pinned" ${acc?.pinned ? 'checked' : ''} style="width: 18px; height: 18px;">
-          <label for="acc-pinned" style="font-size: 0.85rem; font-weight: 700; cursor: pointer; flex: 1;">📌 上位に固定する</label>
+          <div class="pinned-toggle-v3">
+            <input type="checkbox" id="acc-pinned" ${acc?.pinned ? 'checked' : ''}>
+            <label for="acc-pinned" class="pinned-label-v3">📌 上位に固定する</label>
+          </div>
         </div>
       </div>
-      <div class="modal-footer-v3">
         ${!isNew ? '<button class="btn-danger-v3" data-action="deleteItem" style="margin-right: auto;">削除</button>' : ''}
         <button class="modal-apply-btn-v3" data-action="saveItem">${isNew ? '追加' : '保存'}</button>
       </div>
@@ -308,23 +303,23 @@ function showCategoryModal(id, type) {
 
         <div class="form-group-v3">
           <label>アイコン設定</label>
-          <div style="display: flex; gap: 12px; margin-bottom: 12px; align-items: center;">
+          <div class="icon-setting-row">
             <div id="cat-icon-preview">${renderIconHTML(cat?.icon || 'lucide:folder', id, { size: 32 })}</div>
-            <input type="text" id="cat-icon" class="input-v3" value="${cat?.icon || 'lucide:folder'}" style="flex: 1; font-family: monospace; font-size: 0.8rem;" placeholder="lucide:name or emoji">
+            <input type="text" id="cat-icon" class="input-v3" value="${cat?.icon || 'lucide:folder'}" placeholder="lucide:name or emoji">
           </div>
           <div class="icon-picker-grid-v3">
             ${RECOMMENDED_LUCIDE_ICONS.map(icon => `
               <div class="icon-option-v3" data-icon="${icon}">${renderIconHTML(icon, 'preview', { size: 20 })}</div>
             `).join('')}
             ${RECOMMENDED_EMOJIS.slice(0, 12).map(e => `
-              <div class="icon-option-v3" data-icon="${e}" style="font-size: 1.2rem; display: flex; align-items: center; justify-content: center;">${e}</div>
+              <div class="icon-option-v3" data-icon="${e}">${e}</div>
             `).join('')}
           </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg-hover); border-radius: 12px; margin-top: 10px;">
-          <input type="checkbox" id="cat-pinned" ${cat?.pinned ? 'checked' : ''} style="width: 18px; height: 18px;">
-          <label for="cat-pinned" style="font-size: 0.85rem; font-weight: 700; cursor: pointer; flex: 1;">📌 上位に固定する</label>
+        <div class="pinned-toggle-v3">
+          <input type="checkbox" id="cat-pinned" ${cat?.pinned ? 'checked' : ''}>
+          <label for="cat-pinned" class="pinned-label-v3">📌 上位に固定する</label>
         </div>
       </div>
       <div class="modal-footer-v3">

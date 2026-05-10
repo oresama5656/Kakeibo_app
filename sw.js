@@ -1,8 +1,7 @@
-/**
- * Service Worker (v5.2 - 強制リフレッシュ対応・ネットワーク優先)
+ * Service Worker (v8.0 - 強制リフレッシュ対応・ネットワーク優先)
  */
 
-const CACHE_NAME = 'kakeibo-cache-v5.2';
+const CACHE_NAME = 'kakeibo-cache-v8.3';
 const FILES_TO_CACHE = [
   './',
   './index.html',
@@ -24,7 +23,7 @@ const FILES_TO_CACHE = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Caching all files for v5.2...');
+      console.log('[SW] Caching all files for v8.0...');
       return cache.addAll(FILES_TO_CACHE);
     }).then(() => self.skipWaiting()) // インストール直後に有効化
   );
