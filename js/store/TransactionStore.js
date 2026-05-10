@@ -78,24 +78,44 @@ export function getAssetHistory(days = 30) {
 
 export function getAssetHistoryRange(startStr, endStr) {
   const history = [];
-  const totalRaw = getTotalBalance();
+  let currentTotal = getTotalBalance();
   
-  let cur = new Date(startStr);
-  const fin = new Date(endStr);
+  // 取引を日付の降順（新しい順）でソート
+  const sortedTxs = [...state.transactions].sort((a, b) => b.date.localeCompare(a.date));
   
-  while (cur <= fin) {
+  // 今日から過去へ遡って、各日付の残高をキャッシュする
+  const dailyBalances = new Map();
+  const todayStr = formatLocalDate(new Date());
+  let txIdx = 0;
+  
+  // 今日から開始日までの全期間を1回だけ走査
+  let cur = new Date(todayStr);
+  const startLimit = new Date(startStr);
+  
+  while (cur >= startLimit) {
     const dStr = formatLocalDate(cur);
-    let bal = totalRaw;
-    state.transactions.forEach(tx => {
-      // 現在の合計残高から、指定日より後の取引をすべて逆演算して、その日時点の残高を算出する（バックワード計算）
-      if (tx.date > dStr) {
-        if (tx.type === 'income') bal -= tx.amount;
-        else if (tx.type === 'expense') bal += tx.amount;
-      }
-    });
-    history.push({ date: dStr, total: bal });
-    cur.setDate(cur.getDate() + 1);
+    
+    // この日より後の取引をすべて逆演算して、この日の「終了時点」の残高を求める
+    while (txIdx < sortedTxs.length && sortedTxs[txIdx].date > dStr) {
+      const tx = sortedTxs[txIdx];
+      if (tx.type === 'income') currentTotal -= tx.amount;
+      else if (tx.type === 'expense') currentTotal += tx.amount;
+      txIdx++;
+    }
+    
+    dailyBalances.set(dStr, currentTotal);
+    cur.setDate(cur.getDate() - 1);
   }
+
+  // 指定されたレンジ [startStr, endStr] のデータを抽出
+  let walk = new Date(startStr);
+  const endLimit = new Date(endStr);
+  while (walk <= endLimit) {
+    const dStr = formatLocalDate(walk);
+    history.push({ date: dStr, total: dailyBalances.get(dStr) || currentTotal });
+    walk.setDate(walk.getDate() + 1);
+  }
+  
   return history;
 }
 
@@ -111,27 +131,42 @@ export function getAccountHistoryRange(accountId, startStr, endStr) {
   const accObj = state.accounts.find(a => a.id === accountId || a.name === accountId);
   if (!accObj) return [];
   
-  const currentAccBal = accObj.balance || 0;
   const targetId = accObj.id;
+  let currentAccBal = accObj.balance || 0;
   
-  let cur = new Date(startStr);
-  const fin = new Date(endStr);
+  const sortedTxs = [...state.transactions].sort((a, b) => b.date.localeCompare(a.date));
+  const dailyBalances = new Map();
+  const todayStr = formatLocalDate(new Date());
+  let txIdx = 0;
   
-  while (cur <= fin) {
+  let cur = new Date(todayStr);
+  const startLimit = new Date(startStr);
+  
+  while (cur >= startLimit) {
     const dStr = formatLocalDate(cur);
-    let bal = currentAccBal;
-    state.transactions.forEach(tx => {
-      if (tx.date > dStr) {
-        if (tx.type === 'income' && tx.toAccountId === targetId) bal -= tx.amount;
-        else if (tx.type === 'expense' && tx.fromAccountId === targetId) bal += tx.amount;
-        else if (tx.type === 'transfer') {
-          if (tx.fromAccountId === targetId) bal += tx.amount;
-          if (tx.toAccountId === targetId) bal -= tx.amount;
-        }
+    
+    while (txIdx < sortedTxs.length && sortedTxs[txIdx].date > dStr) {
+      const tx = sortedTxs[txIdx];
+      if (tx.type === 'income' && tx.toAccountId === targetId) currentAccBal -= tx.amount;
+      else if (tx.type === 'expense' && tx.fromAccountId === targetId) currentAccBal += tx.amount;
+      else if (tx.type === 'transfer') {
+        if (tx.fromAccountId === targetId) currentAccBal += tx.amount;
+        if (tx.toAccountId === targetId) currentAccBal -= tx.amount;
       }
-    });
-    history.push({ date: dStr, balance: bal });
-    cur.setDate(cur.getDate() + 1);
+      txIdx++;
+    }
+    
+    dailyBalances.set(dStr, currentAccBal);
+    cur.setDate(cur.getDate() - 1);
   }
+
+  let walk = new Date(startStr);
+  const endLimit = new Date(endStr);
+  while (walk <= endLimit) {
+    const dStr = formatLocalDate(walk);
+    history.push({ date: dStr, balance: dailyBalances.get(dStr) || currentAccBal });
+    walk.setDate(walk.getDate() + 1);
+  }
+  
   return history;
 }

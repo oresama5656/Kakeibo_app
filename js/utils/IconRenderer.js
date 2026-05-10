@@ -68,6 +68,6 @@ export function getAvailableIcons() {
     'phone', 'wifi', 'zap', 'droplets', 'flame',
     'coffee', 'beer', 'wine', 'pizza', 'ice-cream',
     'map-pin', 'navigation', 'ticket', 'umbrella', 'cloud',
-    'hand-coins', 'trash-2', 'wrench', 'scale', 'receipt'
+    'hand-coins', 'mail', 'japanese-yen', 'trash-2', 'wrench', 'scale', 'receipt'
   ];
 }

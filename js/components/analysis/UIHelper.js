@@ -188,15 +188,23 @@ export function renderBSContent(state, start, end) {
         <div style="height: 320px;"><canvas id="bs-balance-chart"></canvas></div>
       </div>
 
-      <!-- Asset Trend Chart -->
+      <!-- Asset Trend Chart with Premium Controls -->
       <div class="premium-card-v3">
-        <h4 style="font-size: 0.9rem; font-weight: 800; color: var(--text-primary); margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
-          <i data-lucide="trending-up" style="width: 18px; height: 18px; color: var(--color-accent);"></i>
-          資産推移
-        </h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+          <h4 style="font-size: 0.9rem; font-weight: 800; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="trending-up" style="width: 18px; height: 18px; color: var(--color-accent);"></i>
+            資産推移
+          </h4>
+          <div style="display: flex; gap: 6px;">
+            <select id="analysis-account-selector" class="premium-select-v3">
+              <option value="total">全体合計</option>
+              <option value="multi" ${state.selectedAccountId === 'multi' ? 'selected' : ''}>個別（すべて）</option>
+              ${accounts.map(a => `<option value="${escape(a.id)}" ${a.id === state.selectedAccountId ? 'selected' : ''}>${escape(a.name)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
         <div style="height: 240px;"><canvas id="total-asset-chart"></canvas></div>
       </div>
-      ...
 
       <!-- Account List Title -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px var(--space-md) 10px;">

@@ -118,7 +118,42 @@ export function renderTotalAssetChart(start, end, selectedAccountId, excludedIds
   let label = '純資産';
   let color = '#6366f1';
 
-  if (selectedAccountId) {
+  if (selectedAccountId === 'multi') {
+    // 【個別表示（すべて）モード】全口座のデータセットを生成
+    const visibleAccounts = store.getAccounts().filter(a => !excludedIds.includes(a.id));
+    const palette = ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#06b6d4'];
+    
+    const datasets = visibleAccounts.map((acc, i) => {
+      const history = store.getAccountHistoryRange(acc.id, start, end);
+      if (labels.length === 0) labels = history.map(h => h.date.split('-').slice(1).join('/'));
+      return {
+        label: acc.name,
+        data: history.map(h => h.balance),
+        borderColor: palette[i % palette.length],
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 0,
+        fill: false
+      };
+    });
+    
+    totalAssetChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: labels, datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { 
+          legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        scales: { x: { ticks: { autoSkip: true, maxTicksLimit: 10 } } }
+      }
+    });
+    return; // 早期リターン
+  }
+
+  if (selectedAccountId && selectedAccountId !== 'total') {
+    // 【単一口座モード】
     const history = store.getAccountHistoryRange(selectedAccountId, start, end);
     const acc = store.getAccounts().find(a => a.id === selectedAccountId);
     data = history.map(h => h.balance); 
@@ -126,17 +161,23 @@ export function renderTotalAssetChart(start, end, selectedAccountId, excludedIds
     label = acc ? acc.name : '不明な口座';
     color = (acc && Number(acc.balance) < 0) ? '#f43f5e' : '#10b981';
   } else { 
-    // 全体表示の場合：除外口座を除いた推移を再計算
+    // 【全体合計モード】除外口座を除いた推移を再計算
     const history = store.getAssetHistoryRange(start, end);
     labels = history.map(h => h.date.split('-').slice(1).join('/'));
     
     if (excludedIds.length > 0) {
+      // 効率化：除外対象口座の履歴を事前にすべて計算してMap化する
+      const excludedMaps = excludedIds.map(id => {
+        const accH = store.getAccountHistoryRange(id, start, end);
+        const map = new Map();
+        accH.forEach(item => map.set(item.date, item.balance));
+        return map;
+      });
+
       data = history.map(h => {
         let deduction = 0;
-        excludedIds.forEach(id => {
-          const accH = store.getAccountHistoryRange(id, start, end);
-          const dayMatch = accH.find(ah => ah.date === h.date);
-          if (dayMatch) deduction += dayMatch.balance;
+        excludedMaps.forEach(map => {
+          deduction += map.get(h.date) || 0;
         });
         return h.total - deduction;
       });

@@ -14,7 +14,7 @@ const RECOMMENDED_LUCIDE_ICONS = [
   'lucide:landmark', 'lucide:coins', 'lucide:piggy-bank', 'lucide:trending-up', 'lucide:stethoscope', 
   'lucide:pill', 'lucide:dumbbell', 'lucide:bike', 'lucide:plane', 'lucide:star', 
   'lucide:zap', 'lucide:flame', 'lucide:cat', 'lucide:dog', 'lucide:leaf',
-  'lucide:hand-coins', 'lucide:graduation-cap', 'lucide:baby', 'lucide:laptop', 'lucide:percent',
+  'lucide:hand-coins', 'lucide:mail', 'lucide:japanese-yen', 'lucide:graduation-cap', 'lucide:baby', 'lucide:laptop', 'lucide:percent',
   'lucide:line-chart', 'lucide:smartphone', 'lucide:palmtree', 'lucide:party-popper', 'lucide:droplets', 'lucide:wifi',
   'lucide:package', 'lucide:ticket', 'lucide:beer', 'lucide:trash-2', 'lucide:wrench', 'lucide:scale', 'lucide:receipt'
 ];
@@ -76,9 +76,9 @@ export function render(container) {
         <div id="settings-accounts-list">
           ${accounts.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(acc => `
             <div class="settings-list-item-v3 draggable" data-id="${acc.id}" data-action="editAccount">
-              <span class="settings-drag-handle-v3">⠿</span>
+              <span class="settings-drag-handle-v3"><i data-lucide="grip-vertical"></i></span>
               <div class="item-icon-v3">${renderIconHTML(acc.icon, acc.id, { size: 24 })}</div>
-              <span class="item-name-v3">${store.escapeHTML(acc.name)} ${acc.pinned ? '📌' : ''}</span>
+              <span class="item-name-v3">${store.escapeHTML(acc.name)} ${acc.pinned ? '<i data-lucide="pin" class="pinned-star-icon-v3"></i>' : ''}</span>
               <span class="item-chevron-v3">›</span>
             </div>
           `).join('')}
@@ -100,9 +100,9 @@ export function render(container) {
           <div id="settings-expense-list">
             ${expenseCategories.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(cat => `
               <div class="settings-list-item-v3 draggable" data-id="${cat.id}" data-action="editCategory">
-                <span class="settings-drag-handle-v3 small">⠿</span>
+                <span class="settings-drag-handle-v3 small"><i data-lucide="grip-vertical"></i></span>
                 <div class="item-icon-v3 small">${renderIconHTML(cat.icon, cat.id, { size: 20 })}</div>
-                <span class="item-name-v3 small">${store.escapeHTML(cat.name)} ${cat.pinned ? '📌' : ''}</span>
+                <span class="item-name-v3 small">${store.escapeHTML(cat.name)} ${cat.pinned ? '<i data-lucide="pin" class="pinned-star-icon-v3"></i>' : ''}</span>
                 <span class="item-chevron-v3">›</span>
               </div>
             `).join('')}
@@ -122,9 +122,9 @@ export function render(container) {
           <div id="settings-income-list">
             ${incomeCategories.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(cat => `
               <div class="settings-list-item-v3 draggable" data-id="${cat.id}" data-action="editCategory">
-                <span class="settings-drag-handle-v3 small">⠿</span>
+                <span class="settings-drag-handle-v3 small"><i data-lucide="grip-vertical"></i></span>
                 <div class="item-icon-v3 small">${renderIconHTML(cat.icon, cat.id, { size: 20 })}</div>
-                <span class="item-name-v3 small">${store.escapeHTML(cat.name)} ${cat.pinned ? '📌' : ''}</span>
+                <span class="item-name-v3 small">${store.escapeHTML(cat.name)} ${cat.pinned ? '<i data-lucide="pin" class="pinned-star-icon-v3"></i>' : ''}</span>
                 <span class="item-chevron-v3">›</span>
               </div>
             `).join('')}
@@ -219,34 +219,46 @@ function showAccountModal(id) {
       <div class="modal-drag-handle"></div>
       <div class="modal-header-v3">
         <h3 class="modal-title-v3">${isNew ? '口座追加' : '口座編集'}</h3>
-        <button class="modal-close-v3" data-action="closeModal">&times;</button>
+        <button class="modal-close-v3" data-action="closeModal" aria-label="閉じる">&times;</button>
       </div>
       <div class="modal-body-v3">
+        <div class="hero-icon-container-v3">
+          <div id="acc-icon-preview" class="hero-icon-preview-v3">${renderIconHTML(acc?.icon || 'lucide:wallet', id || 'new', { size: 40 })}</div>
+          <input type="hidden" id="acc-icon" value="${acc?.icon || 'lucide:wallet'}">
+        </div>
+
         <div class="form-group-v3">
           <label>口座名</label>
-          <input type="text" id="acc-name" class="input-v3" value="${acc?.name || ''}" placeholder="例: 楽天カード">
+          <input type="text" id="acc-name" name="account-name" class="input-v3" value="${acc?.name || ''}" placeholder="例: 生活費口座" autocomplete="account-name">
         </div>
-        
+
         <div class="form-group-v3">
-          <label>アイコン設定</label>
-          <div class="icon-setting-row">
-            <div id="acc-icon-preview">${renderIconHTML(acc?.icon || 'lucide:wallet', id, { size: 32 })}</div>
-            <input type="text" id="acc-icon" class="input-v3" value="${acc?.icon || 'lucide:wallet'}" placeholder="lucide:name or emoji">
-          </div>
+          <label>初期残高</label>
+          <input type="number" id="acc-balance" name="account-balance" class="input-v3" value="${acc?.initialBalance || 0}" placeholder="0" autocomplete="off">
+        </div>
+
+        <div class="form-group-v3">
+          <label>アイコン選択</label>
           <div class="icon-picker-grid-v3">
             ${RECOMMENDED_LUCIDE_ICONS.map(icon => `
-              <div class="icon-option-v3" data-icon="${icon}">${renderIconHTML(icon, 'preview', { size: 20 })}</div>
+              <div class="icon-option-v3 ${acc?.icon === icon ? 'active' : ''}" data-icon="${icon}" role="button" aria-label="アイコン: ${icon}">${renderIconHTML(icon, 'preview', { size: 24 })}</div>
             `).join('')}
           </div>
         </div>
 
-          <div class="pinned-toggle-v3">
-            <input type="checkbox" id="acc-pinned" ${acc?.pinned ? 'checked' : ''}>
-            <label for="acc-pinned" class="pinned-label-v3">📌 上位に固定する</label>
+        <div class="premium-switch-row-v3">
+          <div class="switch-label-v3">
+            <i data-lucide="star" style="width: 18px; color: #eab308;"></i>
+            <span>お気に入り（優先表示）</span>
           </div>
+          <label class="switch-v3">
+            <input type="checkbox" id="acc-pinned" ${acc?.pinned ? 'checked' : ''}>
+            <span class="slider-v3"></span>
+          </label>
         </div>
       </div>
-        ${!isNew ? '<button class="btn-danger-v3" data-action="deleteItem" style="margin-right: auto;">削除</button>' : ''}
+      <div class="modal-footer-v3">
+        ${!isNew ? '<button class="btn-danger-v3" data-action="deleteItem">削除</button>' : ''}
         <button class="modal-apply-btn-v3" data-action="saveItem">${isNew ? '追加' : '保存'}</button>
       </div>
     </div>
@@ -258,8 +270,18 @@ function showAccountModal(id) {
     const iconOpt = e.target.closest('.icon-option-v3');
     if (iconOpt) {
       const newIcon = iconOpt.dataset.icon;
+      // UI Update
+      document.querySelectorAll('.icon-option-v3').forEach(opt => opt.classList.remove('active'));
+      iconOpt.classList.add('active');
+      
       document.getElementById('acc-icon').value = newIcon;
-      document.getElementById('acc-icon-preview').innerHTML = renderIconHTML(newIcon, id || 'new', { size: 32 });
+      document.getElementById('acc-icon-preview').innerHTML = renderIconHTML(newIcon, id || 'new', { size: 40 });
+      
+      // Animate preview
+      const preview = document.getElementById('acc-icon-preview');
+      preview.style.transform = 'scale(1.2)';
+      setTimeout(() => preview.style.transform = 'scale(1)', 200);
+
       if (window.lucide) lucide.createIcons();
       return;
     }
@@ -286,38 +308,45 @@ function showCategoryModal(id, type) {
   const overlay = document.createElement('div');
   overlay.className = 'premium-modal-overlay fadeIn';
   overlay.innerHTML = `
-    <div class="premium-modal-sheet slideUp" style="max-width: 450px;">
+    <div class="premium-modal-sheet slideUp">
       <div class="modal-drag-handle"></div>
       <div class="modal-header-v3">
         <h3 class="modal-title-v3">カテゴリ管理</h3>
-        <button class="modal-close-v3" data-action="closeModal">&times;</button>
+        <button class="modal-close-v3" data-action="closeModal" aria-label="閉じる">&times;</button>
       </div>
       <div class="modal-body-v3">
-        <div class="form-group-v3">
-          <label>名前</label>
-          <input type="text" id="cat-name" class="input-v3" value="${cat?.name || ''}" placeholder="例: 食費">
+        <div class="hero-icon-container-v3">
+          <div id="cat-icon-preview" class="hero-icon-preview-v3">${renderIconHTML(cat?.icon || 'lucide:folder', id || 'new', { size: 40 })}</div>
+          <input type="hidden" id="cat-icon" value="${cat?.icon || 'lucide:folder'}">
         </div>
 
         <div class="form-group-v3">
-          <label>アイコン設定</label>
-          <div class="icon-setting-row">
-            <div id="cat-icon-preview">${renderIconHTML(cat?.icon || 'lucide:folder', id, { size: 32 })}</div>
-            <input type="text" id="cat-icon" class="input-v3" value="${cat?.icon || 'lucide:folder'}" placeholder="lucide:name or emoji">
-          </div>
+          <label>カテゴリ名</label>
+          <input type="text" id="cat-name" name="category-name" class="input-v3" value="${cat?.name || ''}" placeholder="例: 食費" autocomplete="category">
+        </div>
+
+        <div class="form-group-v3">
+          <label>アイコン選択</label>
           <div class="icon-picker-grid-v3">
             ${RECOMMENDED_LUCIDE_ICONS.map(icon => `
-              <div class="icon-option-v3" data-icon="${icon}">${renderIconHTML(icon, 'preview', { size: 20 })}</div>
+              <div class="icon-option-v3 ${cat?.icon === icon ? 'active' : ''}" data-icon="${icon}" role="button" aria-label="アイコン: ${icon}">${renderIconHTML(icon, 'preview', { size: 24 })}</div>
             `).join('')}
           </div>
         </div>
 
-        <div class="pinned-toggle-v3">
-          <input type="checkbox" id="cat-pinned" ${cat?.pinned ? 'checked' : ''}>
-          <label for="cat-pinned" class="pinned-label-v3">📌 上位に固定する</label>
+        <div class="premium-switch-row-v3">
+          <div class="switch-label-v3">
+            <i data-lucide="star" style="width: 18px; color: #eab308;"></i>
+            <span>お気に入り（優先表示）</span>
+          </div>
+          <label class="switch-v3">
+            <input type="checkbox" id="cat-pinned" ${cat?.pinned ? 'checked' : ''}>
+            <span class="slider-v3"></span>
+          </label>
         </div>
       </div>
       <div class="modal-footer-v3">
-        ${!isNew ? '<button class="btn-danger-v3" data-action="deleteItem" style="margin-right: auto;">削除</button>' : ''}
+        ${!isNew ? '<button class="btn-danger-v3" data-action="deleteItem">削除</button>' : ''}
         <button class="modal-apply-btn-v3" data-action="saveItem">${isNew ? '追加' : '保存'}</button>
       </div>
     </div>
@@ -329,8 +358,18 @@ function showCategoryModal(id, type) {
     const iconOpt = e.target.closest('.icon-option-v3');
     if (iconOpt) {
       const newIcon = iconOpt.dataset.icon;
+      // UI Update
+      document.querySelectorAll('.icon-option-v3').forEach(opt => opt.classList.remove('active'));
+      iconOpt.classList.add('active');
+
       document.getElementById('cat-icon').value = newIcon;
-      document.getElementById('cat-icon-preview').innerHTML = renderIconHTML(newIcon, id || 'new', { size: 32 });
+      document.getElementById('cat-icon-preview').innerHTML = renderIconHTML(newIcon, id || 'new', { size: 40 });
+
+      // Animate preview
+      const preview = document.getElementById('cat-icon-preview');
+      preview.style.transform = 'scale(1.2)';
+      setTimeout(() => preview.style.transform = 'scale(1)', 200);
+
       if (window.lucide) lucide.createIcons();
       return;
     }
