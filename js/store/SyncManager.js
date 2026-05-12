@@ -57,6 +57,36 @@ export async function readAllFromCloud(sheetId) {
   }
 }
 
+/**
+ * 読み込み専用の同期（pullFromCloud専用）
+ * クラウドのデータをローカルに反映するだけ。クラウドへの書き戻しは行わない。
+ * ← これがないと「読んで→書き直し」の無駄往復でAPI呼び出しが倍増し、エラーの原因になる。
+ */
+export async function pullOnlyFromCloud(sheetId, saveFn) {
+  if (!auth.isLoggedIn() || isSyncing) return false;
+  isSyncing = true;
+  try {
+    const cloud = await readAllFromCloud(sheetId);
+    const isCloudExists = cloud.transactions.length > 0 || cloud.categories.length > 0 || cloud.accounts.length > 0;
+    if (!isCloudExists) return false; // クラウドが空なら何もしない
+
+    // クラウドのデータでローカルを上書き
+    state.transactions = cloud.transactions.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));
+    state.transactions = migrateTransactionIds(state.transactions, cloud.accounts, cloud.categories);
+    state.categories = cloud.categories;
+    state.accounts = cloud.accounts;
+    state.shortcuts = cloud.shortcuts;
+    updateAccountBalances();
+    saveFn(); // localStorageに保存
+    return true;
+  } catch (e) {
+    console.error('[pullOnly] Error:', e);
+    return false;
+  } finally {
+    isSyncing = false;
+  }
+}
+
 export async function syncToCloudInternal(sheetId, saveFn, priority = 'local', forcePriority = false) {
   if (!auth.isLoggedIn() || isSyncing) return;
   isSyncing = true;

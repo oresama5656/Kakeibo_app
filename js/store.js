@@ -84,31 +84,27 @@ export async function loadFromCloud(sheetId) {
 }
 
 /**
- * リアルタイム同期用のプル（差分マージして画面更新）
- * save()による書き込み中は実行しない（削除データの復活を防ぐ）
- * 
- * ⚠️ 重要: priority='cloud' を使う
- * pullFromCloud は「他デバイスの変更を取得する」操作なので、クラウドが正解。
- * 'local' を使うと、このデバイスのローカル（古いデータ）がクラウド（削除済み）に
- * 勝ってしまい、他デバイスで削除した取引が復活するバグが発生する。
+ * リアルタイム同期用のプル（クラウド→ローカルの読み込み専用）
+ * save()による書き込み中はスキップする。
+ * ⚠️ pullOnlyFromCloud を使うこと。syncToCloudInternal は書き戻しも行うため、
+ *    API呼び出しが倍増してエラーの原因になる。
  */
 export async function pullFromCloud() {
   const sheetId = localStorage.getItem('kakeibo_sheet_id');
   if (!sheetId) return;
-  
+
   // save()がクラウドへ書き込み中の場合はスキップ
   if (SyncManager.isSyncInProgress()) {
     console.log('[pullFromCloud] Sync in progress, skipping.');
     return;
   }
-  
+
   const prevState = JSON.stringify(state);
-  
-  // force=true, priority='cloud': 他デバイスの変更を取得する。クラウドが正解。
-  await SyncManager.syncToCloudInternal(sheetId, () => {
+
+  const changed = await SyncManager.pullOnlyFromCloud(sheetId, () => {
     localStorage.setItem('kakeibo_data', JSON.stringify(state));
-  }, 'cloud', true);
-  
+  });
+
   const nextState = JSON.stringify(state);
   
   // データに変化があった場合のみ、再描画イベントを発行
