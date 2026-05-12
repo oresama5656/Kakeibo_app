@@ -427,7 +427,7 @@ function showEditModal(txId) {
         <div class="form-group">
           <label class="form-label">カテゴリー</label>
           <select class="form-input" id="edit-category">
-            ${categories.map(c => `<option value="${c.id}" ${c.id === tx.categoryId ? 'selected' : ''}>${iconToEmoji(c.icon)} ${c.name}</option>`).join('')}
+            ${categories.map(c => `<option value="${c.id}" ${c.id === tx.categoryId ? 'selected' : ''}>${c.name}</option>`).join('')}
           </select>
         </div>
       ` : ''}
@@ -436,7 +436,7 @@ function showEditModal(txId) {
         <div class="form-group">
           <label class="form-label">出金元</label>
           <select class="form-input" id="edit-from">
-            ${accounts.map(a => `<option value="${a.id}" ${a.id === tx.fromAccountId ? 'selected' : ''}>${iconToEmoji(a.icon)} ${a.name}</option>`).join('')}
+            ${accounts.map(a => `<option value="${a.id}" ${a.id === tx.fromAccountId ? 'selected' : ''}>${a.name}</option>`).join('')}
           </select>
         </div>
       ` : ''}
@@ -445,7 +445,7 @@ function showEditModal(txId) {
         <div class="form-group">
           <label class="form-label">入金先</label>
           <select class="form-input" id="edit-to">
-            ${accounts.map(a => `<option value="${a.id}" ${a.id === tx.toAccountId ? 'selected' : ''}>${iconToEmoji(a.icon)} ${a.name}</option>`).join('')}
+            ${accounts.map(a => `<option value="${a.id}" ${a.id === tx.toAccountId ? 'selected' : ''}>${a.name}</option>`).join('')}
           </select>
         </div>
       ` : ''}
