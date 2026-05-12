@@ -6,6 +6,36 @@ import * as store from '../store.js';
 import * as PeriodManager from '../components/analysis/PeriodManager.js';
 import { renderIconHTML } from '../utils/IconRenderer.js';
 
+/**
+ * lucide:xxx 形式のアイコン名をoption内で表示できる絵文字に変換
+ * <option>タグ内ではHTMLタグが使えないため、テキストベースの絵文字でフォールバック
+ */
+const LUCIDE_TO_EMOJI = {
+  'utensils': '🍴', 'shopping-bag': '🛍️', 'car': '🚗', 'bike': '🚲', 'plane': '✈️',
+  'train': '🚃', 'bus': '🚌', 'home': '🏠', 'gamepad-2': '🎮', 'scale': '⚖️',
+  'banknote': '💴', 'wallet': '👛', 'credit-card': '💳', 'landmark': '🏦',
+  'trending-up': '📈', 'trending-down': '📉', 'bar-chart': '📊',
+  'gift': '🎁', 'stethoscope': '🏥', 'zap': '⚡', 'smartphone': '📱',
+  'globe': '🌐', 'graduation-cap': '🎓', 'baby': '👶', 'coffee': '☕',
+  'beer': '🍺', 'wine': '🍷', 'users': '👥', 'heart': '❤️',
+  'briefcase': '💼', 'book-open': '📚', 'receipt': '🧾', 'coins': '🪙',
+  'shopping-cart': '🛒', 'zap': '⚡', 'droplets': '💧', 'flame': '🔥',
+  'map-pin': '📍', 'ticket': '🎫', 'umbrella': '☂️', 'mail': '📧',
+  'japanese-yen': '¥', 'wrench': '🔧', 'phone': '📞', 'pizza': '🍕',
+  'hand-coins': '🤲', 'palmtree': '🌴', 'folder': '📂', 'help-circle': '❓',
+  'repeat': '🔄', 'shield': '🛡️', 'truck': '🚚', 'package': '📦',
+};
+
+function iconToEmoji(iconStr) {
+  if (!iconStr) return '📌';
+  if (iconStr.startsWith('lucide:')) {
+    const name = iconStr.replace('lucide:', '');
+    return LUCIDE_TO_EMOJI[name] || '📌';
+  }
+  // すでに絵文字の場合はそのまま返す
+  return iconStr;
+}
+
 let historyState = {
   periodType: 'month',
   referenceDate: new Date(),
@@ -397,7 +427,7 @@ function showEditModal(txId) {
         <div class="form-group">
           <label class="form-label">カテゴリー</label>
           <select class="form-input" id="edit-category">
-            ${categories.map(c => `<option value="${c.id}" ${c.id === tx.categoryId ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('')}
+            ${categories.map(c => `<option value="${c.id}" ${c.id === tx.categoryId ? 'selected' : ''}>${iconToEmoji(c.icon)} ${c.name}</option>`).join('')}
           </select>
         </div>
       ` : ''}
@@ -406,7 +436,7 @@ function showEditModal(txId) {
         <div class="form-group">
           <label class="form-label">出金元</label>
           <select class="form-input" id="edit-from">
-            ${accounts.map(a => `<option value="${a.id}" ${a.id === tx.fromAccountId ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
+            ${accounts.map(a => `<option value="${a.id}" ${a.id === tx.fromAccountId ? 'selected' : ''}>${iconToEmoji(a.icon)} ${a.name}</option>`).join('')}
           </select>
         </div>
       ` : ''}
@@ -415,7 +445,7 @@ function showEditModal(txId) {
         <div class="form-group">
           <label class="form-label">入金先</label>
           <select class="form-input" id="edit-to">
-            ${accounts.map(a => `<option value="${a.id}" ${a.id === tx.toAccountId ? 'selected' : ''}>${a.icon} ${a.name}</option>`).join('')}
+            ${accounts.map(a => `<option value="${a.id}" ${a.id === tx.toAccountId ? 'selected' : ''}>${iconToEmoji(a.icon)} ${a.name}</option>`).join('')}
           </select>
         </div>
       ` : ''}
