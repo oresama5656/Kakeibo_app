@@ -1,9 +1,10 @@
 const CLIENT_ID = '847697512612-g7cs60es07i6vghtq8q2j30e5b7t4h80.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
+const WORKER_URL = 'https://kakeibo-auth-worker.oresama5656.workers.dev'; // 本番デプロイ済み
 
 import * as store from './store.js';
 
-let tokenClient;
+let codeClient;
 let accessToken = null;
 let isInitialized = false;
 
@@ -38,13 +39,14 @@ export async function initGoogleAuth() {
               localStorage.removeItem('g_token_timestamp');
             }
 
-            // 2. GIS (OAuth2) の初期化
-            tokenClient = google.accounts.oauth2.initTokenClient({
+            // 2. GIS (OAuth2) の初期化 (Code Clientに変更)
+            codeClient = google.accounts.oauth2.initCodeClient({
               client_id: CLIENT_ID,
               scope: SCOPES,
-              callback: (resp) => {
+              ux_mode: 'popup',
+              callback: async (resp) => {
                 if (resp.error) return;
-                handleTokenResponse(resp);
+                await handleCodeResponse(resp.code);
               },
             });
 
@@ -52,9 +54,9 @@ export async function initGoogleAuth() {
             
             // 初期化時にメールアドレスが保存されているか確認（セッション維持用）
             const storedEmail = localStorage.getItem('g_user_email');
-            if (accessToken && !storedEmail) {
-              // トークンはあるがメールがない場合（移行期間など）、取得を試みる
-              await fetchAndCheckUserEmail(accessToken);
+            if (!accessToken && storedEmail) {
+              // メールはあるがトークンがない（または期限切れ）場合、Worker経由で自動復帰を試みる
+              await silentRefresh();
             }
 
             resolve();
@@ -72,59 +74,82 @@ export async function initGoogleAuth() {
 }
 
 /**
- * ログイン実行
+ * ログイン実行 (Codeを取得してWorkerへ送る)
  */
 export function signIn() {
   return new Promise((resolve, reject) => {
-    if (!tokenClient) return reject(new Error('Google SDK not ready.'));
+    if (!codeClient) return reject(new Error('Google SDK not ready.'));
 
-    tokenClient.callback = (resp) => {
+    codeClient.callback = async (resp) => {
       if (resp.error) {
         window.showToast?.(`連携エラー: ${resp.error}`, 'error');
         reject(resp);
         return;
       }
-      handleTokenResponse(resp);
-      resolve(accessToken);
+      try {
+        await handleCodeResponse(resp.code);
+        resolve(accessToken);
+      } catch (e) {
+        reject(e);
+      }
     };
 
-    // 初回は確実にアカウント選択を出す
-    tokenClient.requestAccessToken({ prompt: 'select_account' });
+    codeClient.requestCode();
   });
 }
 
 /**
- * サイレント・リフレッシュ (ユーザー操作なしでトークン更新)
+ * Worker経由でのトークン更新
  */
 async function silentRefresh() {
-  return new Promise((resolve) => {
-    if (!tokenClient) return resolve(false);
-    
-    tokenClient.callback = (resp) => {
-      if (resp.error) {
-        console.warn('Silent refresh failed:', resp.error);
-        resolve(false);
-        return;
-      }
-      handleTokenResponse(resp);
-      console.log('Token refreshed silently.');
-      resolve(true);
-    };
+  const userId = localStorage.getItem('g_user_email');
+  if (!userId) return false;
 
-    // prompt: none はサードパーティCookie制限等で動かないことが多いため、
-    // promptを指定せずに実行（ログイン済みなら一瞬ポップアップが出るか出ないかで更新される）
-    tokenClient.requestAccessToken({ prompt: '' });
-  });
+  try {
+    const resp = await fetch(`${WORKER_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId })
+    });
+
+    const data = await resp.json();
+    if (data.error) {
+      console.warn('Silent refresh failed via Worker:', data.error);
+      return false;
+    }
+
+    handleTokenResponse(data);
+    console.log('Token refreshed via Worker.');
+    return true;
+  } catch (e) {
+    console.warn('Worker connection failed during refresh:', e);
+    return false;
+  }
 }
 
-async function handleTokenResponse(resp) {
-  const newTask = resp.access_token;
-  
-  // 以前のメールアドレスと比較して、アカウント変更を検知する
-  await fetchAndCheckUserEmail(newTask);
-  
-  accessToken = newTask;
+async function handleCodeResponse(code) {
+  // WorkerにCodeを送り、アクセストークン（とサーバー側でのリフレッシュトークン保存）を得る
+  const resp = await fetch(`${WORKER_URL}/auth/callback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code })
+  });
+
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error);
+
+  await handleTokenResponse(data);
+}
+
+async function handleTokenResponse(data) {
+  accessToken = data.access_token;
   gapi.client.setToken({ access_token: accessToken });
+  
+  // サーバーが特定したメールアドレスを保存
+  if (data.email) {
+    localStorage.setItem('g_user_email', data.email);
+  }
+  
   localStorage.setItem('g_access_token', accessToken);
   localStorage.setItem('g_token_timestamp', Date.now().toString());
   startAutoRefresh();
@@ -141,14 +166,14 @@ async function fetchAndCheckUserEmail(token) {
     const userInfo = await response.json();
     const newEmail = userInfo.email;
 
-    if (!newEmail) return;
+    if (!newEmail) return true;
 
     const currentEmail = localStorage.getItem('g_user_email');
 
     // 初回ログイン時はメールを保存するだけ
     if (!currentEmail) {
       localStorage.setItem('g_user_email', newEmail);
-      return;
+      return true;
     }
 
     // アカウントが切り替わった場合
@@ -156,10 +181,20 @@ async function fetchAndCheckUserEmail(token) {
       console.warn('Account mismatch detected:', currentEmail, '->', newEmail);
       alert('別のアカウントが選択されました。データの混同を防ぐため、現在のデータを削除してログアウトします。');
       store.blockSync(); // 同期を即座に停止
+      
+      // signOut()の前に確実にデータを消去する（リロードより前に消去を完了させる）
+      localStorage.removeItem('kakeibo_data');
+      localStorage.removeItem('kakeibo_sheet_id');
+      localStorage.removeItem('g_user_email');
+      
       signOut(); // ここでリロードされる
+      return false; // 不一致を呼び出し元に伝える
     }
+    
+    return true; // 一致している、または初回
   } catch (e) {
     console.error('Failed to fetch user email:', e);
+    return false;
   }
 }
 
@@ -235,8 +270,79 @@ export async function clearRows(spreadsheetId, range) {
   }
 }
 
+/**
+ * スプレッドシートにデバッグログを書き込む
+ */
+export async function writeLog(spreadsheetId, message) {
+  try {
+    const timestamp = new Date().toISOString();
+    await gapi.client.sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: 'logs!A1',
+      valueInputOption: 'USER_ENTERED',
+      resource: { values: [[timestamp, message]] }
+    });
+  } catch (e) {
+    console.warn('Failed to write cloud log:', e);
+  }
+}
+
+/**
+ * 複数の範囲を一括で消去
+ */
+export async function batchClear(spreadsheetId, ranges) {
+  try {
+    return await gapi.client.sheets.spreadsheets.values.batchClear({
+      spreadsheetId,
+      resource: { ranges }
+    });
+  } catch (e) {
+    if (e.status === 401 || e.status === 403) {
+      if (await silentRefresh()) return batchClear(spreadsheetId, ranges);
+    }
+    throw e;
+  }
+}
+
+/**
+ * 複数の範囲を一括で更新
+ */
+export async function batchUpdateValues(spreadsheetId, data) {
+  try {
+    return await gapi.client.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId,
+      resource: {
+        valueInputOption: 'USER_ENTERED',
+        data: data
+      }
+    });
+  } catch (e) {
+    if (e.status === 401 || e.status === 403) {
+      if (await silentRefresh()) return batchUpdateValues(spreadsheetId, data);
+    }
+    throw e;
+  }
+}
+
+/**
+ * Google Sheets API の batchUpdate を使用して、データの削除と書き込みを同一リクエスト内で行う（アトミックな更新）ためのヘルパー関数を追加しました。これにより、通信エラー等で「データが消えたままになる」リスクを完全に排除します。
+ */
+export async function batchUpdateRows(spreadsheetId, requests) {
+  try {
+    return await gapi.client.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: { requests }
+    });
+  } catch (e) {
+    if (e.status === 401 || e.status === 403) {
+      if (await silentRefresh()) return batchUpdateRows(spreadsheetId, requests);
+    }
+    throw e;
+  }
+}
+
 async function setupSpreadsheetSkeleton(spreadsheetId) {
-  const sheets = ['transactions', 'accounts', 'categories', 'shortcuts', 'settings'];
+  const sheets = ['transactions', 'accounts', 'categories', 'shortcuts', 'settings', 'logs'];
   const requests = sheets.map(name => ({ addSheet: { properties: { title: name } } }));
   await gapi.client.sheets.spreadsheets.batchUpdate({
     spreadsheetId,

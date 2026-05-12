@@ -4,6 +4,7 @@
 
 import { initStore } from './store.js';
 import * as auth from './auth.js';
+import * as sync from './sync.js';
 import { render as renderInput } from './screens/input.js';
 import { render as renderDashboard } from './screens/dashboard.js';
 import { render as renderHistory } from './screens/history.js';
@@ -38,6 +39,7 @@ async function initGoogleBackground() {
       if (window.google && window.gapi) {
         console.log('Google SDKs found. Initializing stable auth...');
         await auth.initGoogleAuth();
+        sync.initRealtimeSync();
         
         const result = await auth.getOrCreateSpreadsheet().catch(e => {
             console.log('Initial spreadsheet check failed (likely not logged in or network error).');
@@ -160,7 +162,26 @@ function setupNavigation() {
   window.navigateTo = navigate;
 }
 
+// リアルタイム更新イベントの購読
+window.addEventListener('kakeibo-data-updated', () => {
+  console.log('Data updated event received. Re-rendering current screen...');
+  renderApp(); // 現在の画面を再描画
+});
+
 document.addEventListener('DOMContentLoaded', initializeApp);
+
+// フェーズ1: 擬似リアルタイム同期 (アプリ復帰時にクラウドから最新データを取得)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    const sheetId = localStorage.getItem('kakeibo_sheet_id');
+    if (sheetId && auth.isLoggedIn()) {
+      console.log('App became visible. Pulling latest data from cloud...');
+      store.pullFromCloud().catch(err => {
+        console.warn('Visibility cloud pull failed:', err);
+      });
+    }
+  }
+});
 
 // Global Toast
 window.showToast = (message, type = 'success') => {

@@ -12,6 +12,7 @@ import * as AccountStore from './store/AccountStore.js';
 import * as CategoryStore from './store/CategoryStore.js';
 import * as TransactionStore from './store/TransactionStore.js';
 import * as SyncManager from './store/SyncManager.js';
+import * as sync from './sync.js';
 
 // --- 初期化と保存ロジック（コーディネーター） ---
 
@@ -30,10 +31,12 @@ export function initStore() {
     }));
     state.transactions = migrateTransactionIds(state.transactions, state.accounts, state.categories);
     
-    // カテゴリーの初期チェックと補充
+    // カテゴリーの初期チェックと補充（クラウド未連携の場合のみデフォルトを補充する）
+    const isCloudLinked = !!localStorage.getItem('kakeibo_sheet_id');
     if (!state.categories || state.categories.length === 0) {
       state.categories = [...DEFAULT_CATEGORIES];
-    } else {
+    } else if (!isCloudLinked) {
+      // クラウドと連携していない場合のみ、必須カテゴリーを補充する
       const hasExpenseCorrection = state.categories.find(c => (c.id === 'cat_99' || c.name === '残高修正') && c.type === 'expense');
       const hasIncomeCorrection = state.categories.find(c => (c.id === 'cat_100' || c.name === '残高修正') && c.type === 'income');
       if (!hasExpenseCorrection) state.categories.push({ id: 'cat_99', name: '残高修正', icon: '⚖️', type: 'expense', order: 99 });
@@ -64,24 +67,42 @@ export async function save() {
         await SyncManager.syncToCloudInternal(sheetId, () => {
           localStorage.setItem('kakeibo_data', JSON.stringify(state));
         }); 
+        sync.notifyUpdate(); // 他デバイスへ通知
       } catch (e) { console.warn('Sync deferred'); }
     }
   }
 }
 
 export async function loadFromCloud(sheetId) {
-  const [tx, cat, acc, sc] = await SyncManager.readAllFromCloud(sheetId);
-  state.transactions = tx;
-  state.categories = cat;
-  state.accounts = acc;
-  state.shortcuts = sc;
+  // ログイン済みのsheetIdを保存（initStoreの判定に使用）
+  localStorage.setItem('kakeibo_sheet_id', sheetId);
+  // 常にクラウドを正とする（初回ログイン時もリロード後も同じ）
+  await SyncManager.syncToCloudInternal(sheetId, () => {
+    localStorage.setItem('kakeibo_data', JSON.stringify(state));
+  }, 'cloud');
+  // リロードではなくイベントで画面を更新する（リロードがinitStoreを再実行してデフォルトを注入する原因だった）
+  window.dispatchEvent(new CustomEvent('kakeibo-data-updated'));
+}
+
+/**
+ * リアルタイム同期用のプル（差分マージして画面更新）
+ */
+export async function pullFromCloud() {
+  const sheetId = localStorage.getItem('kakeibo_sheet_id');
+  if (!sheetId) return;
   
-  state.transactions = state.transactions.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));
-  state.transactions = migrateTransactionIds(state.transactions, state.accounts, state.categories);
+  const prevState = JSON.stringify(state);
   
-  AccountStore.updateAccountBalances();
-  SyncManager.setCloudSyncReady(true);
-  save();
+  await SyncManager.syncToCloudInternal(sheetId, () => {
+    localStorage.setItem('kakeibo_data', JSON.stringify(state));
+  });
+  
+  const nextState = JSON.stringify(state);
+  
+  // データに変化があった場合のみ、再描画イベントを発行
+  if (prevState !== nextState) {
+    window.dispatchEvent(new CustomEvent('kakeibo-data-updated'));
+  }
 }
 
 // --- APIの再エクスポート（下位互換性維持） ---
