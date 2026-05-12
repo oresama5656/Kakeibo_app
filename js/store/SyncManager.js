@@ -103,9 +103,8 @@ export async function syncToCloudInternal(sheetId, saveFn, priority = 'local') {
     state.shortcuts = nextSc;
     updateAccountBalances();
 
-    // --- 4. バッチ書き込み ---
-    // ⚠️ CRITICAL: batchClear と batchUpdateValues の間でエラーが起きると
-    // クラウドが空になる。将来的には単一リクエストのアトミック更新に移行すべき。
+    // --- 4. バッチ書き込み (Write-then-Cleanup パターン) ---
+    // ✅ 先に書いてから余った行を消す。書き込み失敗時にクラウドが空になるリスクを排除。
     const txRows = state.transactions.map(t => [t.id, t.date, t.amount, t.type, t.category, t.fromAccount, t.memo, t.toAccount || '', t.categoryId || '', t.fromAccountId || '', t.toAccountId || '']);
     const catRows = state.categories.map(c => [c.id, c.name, c.icon, c.type, c.order, c.pinned ? 1 : 0]);
     const accRows = state.accounts.map(a => [a.id, a.name, a.icon, a.balance, a.initialBalance, a.order, a.pinned ? 1 : 0]);
@@ -116,9 +115,8 @@ export async function syncToCloudInternal(sheetId, saveFn, priority = 'local') {
     if (accRows.length === 0) accRows.push(['EMPTY']);
     if (scRows.length === 0) scRows.push(['EMPTY']);
 
-    await auth.batchClear(sheetId, ['transactions!A:K', 'categories!A:G', 'accounts!A:G', 'shortcuts!A:K']);
-    
-    // batchClear後にこの行が失敗するとクラウドが空になる。エラーはcatchで記録される。
+    // STEP 1: 新しいデータを書き込む（既存行を上書き）
+    // ここが失敗しても、クラウドには旧データが残る（安全）
     await auth.batchUpdateValues(sheetId, [
       { range: 'transactions!A1', values: txRows },
       { range: 'categories!A1', values: catRows },
@@ -126,6 +124,24 @@ export async function syncToCloudInternal(sheetId, saveFn, priority = 'local') {
       { range: 'shortcuts!A1', values: scRows },
       { range: 'settings!A1', values: [[JSON.stringify(state.settings)]] }
     ]);
+
+    // STEP 2: 旧データの余った行をクリア（新データより多い行が残る場合のみ）
+    // ここが失敗しても、余分な行が残るだけでデータ消失は起きない（軽微）
+    const trailingClearRanges = [];
+    if (cloud.transactions.length > txRows.length)
+      trailingClearRanges.push(`transactions!A${txRows.length + 1}:K`);
+    if (cloud.categories.length > catRows.length)
+      trailingClearRanges.push(`categories!A${catRows.length + 1}:G`);
+    if (cloud.accounts.length > accRows.length)
+      trailingClearRanges.push(`accounts!A${accRows.length + 1}:G`);
+    if (cloud.shortcuts.length > scRows.length)
+      trailingClearRanges.push(`shortcuts!A${scRows.length + 1}:K`);
+
+    if (trailingClearRanges.length > 0) {
+      await auth.batchClear(sheetId, trailingClearRanges).catch(e => {
+        console.warn('[Sync] Trailing row cleanup failed (non-critical):', e);
+      });
+    }
 
     await auth.writeLog(sheetId, `[Sync Success] Final count(tx=${state.transactions.length}, cat=${state.categories.length})`);
     
