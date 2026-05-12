@@ -104,6 +104,8 @@ export async function syncToCloudInternal(sheetId, saveFn, priority = 'local') {
     updateAccountBalances();
 
     // --- 4. バッチ書き込み ---
+    // ⚠️ CRITICAL: batchClear と batchUpdateValues の間でエラーが起きると
+    // クラウドが空になる。将来的には単一リクエストのアトミック更新に移行すべき。
     const txRows = state.transactions.map(t => [t.id, t.date, t.amount, t.type, t.category, t.fromAccount, t.memo, t.toAccount || '', t.categoryId || '', t.fromAccountId || '', t.toAccountId || '']);
     const catRows = state.categories.map(c => [c.id, c.name, c.icon, c.type, c.order, c.pinned ? 1 : 0]);
     const accRows = state.accounts.map(a => [a.id, a.name, a.icon, a.balance, a.initialBalance, a.order, a.pinned ? 1 : 0]);
@@ -115,6 +117,8 @@ export async function syncToCloudInternal(sheetId, saveFn, priority = 'local') {
     if (scRows.length === 0) scRows.push(['EMPTY']);
 
     await auth.batchClear(sheetId, ['transactions!A:K', 'categories!A:G', 'accounts!A:G', 'shortcuts!A:K']);
+    
+    // batchClear後にこの行が失敗するとクラウドが空になる。エラーはcatchで記録される。
     await auth.batchUpdateValues(sheetId, [
       { range: 'transactions!A1', values: txRows },
       { range: 'categories!A1', values: catRows },
@@ -126,11 +130,12 @@ export async function syncToCloudInternal(sheetId, saveFn, priority = 'local') {
     await auth.writeLog(sheetId, `[Sync Success] Final count(tx=${state.transactions.length}, cat=${state.categories.length})`);
     
     if (state.deletedIds.length > 50) state.deletedIds = state.deletedIds.slice(-20);
+    // saveFn は localStorage.setItem のみを行うこと。save() を再帰的に渡すと無限ループになる。
     saveFn();
   } catch (e) {
     console.error('[Sync] Critical Error:', e);
-    await auth.writeLog(sheetId, `[Sync ERROR] ${e.message}`);
-    window.showToast?.('同期中にエラーが発生しました。詳細はクラウドログを確認してください。', 'error');
+    await auth.writeLog(sheetId, `[Sync ERROR] ${e.message}`).catch(() => {});
+    window.showToast?.('同期中にエラーが発生しました。', 'error');
     throw e;
   } finally {
     isSyncing = false;

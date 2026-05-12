@@ -325,7 +325,8 @@ export async function batchUpdateValues(spreadsheetId, data) {
 }
 
 /**
- * Google Sheets API の batchUpdate を使用して、データの削除と書き込みを同一リクエスト内で行う（アトミックな更新）ためのヘルパー関数を追加しました。これにより、通信エラー等で「データが消えたままになる」リスクを完全に排除します。
+ * Google Sheets API の spreadsheets.batchUpdate を呼び出す汎用ラッパー
+ * シート構造変更（行の追加・削除など）に使用する
  */
 export async function batchUpdateRows(spreadsheetId, requests) {
   try {
