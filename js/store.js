@@ -64,46 +64,50 @@ export async function save() {
     const sheetId = localStorage.getItem('kakeibo_sheet_id');
     if (sheetId && SyncManager.getCloudSyncReady()) {
       try { 
+        // force=true, priority='local': ローカルの変更をクラウドに書く。自動モード切り替え禁止。
         await SyncManager.syncToCloudInternal(sheetId, () => {
           localStorage.setItem('kakeibo_data', JSON.stringify(state));
-        }); 
-        sync.notifyUpdate(); // 他デバイスへ通知
+        }, 'local', true); 
+        sync.notifyUpdate();
       } catch (e) { console.warn('Sync deferred'); }
     }
   }
 }
 
 export async function loadFromCloud(sheetId) {
-  // ログイン済みのsheetIdを保存（initStoreの判定に使用）
   localStorage.setItem('kakeibo_sheet_id', sheetId);
-  // 常にクラウドを正とする（初回ログイン時もリロード後も同じ）
+  // force=true, priority='cloud': 初回ログイン時は常にクラウドを正とする
   await SyncManager.syncToCloudInternal(sheetId, () => {
     localStorage.setItem('kakeibo_data', JSON.stringify(state));
-  }, 'cloud');
-  // リロードではなくイベントで画面を更新する（リロードがinitStoreを再実行してデフォルトを注入する原因だった）
+  }, 'cloud', true);
   window.dispatchEvent(new CustomEvent('kakeibo-data-updated'));
 }
 
 /**
  * リアルタイム同期用のプル（差分マージして画面更新）
  * save()による書き込み中は実行しない（削除データの復活を防ぐ）
+ * 
+ * ⚠️ 重要: priority='cloud' を使う
+ * pullFromCloud は「他デバイスの変更を取得する」操作なので、クラウドが正解。
+ * 'local' を使うと、このデバイスのローカル（古いデータ）がクラウド（削除済み）に
+ * 勝ってしまい、他デバイスで削除した取引が復活するバグが発生する。
  */
 export async function pullFromCloud() {
   const sheetId = localStorage.getItem('kakeibo_sheet_id');
   if (!sheetId) return;
   
   // save()がクラウドへ書き込み中の場合はスキップ
-  // （書き込み完了前にpullするとクラウドの旧データで上書きされてしまう）
   if (SyncManager.isSyncInProgress()) {
-    console.log('[pullFromCloud] Sync in progress, skipping pull to prevent data restoration.');
+    console.log('[pullFromCloud] Sync in progress, skipping.');
     return;
   }
   
   const prevState = JSON.stringify(state);
   
+  // force=true, priority='cloud': 他デバイスの変更を取得する。クラウドが正解。
   await SyncManager.syncToCloudInternal(sheetId, () => {
     localStorage.setItem('kakeibo_data', JSON.stringify(state));
-  });
+  }, 'cloud', true);
   
   const nextState = JSON.stringify(state);
   
