@@ -98,9 +98,10 @@ export async function syncToCloudInternal(sheetId, saveFn, priority = 'local', f
     // forcePriority=true の場合は呼び出し元の意図を尊重（自動上書き禁止）
     // forcePriority=false の場合のみ、初回ログイン検知で'cloud'に切り替える
     let mode = priority;
+    const isCloudExists = cloud.transactions.length > 0 || cloud.categories.length > 0 || cloud.accounts.length > 0;
+    
     if (!forcePriority) {
       const isLocalFresh = !localStorage.getItem('kakeibo_data') || state.transactions.length === 0;
-      const isCloudExists = cloud.transactions.length > 0 || cloud.categories.length > 0 || cloud.accounts.length > 0;
       if (isLocalFresh && isCloudExists) mode = 'cloud';
     }
     
