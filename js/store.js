@@ -86,10 +86,18 @@ export async function loadFromCloud(sheetId) {
 
 /**
  * リアルタイム同期用のプル（差分マージして画面更新）
+ * save()による書き込み中は実行しない（削除データの復活を防ぐ）
  */
 export async function pullFromCloud() {
   const sheetId = localStorage.getItem('kakeibo_sheet_id');
   if (!sheetId) return;
+  
+  // save()がクラウドへ書き込み中の場合はスキップ
+  // （書き込み完了前にpullするとクラウドの旧データで上書きされてしまう）
+  if (SyncManager.isSyncInProgress()) {
+    console.log('[pullFromCloud] Sync in progress, skipping pull to prevent data restoration.');
+    return;
+  }
   
   const prevState = JSON.stringify(state);
   
