@@ -8,13 +8,14 @@ const EMOJI_TO_LUCIDE = {
   '🧻': 'shopping-bag', '🛒': 'shopping-cart', '🛍️': 'shopping-cart',
   '🚃': 'car', '🚗': 'car', '🚙': 'car', '🚕': 'car', '🚲': 'bike', '✈️': 'plane',
   '🍻': 'users', '🍺': 'beer', '🍷': 'wine', '🏠': 'home', '🏨': 'home',
-  '🎮': 'gamepad-2', '⚖️': 'scale', '📂': 'folder', '📄': 'receipt',
+  '🎮': 'gamepad-2', '⚖️': 'scale', '📂': 'folder', '📁': 'folder', '📄': 'receipt',
   '💰': 'banknote', '💴': 'banknote', '💵': 'wallet', '👛': 'wallet', '💳': 'credit-card',
   '🏦': 'landmark', '💹': 'trending-up', '📈': 'trending-up', '📉': 'trending-down', '📊': 'bar-chart',
   '🧧': 'gift', '🎁': 'gift', '🏥': 'stethoscope', '💊': 'pill', '🔌': 'zap', '⚡': 'zap',
   '👔': 'briefcase', '💼': 'briefcase', '📚': 'book-open', '🎓': 'graduation-cap',
   '📱': 'smartphone', '🌐': 'globe', '🛡️': 'shield', '🏖️': 'palmtree', '🏝️': 'palmtree',
   '👶': 'baby', '👴': 'user', '👩‍💼': 'user-check', '📧': 'mail', '✉️': 'mail', '💸': 'banknote',
+  '💱': 'japanese-yen', '🪙': 'coins', '💲': 'japanese-yen',
   '❓': 'help-circle'
 };
 
