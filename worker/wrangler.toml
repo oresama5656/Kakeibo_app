@@ -1,0 +1,19 @@
+name = "kakeibo-auth-worker"
+main = "src/index.js"
+compatibility_date = "2024-05-12"
+
+[vars]
+GOOGLE_CLIENT_ID = "YOUR_CLIENT_ID.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = "YOUR_CLIENT_SECRET"
+REDIRECT_URI = "postmessage"
+
+[[kv_namespaces]]
+binding = "KAKEIBO_AUTH_KV"
+id = "f4a7abb6479744c7ace74ea3c7e322a0"
+
+[durable_objects]
+bindings = [{name = "SYNC_HUB", class_name = "SyncHub"}]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SyncHub"]
