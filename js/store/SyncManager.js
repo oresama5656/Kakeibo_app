@@ -87,8 +87,17 @@ export async function pullOnlyFromCloud(sheetId, saveFn) {
   }
 }
 
+let syncQueue = null;
+
 export async function syncToCloudInternal(sheetId, saveFn, priority = 'local', forcePriority = false) {
-  if (!auth.isLoggedIn() || isSyncing) return;
+  if (!auth.isLoggedIn()) return;
+  
+  if (isSyncing) {
+    console.log('[Sync] Sync in progress. Queuing request.');
+    syncQueue = { sheetId, saveFn, priority, forcePriority };
+    return;
+  }
+  
   isSyncing = true;
   
   try {
@@ -189,5 +198,16 @@ export async function syncToCloudInternal(sheetId, saveFn, priority = 'local', f
     throw e;
   } finally {
     isSyncing = false;
+    
+    // キューに保留中のリクエストがあれば実行
+    if (syncQueue) {
+      console.log('[Sync] Processing queued sync request.');
+      const next = syncQueue;
+      syncQueue = null;
+      // スタックオーバーフローを防ぐため非同期で呼び出す
+      setTimeout(() => {
+        syncToCloudInternal(next.sheetId, next.saveFn, next.priority, next.forcePriority);
+      }, 500);
+    }
   }
 }
