@@ -3,7 +3,7 @@
  * Cloudflare Worker の WebSocket と接続し、データ更新を通知・受信します。
  */
 
-import * as store from './store.js';
+import * as store from './store/index.js';
 
 let ws;
 const WORKER_WS_URL = 'wss://kakeibo-auth-worker.oresama5656.workers.dev/ws'; // 本番デプロイ済み

@@ -2,7 +2,7 @@
 // 設定画面 (v6.0 - Premium Icon System統合版)
 // ============================================
 
-import * as store from '../store.js';
+import * as store from '../store/index.js';
 import * as auth from '../auth.js';
 import { renderIconHTML } from '../utils/IconRenderer.js';
 

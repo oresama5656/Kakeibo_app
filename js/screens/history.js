@@ -2,7 +2,7 @@
 // 履歴画面 (Advanced Premium UI)
 // ============================================
 
-import * as store from '../store.js';
+import * as store from '../store/index.js';
 import * as PeriodManager from '../components/analysis/PeriodManager.js';
 import { renderIconHTML } from '../utils/IconRenderer.js';
 

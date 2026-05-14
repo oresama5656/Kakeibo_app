@@ -1,7 +1,7 @@
 /**
  * 分析画面のUIテンプレート生成
  */
-import * as store from '../../store.js';
+import * as store from '../../store/index.js';
 import { renderIconHTML } from '../../utils/IconRenderer.js';
 
 export function calculateCategoryTotals(txs) {

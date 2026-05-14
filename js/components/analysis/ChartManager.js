@@ -1,7 +1,7 @@
 /**
  * 分析画面のチャート描画ロジック (Chart.jsラッパー)
  */
-import * as store from '../../store.js';
+import * as store from '../../store/index.js';
 
 let plChart = null;
 let totalAssetChart = null;

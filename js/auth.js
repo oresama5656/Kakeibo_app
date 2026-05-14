@@ -2,7 +2,7 @@ const CLIENT_ID = '847697512612-g7cs60es07i6vghtq8q2j30e5b7t4h80.apps.googleuser
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email';
 const WORKER_URL = 'https://kakeibo-auth-worker.oresama5656.workers.dev'; // 本番デプロイ済み
 
-import * as store from './store.js';
+import * as store from './store/index.js';
 
 let codeClient;
 let accessToken = null;

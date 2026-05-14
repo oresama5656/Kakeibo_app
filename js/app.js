@@ -2,7 +2,7 @@
 // メインアプリケーション (v3.5 - 同期ブロック・初期読込置換実装)
 // ============================================
 
-import { initStore } from './store.js';
+import { initStore } from './store/index.js';
 import * as auth from './auth.js';
 import * as sync from './sync.js';
 import { render as renderInput } from './screens/input.js';
@@ -10,7 +10,7 @@ import { render as renderDashboard } from './screens/dashboard.js';
 import { render as renderHistory } from './screens/history.js';
 import { render as renderAnalysis } from './screens/analysis.js';
 import { render as renderSettings, applyTheme } from './screens/settings.js';
-import * as store from './store.js';
+import * as store from './store/index.js';
 
 // --- Initialize ---
 async function initializeApp() {

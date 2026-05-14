@@ -2,7 +2,7 @@
  * 分析画面 (v7.0 - モジュール化・コンポーネント分割版)
  */
 
-import * as store from '../store.js';
+import * as store from '../store/index.js';
 import { setHistoryFilters } from './history.js';
 import * as PeriodManager from '../components/analysis/PeriodManager.js';
 import * as ChartManager from '../components/analysis/ChartManager.js';

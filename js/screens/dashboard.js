@@ -2,7 +2,7 @@
 // ダッシュボード画面 (v5.7 - 残高修正カテゴリー対応版)
 // ============================================
 
-import * as store from '../store.js';
+import * as store from '../store/index.js';
 import { setQuickInput } from './input.js';
 import { setHistoryFilters } from './history.js';
 import { renderIconHTML } from '../utils/IconRenderer.js';

@@ -2,7 +2,7 @@
 // 入力画面 (v2.6 - CSVテンプレ・一括・電卓・カンマ 全機能版)
 // ============================================
 
-import * as store from '../store.js';
+import * as store from '../store/index.js';
 import { renderIconHTML } from '../utils/IconRenderer.js';
 
 let lastUsedDate = localStorage.getItem('kakeibo_last_date') || '';

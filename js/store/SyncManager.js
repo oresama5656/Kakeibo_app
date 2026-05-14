@@ -1,13 +1,16 @@
 /**
- * クラウド同期管理モジュール (v7.0 - Audit-Logged Sync)
+ * クラウド同期管理モジュール (v7.6 - Final Polished Sync)
+ * 再レビューによる死角（モード分岐の欠落、キューの空回し、エラー時のリクエスト消失）を解消。
  */
 import * as auth from '../auth.js';
-import { state, normalizeDate, migrateTransactionIds, setState } from './BaseStore.js';
+import { state, normalizeDate, migrateTransactionIds } from './BaseStore.js';
 import { updateAccountBalances } from './AccountStore.js';
 
 let isCloudSyncReady = false;
 let isSyncBlocked = false;
 let isSyncing = false;
+let syncQueue = []; 
+let isProcessingQueue = false;
 
 export function blockSync() { isSyncBlocked = true; }
 export function isSyncBlockedNow() { return isSyncBlocked; }
@@ -15,9 +18,13 @@ export function setCloudSyncReady(r) { isCloudSyncReady = r; }
 export function getCloudSyncReady() { return isCloudSyncReady; }
 export function isSyncInProgress() { return isSyncing; }
 
+/**
+ * データマージロジック
+ */
 function mergeData(local, cloud, deletedIds = [], priority = 'local') {
   const map = new Map();
-  const delSet = new Set(deletedIds);
+  const delSet = new Set(deletedIds || []);
+  
   if (priority === 'local') {
     cloud.forEach(item => { if (item?.id && !delSet.has(item.id)) map.set(item.id, item); });
     local.forEach(item => { if (item?.id) map.set(item.id, item); });
@@ -28,6 +35,9 @@ function mergeData(local, cloud, deletedIds = [], priority = 'local') {
   return Array.from(map.values());
 }
 
+/**
+ * クラウドからの全データ読み込み
+ */
 export async function readAllFromCloud(sheetId) {
   try {
     const [t, c, a, s] = await Promise.all([
@@ -46,99 +56,157 @@ export async function readAllFromCloud(sheetId) {
       categories: p(c, r => ({ id: r[0], name: r[1], icon: r[2], type: r[3], order: Number(r[4] || 0), pinned: r[5] === '1' || r[5] === 1 })),
       accounts: p(a, r => ({ id: r[0], name: r[1], icon: r[2], balance: Number(r[3] || 0), initialBalance: Number(r[4] || 0), order: Number(r[5] || 0), pinned: r[6] === '1' || r[6] === 1 })),
       shortcuts: p(s, r => ({ 
-        id: r[0], name: r[1], type: r[2], amount: Number(r[3] || 0), 
-        category: r[4], fromAccount: r[5], toAccount: r[6], order: Number(r[7] || 0),
+        id: r[0], name: r[1], type: r[2], amount: Number(r[3] || 0), category: r[4], 
+        fromAccount: r[5], toAccount: r[6] || '', order: Number(r[7] || 0),
         categoryId: r[8] || '', fromAccountId: r[9] || '', toAccountId: r[10] || ''
       }))
     };
   } catch (e) {
-    console.error('[Sync] Read failed:', e);
+    console.error('[SyncManager] Cloud Read Error:', e);
     throw e;
   }
 }
 
 /**
- * 読み込み専用の同期（pullFromCloud専用）
- * クラウドのデータをローカルに反映するだけ。クラウドへの書き戻しは行わない。
- * ← これがないと「読んで→書き直し」の無駄往復でAPI呼び出しが倍増し、エラーの原因になる。
+ * クラウドからの「読み込みのみ」実行（トランザクション制御付き）
  */
 export async function pullOnlyFromCloud(sheetId, saveFn) {
   if (!auth.isLoggedIn() || isSyncing) return false;
+  
   isSyncing = true;
+  // 非直列化可能なデータが含まれないよう注意（stateは純粋なJSONオブジェクトとする）
+  let prevStateBackup;
+  try {
+    prevStateBackup = JSON.stringify(state);
+  } catch (e) {
+    console.warn('[SyncManager] State backup failed (circular refs?), proceeding without rollback safety.');
+  }
+
   try {
     const cloud = await readAllFromCloud(sheetId);
     const isCloudExists = cloud.transactions.length > 0 || cloud.categories.length > 0 || cloud.accounts.length > 0;
-    if (!isCloudExists) return false; // クラウドが空なら何もしない
+    
+    if (!isCloudExists) return false;
 
-    // クラウドのデータでローカルを上書き
     state.transactions = cloud.transactions.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));
-    state.transactions = migrateTransactionIds(state.transactions, cloud.accounts, cloud.categories);
     state.categories = cloud.categories;
     state.accounts = cloud.accounts;
-    state.shortcuts = cloud.shortcuts;
+    state.shortcuts = cloud.shortcuts || [];
+    
+    migrateTransactionIds(state.transactions, state.accounts, state.categories);
     updateAccountBalances();
-    saveFn(); // localStorageに保存
+    saveFn();
+    
     return true;
   } catch (e) {
-    console.error('[pullOnly] Error:', e);
+    console.error('[SyncManager] Pull failed:', e);
+    if (prevStateBackup) {
+      try {
+        const restored = JSON.parse(prevStateBackup);
+        Object.assign(state, restored);
+        console.log('[SyncManager] Rollback successful.');
+      } catch (restoreErr) {
+        console.error('[SyncManager] Rollback failed!', restoreErr);
+      }
+    }
     return false;
   } finally {
     isSyncing = false;
   }
 }
 
-let syncQueue = null;
-
+/**
+ * 外部エントリポイント
+ */
 export async function syncToCloudInternal(sheetId, saveFn, priority = 'local', forcePriority = false) {
-  if (!auth.isLoggedIn()) return;
+  if (!sheetId || isSyncBlocked) return;
+
+  syncQueue.push({ sheetId, saveFn, priority, forcePriority });
   
-  if (isSyncing) {
-    console.log('[Sync] Sync in progress. Queuing request.');
-    syncQueue = { sheetId, saveFn, priority, forcePriority };
+  if (!isProcessingQueue) {
+    processQueue();
+  }
+}
+
+/**
+ * キュープロセッサー
+ */
+async function processQueue() {
+  if (syncQueue.length === 0) {
+    isProcessingQueue = false;
     return;
   }
-  
+
+  isProcessingQueue = true;
+  const request = syncQueue[0]; // まだ shift() しない（成功・確定するまで保持）
+
+  try {
+    await _performSync(request);
+    syncQueue.shift(); // 成功したのでキューから削除
+    
+    // 次の処理をスケジュール
+    if (syncQueue.length > 0) {
+      setTimeout(processQueue, 200);
+    } else {
+      isProcessingQueue = false;
+    }
+  } catch (err) {
+    console.error('[SyncManager] Queue Error (Will retry later):', err);
+    // 失敗時はキューに残したまま、少し長めに待機して再開（簡易リトライ）
+    setTimeout(processQueue, 5000);
+  }
+}
+
+/**
+ * 同期実行の核心
+ */
+async function _performSync({ sheetId, saveFn, priority, forcePriority }) {
   isSyncing = true;
-  
   try {
     const cloud = await readAllFromCloud(sheetId);
-    
-    // --- 1. モード判定 ---
-    // forcePriority=true の場合は呼び出し元の意図を尊重（自動上書き禁止）
-    // forcePriority=false の場合のみ、初回ログイン検知で'cloud'に切り替える
-    let mode = priority;
     const isCloudExists = cloud.transactions.length > 0 || cloud.categories.length > 0 || cloud.accounts.length > 0;
-    
-    if (!forcePriority) {
-      const isLocalFresh = !localStorage.getItem('kakeibo_data') || state.transactions.length === 0;
-      if (isLocalFresh && isCloudExists) mode = 'cloud';
-    }
-    
-    await auth.writeLog(sheetId, `[Sync Start] mode=${mode}, force=${forcePriority}, cloudCount(tx=${cloud.transactions.length}, cat=${cloud.categories.length})`);
 
-    // --- 2. データ生成 ---
+    // --- モード判定 ---
+    let mode = 'merge';
+    const isLocalFresh = localStorage.getItem('kakeibo_data') === null || state.transactions.length === 0;
+
+    if (forcePriority) {
+        // forcePriority が true の場合、priority 引数に基づきモードを確定
+        mode = (priority === 'cloud') ? 'restore' : 'local-force';
+    } else if (isLocalFresh && isCloudExists) {
+        mode = 'restore';
+    }
+
+    await auth.writeLog(sheetId, `[Sync Start] mode=${mode}, priority=${priority}, force=${forcePriority}`);
+
     let nextTx, nextCat, nextAcc, nextSc;
 
-    if (mode === 'cloud') {
-      // 完全復元モード (クラウドを絶対正とする)
-      nextTx = [...cloud.transactions];
-      nextCat = [...cloud.categories];
-      nextAcc = [...cloud.accounts];
-      nextSc = [...cloud.shortcuts];
+    if (mode === 'restore') {
+        nextTx = cloud.transactions;
+        nextCat = cloud.categories;
+        nextAcc = cloud.accounts;
+        nextSc = cloud.shortcuts;
+    } else if (mode === 'local-force') {
+        // ローカルを絶対正としてクラウドを上書き（マージしない）
+        nextTx = [...state.transactions];
+        nextCat = [...state.categories];
+        nextAcc = [...state.accounts];
+        nextSc = [...state.shortcuts];
     } else {
-      // マージモード
-      nextTx = mergeData(state.transactions, cloud.transactions, state.deletedIds, mode);
-      nextCat = mergeData(state.categories, cloud.categories, state.deletedIds || [], mode);
-      nextAcc = mergeData(state.accounts, cloud.accounts, state.deletedIds || [], mode);
-      nextSc = mergeData(state.shortcuts, cloud.shortcuts, [], mode);
+        // merge モード
+        const deletedIds = state.deletedIds || [];
+        nextTx = mergeData(state.transactions, cloud.transactions, deletedIds, 'local');
+        nextCat = mergeData(state.categories, cloud.categories, deletedIds, 'local');
+        nextAcc = mergeData(state.accounts, cloud.accounts, deletedIds, 'local');
+        nextSc = mergeData(state.shortcuts || [], cloud.shortcuts || [], [], 'local');
     }
 
-    // 異常検知ガード
-    if (isCloudExists && nextCat.length === 0) {
-        throw new Error('Merge resulted in zero categories despite cloud having data. Aborting to save data.');
+    // セーフティガード
+    if (isCloudExists && (nextCat.length === 0 || nextAcc.length === 0)) {
+        throw new Error('Merge Safety Triggered: Category/Account count zero.');
     }
 
-    // --- 3. 状態適用 ---
+    // 状態適用
     state.transactions = nextTx.map(tx => ({ ...tx, date: normalizeDate(tx.date) }));
     state.transactions = migrateTransactionIds(state.transactions, nextAcc, nextCat);
     state.categories = nextCat;
@@ -146,8 +214,7 @@ export async function syncToCloudInternal(sheetId, saveFn, priority = 'local', f
     state.shortcuts = nextSc;
     updateAccountBalances();
 
-    // --- 4. バッチ書き込み (Write-then-Cleanup パターン) ---
-    // ✅ 先に書いてから余った行を消す。書き込み失敗時にクラウドが空になるリスクを排除。
+    // バッチ書き込み
     const txRows = state.transactions.map(t => [t.id, t.date, t.amount, t.type, t.category, t.fromAccount, t.memo, t.toAccount || '', t.categoryId || '', t.fromAccountId || '', t.toAccountId || '']);
     const catRows = state.categories.map(c => [c.id, c.name, c.icon, c.type, c.order, c.pinned ? 1 : 0]);
     const accRows = state.accounts.map(a => [a.id, a.name, a.icon, a.balance, a.initialBalance, a.order, a.pinned ? 1 : 0]);
@@ -158,8 +225,6 @@ export async function syncToCloudInternal(sheetId, saveFn, priority = 'local', f
     if (accRows.length === 0) accRows.push(['EMPTY']);
     if (scRows.length === 0) scRows.push(['EMPTY']);
 
-    // STEP 1: 新しいデータを書き込む（既存行を上書き）
-    // ここが失敗しても、クラウドには旧データが残る（安全）
     await auth.batchUpdateValues(sheetId, [
       { range: 'transactions!A1', values: txRows },
       { range: 'categories!A1', values: catRows },
@@ -168,46 +233,24 @@ export async function syncToCloudInternal(sheetId, saveFn, priority = 'local', f
       { range: 'settings!A1', values: [[JSON.stringify(state.settings)]] }
     ]);
 
-    // STEP 2: 旧データの余った行をクリア（新データより多い行が残る場合のみ）
-    // ここが失敗しても、余分な行が残るだけでデータ消失は起きない（軽微）
+    // 不要行のクリーンアップ
     const trailingClearRanges = [];
-    if (cloud.transactions.length > txRows.length)
-      trailingClearRanges.push(`transactions!A${txRows.length + 1}:K`);
-    if (cloud.categories.length > catRows.length)
-      trailingClearRanges.push(`categories!A${catRows.length + 1}:G`);
-    if (cloud.accounts.length > accRows.length)
-      trailingClearRanges.push(`accounts!A${accRows.length + 1}:G`);
-    if (cloud.shortcuts.length > scRows.length)
-      trailingClearRanges.push(`shortcuts!A${scRows.length + 1}:K`);
+    if (cloud.transactions.length > txRows.length) trailingClearRanges.push(`transactions!A${txRows.length + 1}:K`);
+    if (cloud.categories.length > catRows.length) trailingClearRanges.push(`categories!A${catRows.length + 1}:G`);
+    if (cloud.accounts.length > accRows.length) trailingClearRanges.push(`accounts!A${accRows.length + 1}:G`);
+    if (cloud.shortcuts.length > scRows.length) trailingClearRanges.push(`shortcuts!A${scRows.length + 1}:K`);
 
     if (trailingClearRanges.length > 0) {
-      await auth.batchClear(sheetId, trailingClearRanges).catch(e => {
-        console.warn('[Sync] Trailing row cleanup failed (non-critical):', e);
-      });
+      await auth.batchClear(sheetId, trailingClearRanges).catch(() => {});
     }
 
-    await auth.writeLog(sheetId, `[Sync Success] Final count(tx=${state.transactions.length}, cat=${state.categories.length})`);
-    
-    if (state.deletedIds.length > 50) state.deletedIds = state.deletedIds.slice(-20);
-    // saveFn は localStorage.setItem のみを行うこと。save() を再帰的に渡すと無限ループになる。
+    await auth.writeLog(sheetId, `[Sync Success] txCount=${state.transactions.length}`);
     saveFn();
   } catch (e) {
-    console.error('[Sync] Critical Error:', e);
+    console.error('[SyncManager] _performSync Error:', e);
     await auth.writeLog(sheetId, `[Sync ERROR] ${e.message}`).catch(() => {});
-    window.showToast?.('同期中にエラーが発生しました。', 'error');
-    throw e;
+    throw e; // processQueue 側でリトライ制御させるため throw する
   } finally {
     isSyncing = false;
-    
-    // キューに保留中のリクエストがあれば実行
-    if (syncQueue) {
-      console.log('[Sync] Processing queued sync request.');
-      const next = syncQueue;
-      syncQueue = null;
-      // スタックオーバーフローを防ぐため非同期で呼び出す
-      setTimeout(() => {
-        syncToCloudInternal(next.sheetId, next.saveFn, next.priority, next.forcePriority);
-      }, 500);
-    }
   }
 }
