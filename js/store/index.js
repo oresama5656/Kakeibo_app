@@ -2,7 +2,7 @@
  * データ管理エントリポイント (v4.0 - モジュール統合版)
  */
 
-import * as auth from './auth.js';
+import * as auth from '../auth.js';
 import { 
   state, DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS, 
   normalizeDate, migrateTransactionIds, setState, escapeHTML 
@@ -178,7 +178,11 @@ export const getAccountHistoryRange = TransactionStore.getAccountHistoryRange;
 export const blockSync = SyncManager.blockSync;
 export const setCloudSyncReady = SyncManager.setCloudSyncReady;
 export async function syncToCloud(sheetId, options) { 
-  await SyncManager.syncToCloudInternal(sheetId, () => save()); 
+  const priority = options?.priority || 'local';
+  const force = options?.force || false;
+  await SyncManager.syncToCloudInternal(sheetId, () => {
+    localStorage.setItem('kakeibo_data', JSON.stringify(state));
+  }, priority, force); 
 }
 
 // Misc

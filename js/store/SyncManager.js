@@ -1,9 +1,5 @@
-/**
- * クラウド同期管理モジュール (v7.6 - Final Polished Sync)
- * 再レビューによる死角（モード分岐の欠落、キューの空回し、エラー時のリクエスト消失）を解消。
- */
 import * as auth from '../auth.js';
-import { state, normalizeDate, migrateTransactionIds } from './BaseStore.js';
+import { state, normalizeDate, migrateTransactionIds, DEFAULT_CATEGORIES, DEFAULT_ACCOUNTS } from './BaseStore.js';
 import { updateAccountBalances } from './AccountStore.js';
 
 let isCloudSyncReady = false;
@@ -118,14 +114,16 @@ export async function pullOnlyFromCloud(sheetId, saveFn) {
 /**
  * 外部エントリポイント
  */
-export async function syncToCloudInternal(sheetId, saveFn, priority = 'local', forcePriority = false) {
-  if (!sheetId || isSyncBlocked) return;
+export function syncToCloudInternal(sheetId, saveFn, priority = 'local', forcePriority = false) {
+  if (!sheetId || isSyncBlocked) return Promise.resolve();
 
-  syncQueue.push({ sheetId, saveFn, priority, forcePriority });
-  
-  if (!isProcessingQueue) {
-    processQueue();
-  }
+  return new Promise((resolve, reject) => {
+    syncQueue.push({ sheetId, saveFn, priority, forcePriority, resolve, reject });
+    
+    if (!isProcessingQueue) {
+      processQueue();
+    }
+  });
 }
 
 /**
@@ -138,22 +136,23 @@ async function processQueue() {
   }
 
   isProcessingQueue = true;
-  const request = syncQueue[0]; // まだ shift() しない（成功・確定するまで保持）
+  const request = syncQueue[0];
 
   try {
     await _performSync(request);
-    syncQueue.shift(); // 成功したのでキューから削除
-    
+    const completedRequest = syncQueue.shift(); // 成功したのでキューから削除
+    completedRequest.resolve(); // 呼び出し元に完了を通知
+  } catch (err) {
+    console.error('[SyncManager] Queue Error (Removed from queue):', err);
+    const failedRequest = syncQueue.shift(); // エラー時はUIのフリーズを防ぐため破棄して通知
+    failedRequest.reject(err);
+  } finally {
     // 次の処理をスケジュール
     if (syncQueue.length > 0) {
       setTimeout(processQueue, 200);
     } else {
       isProcessingQueue = false;
     }
-  } catch (err) {
-    console.error('[SyncManager] Queue Error (Will retry later):', err);
-    // 失敗時はキューに残したまま、少し長めに待機して再開（簡易リトライ）
-    setTimeout(processQueue, 5000);
   }
 }
 
@@ -171,8 +170,12 @@ async function _performSync({ sheetId, saveFn, priority, forcePriority }) {
     const isLocalFresh = localStorage.getItem('kakeibo_data') === null || state.transactions.length === 0;
 
     if (forcePriority) {
-        // forcePriority が true の場合、priority 引数に基づきモードを確定
-        mode = (priority === 'cloud') ? 'restore' : 'local-force';
+        // クラウドが空っぽ（新規作成直後など）の場合、'cloud'優先の指示があってもローカルの初期データをクラウドにアップロードする
+        if (priority === 'cloud' && !isCloudExists) {
+            mode = 'local-force';
+        } else {
+            mode = (priority === 'cloud') ? 'restore' : 'local-force';
+        }
     } else if (isLocalFresh && isCloudExists) {
         mode = 'restore';
     }
@@ -201,9 +204,14 @@ async function _performSync({ sheetId, saveFn, priority, forcePriority }) {
         nextSc = mergeData(state.shortcuts || [], cloud.shortcuts || [], [], 'local');
     }
 
-    // セーフティガード
-    if (isCloudExists && (nextCat.length === 0 || nextAcc.length === 0)) {
-        throw new Error('Merge Safety Triggered: Category/Account count zero.');
+    // セーフティガードと自己修復（Auto-Healing）
+    if (nextCat.length === 0) {
+        console.warn('[SyncManager] Auto-healing missing categories');
+        nextCat = [...DEFAULT_CATEGORIES];
+    }
+    if (nextAcc.length === 0) {
+        console.warn('[SyncManager] Auto-healing missing accounts');
+        nextAcc = [...DEFAULT_ACCOUNTS];
     }
 
     // 状態適用

@@ -242,6 +242,7 @@ export async function getOrCreateSpreadsheet() {
     if (files && files.length > 0) {
       const sheetId = files[0].id;
       localStorage.setItem('kakeibo_sheet_id', sheetId);
+      await ensureSheetsExist(sheetId);
       return { id: sheetId, isNew: false };
     } else {
       const createResp = await gapi.client.sheets.spreadsheets.create({
@@ -339,6 +340,26 @@ export async function batchUpdateRows(spreadsheetId, requests) {
       if (await silentRefresh()) return batchUpdateRows(spreadsheetId, requests);
     }
     throw e;
+  }
+}
+
+async function ensureSheetsExist(spreadsheetId) {
+  try {
+    const resp = await gapi.client.sheets.spreadsheets.get({ spreadsheetId });
+    const existingSheets = resp.result.sheets.map(s => s.properties.title);
+    const requiredSheets = ['transactions', 'accounts', 'categories', 'shortcuts', 'settings', 'logs'];
+    const missingSheets = requiredSheets.filter(name => !existingSheets.includes(name));
+
+    if (missingSheets.length > 0) {
+      const requests = missingSheets.map(name => ({ addSheet: { properties: { title: name } } }));
+      await gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        resource: { requests }
+      });
+      console.log('[Auth] Automatically added missing sheets:', missingSheets);
+    }
+  } catch (e) {
+    console.warn('[Auth] Failed to verify missing sheets (might fail later):', e);
   }
 }
 
