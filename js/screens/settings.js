@@ -77,7 +77,7 @@ export function render(container) {
           ${accounts.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(acc => `
             <div class="settings-list-item-v3 draggable" data-id="${acc.id}" data-action="editAccount">
               <span class="settings-drag-handle-v3"><i data-lucide="grip-vertical"></i></span>
-              <div class="item-icon-v3">${renderIconHTML(acc.icon, acc.id, { size: 24 })}</div>
+              <div class="item-icon-v3 color-${acc.color || 'slate'}">${renderIconHTML(acc.icon, acc.id, { size: 24 })}</div>
               <span class="item-name-v3">${store.escapeHTML(acc.name)} ${acc.pinned ? '<i data-lucide="pin" class="pinned-star-icon-v3"></i>' : ''}</span>
               <span class="item-chevron-v3">›</span>
             </div>
@@ -101,7 +101,7 @@ export function render(container) {
             ${expenseCategories.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(cat => `
               <div class="settings-list-item-v3 draggable" data-id="${cat.id}" data-action="editCategory">
                 <span class="settings-drag-handle-v3 small"><i data-lucide="grip-vertical"></i></span>
-                <div class="item-icon-v3 small">${renderIconHTML(cat.icon, cat.id, { size: 20 })}</div>
+                <div class="item-icon-v3 small color-${cat.color || 'slate'}">${renderIconHTML(cat.icon, cat.id, { size: 20 })}</div>
                 <span class="item-name-v3 small">${store.escapeHTML(cat.name)} ${cat.pinned ? '<i data-lucide="pin" class="pinned-star-icon-v3"></i>' : ''}</span>
                 <span class="item-chevron-v3">›</span>
               </div>
@@ -123,7 +123,7 @@ export function render(container) {
             ${incomeCategories.sort((a,b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (a.order || 0) - (b.order || 0)).map(cat => `
               <div class="settings-list-item-v3 draggable" data-id="${cat.id}" data-action="editCategory">
                 <span class="settings-drag-handle-v3 small"><i data-lucide="grip-vertical"></i></span>
-                <div class="item-icon-v3 small">${renderIconHTML(cat.icon, cat.id, { size: 20 })}</div>
+                <div class="item-icon-v3 small color-${cat.color || 'slate'}">${renderIconHTML(cat.icon, cat.id, { size: 20 })}</div>
                 <span class="item-name-v3 small">${store.escapeHTML(cat.name)} ${cat.pinned ? '<i data-lucide="pin" class="pinned-star-icon-v3"></i>' : ''}</span>
                 <span class="item-chevron-v3">›</span>
               </div>
@@ -223,8 +223,24 @@ function showAccountModal(id) {
       </div>
       <div class="modal-body-v3">
         <div class="hero-icon-container-v3">
-          <div id="acc-icon-preview" class="hero-icon-preview-v3">${renderIconHTML(acc?.icon || 'lucide:wallet', id || 'new', { size: 40 })}</div>
+          <div id="acc-icon-preview" class="hero-icon-preview-v3 color-${acc?.color || 'slate'}">${renderIconHTML(acc?.icon || 'lucide:wallet', id || 'new', { size: 40 })}</div>
           <input type="hidden" id="acc-icon" value="${acc?.icon || 'lucide:wallet'}">
+        </div>
+
+        <div class="form-group-v3" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+          <label style="margin: 0;">テーマカラー</label>
+          <div class="color-picker-container">
+            <button type="button" class="color-trigger-btn" style="background: var(--swatch-${acc?.color || 'slate'})" id="acc-color-btn"></button>
+            <input type="hidden" id="acc-color" value="${acc?.color || 'slate'}">
+            <div class="color-popover" id="acc-color-popover">
+              <div class="color-swatch-item" style="background: var(--swatch-slate)" data-color="slate"></div>
+              <div class="color-swatch-item" style="background: var(--swatch-indigo)" data-color="indigo"></div>
+              <div class="color-swatch-item" style="background: var(--swatch-emerald)" data-color="emerald"></div>
+              <div class="color-swatch-item" style="background: var(--swatch-rose)" data-color="rose"></div>
+              <div class="color-swatch-item" style="background: var(--swatch-amber)" data-color="amber"></div>
+              <div class="color-swatch-item" style="background: var(--swatch-sky)" data-color="sky"></div>
+            </div>
+          </div>
         </div>
 
         <div class="form-group-v3">
@@ -267,6 +283,27 @@ function showAccountModal(id) {
   if (window.lucide) lucide.createIcons();
 
   overlay.addEventListener('click', (e) => {
+    // Color Popover Toggle
+    if (e.target.closest('#acc-color-btn')) {
+      document.getElementById('acc-color-popover').classList.toggle('show');
+      return;
+    }
+    // Color Selection
+    const swatch = e.target.closest('.color-swatch-item');
+    if (swatch) {
+      const color = swatch.dataset.color;
+      document.getElementById('acc-color').value = color;
+      document.getElementById('acc-color-btn').style.background = `var(--swatch-${color})`;
+      document.getElementById('acc-icon-preview').className = `hero-icon-preview-v3 color-${color}`;
+      document.getElementById('acc-color-popover').classList.remove('show');
+      return;
+    }
+    // Close Popover on Outside Click
+    const popover = document.getElementById('acc-color-popover');
+    if (popover && popover.classList.contains('show') && !e.target.closest('.color-picker-container')) {
+      popover.classList.remove('show');
+    }
+
     const iconOpt = e.target.closest('.icon-option-v3');
     if (iconOpt) {
       const newIcon = iconOpt.dataset.icon;
@@ -294,7 +331,8 @@ function showAccountModal(id) {
         name: document.getElementById('acc-name').value.trim(), 
         icon: document.getElementById('acc-icon').value.trim() || 'lucide:wallet', 
         initialBalance: Number(document.getElementById('acc-balance').value) || 0,
-        pinned: document.getElementById('acc-pinned').checked
+        pinned: document.getElementById('acc-pinned').checked,
+        color: document.getElementById('acc-color').value
       };
       if (data.name) { if (isNew) store.addAccount(data); else store.updateAccount(id, data); overlay.remove(); refresh(); }
     }
@@ -316,8 +354,24 @@ function showCategoryModal(id, type) {
       </div>
       <div class="modal-body-v3">
         <div class="hero-icon-container-v3">
-          <div id="cat-icon-preview" class="hero-icon-preview-v3">${renderIconHTML(cat?.icon || 'lucide:folder', id || 'new', { size: 40 })}</div>
+          <div id="cat-icon-preview" class="hero-icon-preview-v3 color-${cat?.color || 'slate'}">${renderIconHTML(cat?.icon || 'lucide:folder', id || 'new', { size: 40 })}</div>
           <input type="hidden" id="cat-icon" value="${cat?.icon || 'lucide:folder'}">
+        </div>
+
+        <div class="form-group-v3" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
+          <label style="margin: 0;">テーマカラー</label>
+          <div class="color-picker-container">
+            <button type="button" class="color-trigger-btn" style="background: var(--swatch-${cat?.color || 'slate'})" id="cat-color-btn"></button>
+            <input type="hidden" id="cat-color" value="${cat?.color || 'slate'}">
+            <div class="color-popover" id="cat-color-popover">
+              <div class="color-swatch-item" style="background: var(--swatch-slate)" data-color="slate"></div>
+              <div class="color-swatch-item" style="background: var(--swatch-indigo)" data-color="indigo"></div>
+              <div class="color-swatch-item" style="background: var(--swatch-emerald)" data-color="emerald"></div>
+              <div class="color-swatch-item" style="background: var(--swatch-rose)" data-color="rose"></div>
+              <div class="color-swatch-item" style="background: var(--swatch-amber)" data-color="amber"></div>
+              <div class="color-swatch-item" style="background: var(--swatch-sky)" data-color="sky"></div>
+            </div>
+          </div>
         </div>
 
         <div class="form-group-v3">
@@ -355,6 +409,27 @@ function showCategoryModal(id, type) {
   if (window.lucide) lucide.createIcons();
 
   overlay.addEventListener('click', (e) => {
+    // Color Popover Toggle
+    if (e.target.closest('#cat-color-btn')) {
+      document.getElementById('cat-color-popover').classList.toggle('show');
+      return;
+    }
+    // Color Selection
+    const swatch = e.target.closest('.color-swatch-item');
+    if (swatch) {
+      const color = swatch.dataset.color;
+      document.getElementById('cat-color').value = color;
+      document.getElementById('cat-color-btn').style.background = `var(--swatch-${color})`;
+      document.getElementById('cat-icon-preview').className = `hero-icon-preview-v3 color-${color}`;
+      document.getElementById('cat-color-popover').classList.remove('show');
+      return;
+    }
+    // Close Popover on Outside Click
+    const popover = document.getElementById('cat-color-popover');
+    if (popover && popover.classList.contains('show') && !e.target.closest('.color-picker-container')) {
+      popover.classList.remove('show');
+    }
+
     const iconOpt = e.target.closest('.icon-option-v3');
     if (iconOpt) {
       const newIcon = iconOpt.dataset.icon;
@@ -382,7 +457,8 @@ function showCategoryModal(id, type) {
         name: document.getElementById('cat-name').value.trim(), 
         icon: document.getElementById('cat-icon').value.trim() || 'lucide:folder', 
         type: cat?.type || type || 'expense',
-        pinned: document.getElementById('cat-pinned').checked
+        pinned: document.getElementById('cat-pinned').checked,
+        color: document.getElementById('cat-color').value
       };
       if (data.name) { if (isNew) store.addCategory(data); else store.updateCategory(id, data); overlay.remove(); refresh(); }
     }

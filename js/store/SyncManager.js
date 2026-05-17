@@ -39,7 +39,7 @@ export async function readAllFromCloud(sheetId) {
     const [t, c, a, s] = await Promise.all([
       auth.readRows(sheetId, 'transactions!A:K'),
       auth.readRows(sheetId, 'categories!A:G'),
-      auth.readRows(sheetId, 'accounts!A:G'),
+      auth.readRows(sheetId, 'accounts!A:H'),
       auth.readRows(sheetId, 'shortcuts!A:K')
     ]);
     const p = (rows, fn) => (rows && rows.length > 0 && rows[0][0] !== 'EMPTY') ? rows.map(fn) : [];
@@ -49,8 +49,8 @@ export async function readAllFromCloud(sheetId) {
         category: r[4], fromAccount: r[5], memo: r[6] || '', toAccount: r[7] || '',
         categoryId: r[8] || '', fromAccountId: r[9] || '', toAccountId: r[10] || '' 
       })),
-      categories: p(c, r => ({ id: r[0], name: r[1], icon: r[2], type: r[3], order: Number(r[4] || 0), pinned: r[5] === '1' || r[5] === 1 })),
-      accounts: p(a, r => ({ id: r[0], name: r[1], icon: r[2], balance: Number(r[3] || 0), initialBalance: Number(r[4] || 0), order: Number(r[5] || 0), pinned: r[6] === '1' || r[6] === 1 })),
+      categories: p(c, r => ({ id: r[0], name: r[1], icon: r[2], type: r[3], order: Number(r[4] || 0), pinned: r[5] === '1' || r[5] === 1, color: r[6] || 'slate' })),
+      accounts: p(a, r => ({ id: r[0], name: r[1], icon: r[2], balance: Number(r[3] || 0), initialBalance: Number(r[4] || 0), order: Number(r[5] || 0), pinned: r[6] === '1' || r[6] === 1, color: r[7] || 'slate' })),
       shortcuts: p(s, r => ({ 
         id: r[0], name: r[1], type: r[2], amount: Number(r[3] || 0), category: r[4], 
         fromAccount: r[5], toAccount: r[6] || '', order: Number(r[7] || 0),
@@ -224,8 +224,8 @@ async function _performSync({ sheetId, saveFn, priority, forcePriority }) {
 
     // バッチ書き込み
     const txRows = state.transactions.map(t => [t.id, t.date, t.amount, t.type, t.category, t.fromAccount, t.memo, t.toAccount || '', t.categoryId || '', t.fromAccountId || '', t.toAccountId || '']);
-    const catRows = state.categories.map(c => [c.id, c.name, c.icon, c.type, c.order, c.pinned ? 1 : 0]);
-    const accRows = state.accounts.map(a => [a.id, a.name, a.icon, a.balance, a.initialBalance, a.order, a.pinned ? 1 : 0]);
+    const catRows = state.categories.map(c => [c.id, c.name, c.icon, c.type, c.order, c.pinned ? 1 : 0, c.color || 'slate']);
+    const accRows = state.accounts.map(a => [a.id, a.name, a.icon, a.balance, a.initialBalance, a.order, a.pinned ? 1 : 0, a.color || 'slate']);
     const scRows = (state.shortcuts || []).map(s => [s.id, s.name, s.type, s.amount, s.category, s.fromAccount, s.toAccount, s.order, s.categoryId || '', s.fromAccountId || '', s.toAccountId || '']);
 
     if (txRows.length === 0) txRows.push(['EMPTY']);
@@ -245,7 +245,7 @@ async function _performSync({ sheetId, saveFn, priority, forcePriority }) {
     const trailingClearRanges = [];
     if (cloud.transactions.length > txRows.length) trailingClearRanges.push(`transactions!A${txRows.length + 1}:K`);
     if (cloud.categories.length > catRows.length) trailingClearRanges.push(`categories!A${catRows.length + 1}:G`);
-    if (cloud.accounts.length > accRows.length) trailingClearRanges.push(`accounts!A${accRows.length + 1}:G`);
+    if (cloud.accounts.length > accRows.length) trailingClearRanges.push(`accounts!A${accRows.length + 1}:H`);
     if (cloud.shortcuts.length > scRows.length) trailingClearRanges.push(`shortcuts!A${scRows.length + 1}:K`);
 
     if (trailingClearRanges.length > 0) {
